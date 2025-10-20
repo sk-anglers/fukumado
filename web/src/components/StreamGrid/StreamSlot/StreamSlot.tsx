@@ -1,4 +1,9 @@
-import { ArrowsPointingOutIcon, SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
+  SpeakerWaveIcon,
+  SpeakerXMarkIcon
+} from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { useLayoutStore } from '../../../stores/layoutStore';
@@ -37,7 +42,9 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
   const assignedStream = slot.assignedStream;
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const playerInstanceRef = useRef<YT.Player | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const accentColor = useMemo(() => {
     if (!assignedStream) {
@@ -60,6 +67,7 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
       : '視聴者数 -';
 
   useEffect(() => {
+    setPlayerReady(false);
     setPlayerReady(false);
     let isMounted = true;
 
@@ -128,6 +136,40 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
     }
   }, [slot.muted, slot.volume, playerReady]);
 
+  useEffect(() => {
+    const handleFullscreenChange = (): void => {
+      const target = containerRef.current;
+      setIsFullscreen(document.fullscreenElement === target);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const handleToggleFullscreen = async (event: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
+    event.stopPropagation();
+    const target = containerRef.current;
+    if (!target) return;
+
+    try {
+      if (document.fullscreenElement === target) {
+        await document.exitFullscreen();
+      } else {
+        await target.requestFullscreen();
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Fullscreen toggle failed', error);
+    }
+  };
+
+  const handleFocusPreset = (event: React.MouseEvent<HTMLButtonElement>): void => {
+    event.stopPropagation();
+    onSelect();
+    setPreset('focus');
+  };
+
   return (
     <article
       className={clsx(styles.slot, isActive && styles.active, !assignedStream && styles.empty)}
@@ -138,7 +180,7 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
     >
       <div className={styles.surface}>
         {assignedStream ? (
-          <div className={styles.playerContainer}>
+          <div className={styles.playerContainer} ref={containerRef}>
             <div className={styles.playerFrame} ref={playerContainerRef} />
             {!playerReady && (
               <div className={styles.preview} style={{ '--accent-color': accentColor } as CSSProperties}>
@@ -161,25 +203,31 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
 
         <div className={styles.overlayTop}>
           {assignedStream ? (
-            <div className={styles.platformBadge} style={{ color: accentColor }}>
-              {platformLabel[assignedStream.platform]}
-            </div>
+            <>
+              <div className={styles.platformBadge} style={{ color: accentColor }}>
+                {platformLabel[assignedStream.platform]}
+              </div>
+              <div className={styles.topButtons}>
+                <button
+                  className={styles.focusButton}
+                  type="button"
+                  onClick={handleFocusPreset}
+                >
+                  フォーカス
+                </button>
+                <button
+                  className={styles.fullscreenButton}
+                  type="button"
+                  onClick={handleToggleFullscreen}
+                >
+                  {isFullscreen ? <ArrowsPointingInIcon /> : <ArrowsPointingOutIcon />}
+                  <span>{isFullscreen ? '全画面解除' : '全画面'}</span>
+                </button>
+              </div>
+            </>
           ) : (
             <div className={styles.platformBadgeMuted}>空き枠</div>
           )}
-          <button
-            className={styles.focusButton}
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect();
-              setPreset('focus');
-            }}
-            disabled={!assignedStream}
-          >
-            <ArrowsPointingOutIcon />
-            <span>フォーカス</span>
-          </button>
         </div>
 
         <div className={styles.overlayBottom}>

@@ -49,6 +49,8 @@ export interface LayoutState {
   setAvailableStreams: (streams: Streamer[]) => void;
   setStreamsLoading: (loading: boolean) => void;
   setStreamsError: (message?: string) => void;
+  fullscreen: boolean;
+  setFullscreen: (value: boolean) => void;
 }
 
 const initialSlots = createInitialSlots();
@@ -64,6 +66,7 @@ export const useLayoutStore = create<LayoutState>()(
       availableStreams: [],
       streamsLoading: false,
       streamsError: undefined,
+      fullscreen: false,
       platforms: ['youtube', 'twitch', 'niconico'],
       setPreset: (preset) => set({ preset }),
       selectSlot: (slotId) =>
@@ -227,6 +230,8 @@ export const useLayoutStore = create<LayoutState>()(
       setAvailableStreams: (streams) => set({ availableStreams: streams }),
       setStreamsLoading: (loading) => set({ streamsLoading: loading }),
       setStreamsError: (message) => set({ streamsError: message })
+      ,
+      setFullscreen: (value) => set({ fullscreen: value })
     }),
     {
       name: 'fukumado-layout',

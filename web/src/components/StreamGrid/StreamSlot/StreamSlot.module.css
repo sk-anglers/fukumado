@@ -205,6 +205,35 @@
   background: rgba(30, 41, 59, 0.7);
 }
 
+.topButtons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.fullscreenButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.3rem 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  font-size: 0.78rem;
+  color: rgba(191, 219, 254, 0.9);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.fullscreenButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.fullscreenButton:hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(30, 41, 59, 0.75);
+}
+
 .streamInfo {
   display: flex;
   flex-direction: column;
