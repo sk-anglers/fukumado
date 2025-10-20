@@ -2,6 +2,102 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { LayoutPreset, Platform, StreamSlot, Streamer } from '../types';
 
+const DEFAULT_ACTIVE_SLOTS = 4;
+const TOTAL_SLOT_CAPACITY = 8;
+const DEFAULT_VOLUME = 70;
+
+export const MAX_ACTIVE_SLOTS = TOTAL_SLOT_CAPACITY;
+
+const initialStreams: Streamer[] = [
+  {
+    id: 'yt-1',
+    displayName: 'Sorane Tsubame',
+    platform: 'youtube',
+    title: 'ランクマッチ耐久',
+    gameTitle: 'APEX LEGENDS',
+    liveSince: '2025-10-20T07:30:00+09:00',
+    viewerCount: 12340
+  },
+  {
+    id: 'tw-1',
+    displayName: 'neonfox',
+    platform: 'twitch',
+    title: '深夜作業雑談 #fukumado',
+    gameTitle: 'Just Chatting',
+    liveSince: '2025-10-20T06:45:00+09:00',
+    viewerCount: 3200
+  },
+  {
+    id: 'nc-1',
+    displayName: 'Miracle Taro',
+    platform: 'niconico',
+    title: '歌枠リクエストスペシャル',
+    gameTitle: 'Karaoke',
+    liveSince: '2025-10-20T08:15:00+09:00',
+    viewerCount: 980
+  },
+  {
+    id: 'yt-2',
+    displayName: 'Digital Chick',
+    platform: 'youtube',
+    title: '新作インディーゲーム初見プレイ',
+    gameTitle: 'Star Crashers',
+    liveSince: '2025-10-20T09:00:00+09:00',
+    viewerCount: 8600
+  },
+  {
+    id: 'tw-2',
+    displayName: 'MegRhythm',
+    platform: 'twitch',
+    title: '朝活デイリースクリム',
+    gameTitle: 'VALORANT',
+    liveSince: '2025-10-20T05:55:00+09:00',
+    viewerCount: 4100
+  },
+  {
+    id: 'yt-3',
+    displayName: 'YoruKuma',
+    platform: 'youtube',
+    title: '深夜のパズル全クリ耐久',
+    gameTitle: 'Puzzle Storm',
+    liveSince: '2025-10-20T07:15:00+09:00',
+    viewerCount: 5400
+  },
+  {
+    id: 'tw-3',
+    displayName: 'RaccoonLab',
+    platform: 'twitch',
+    title: '建築勢のサバイバル日誌',
+    gameTitle: 'Minecraft',
+    liveSince: '2025-10-20T04:20:00+09:00',
+    viewerCount: 2800
+  },
+  {
+    id: 'nc-2',
+    displayName: 'Fika Network',
+    platform: 'niconico',
+    title: '朝活ラジオとニュースまとめ',
+    gameTitle: 'Talk Show',
+    liveSince: '2025-10-20T09:20:00+09:00',
+    viewerCount: 1250
+  }
+];
+
+const createInitialSlots = (): StreamSlot[] =>
+  Array.from({ length: TOTAL_SLOT_CAPACITY }, (_, index) => ({
+    id: `slot-${index + 1}`,
+    muted: false,
+    volume: DEFAULT_VOLUME
+  }));
+
+const hydrateSlots = (slots: StreamSlot[]): StreamSlot[] =>
+  slots.map((slot, index) => ({
+    id: slot.id ?? `slot-${index + 1}`,
+    muted: slot.muted ?? false,
+    volume: slot.volume ?? DEFAULT_VOLUME,
+    assignedStream: slot.assignedStream
+  }));
+
 export interface LayoutState {
   preset: LayoutPreset;
   slots: StreamSlot[];
@@ -22,76 +118,16 @@ export interface LayoutState {
   setActiveSlotsCount: (count: number) => void;
 }
 
-const initialStreams: Streamer[] = [
-  {
-    id: 'yt-1',
-    displayName: '空想つばめ',
-    platform: 'youtube',
-    title: 'ランクマッチ耐久',
-    gameTitle: 'APEX LEGENDS',
-    liveSince: '2025-10-20T07:30:00+09:00',
-    viewerCount: 12340
-  },
-  {
-    id: 'tw-1',
-    displayName: 'neonfox',
-    platform: 'twitch',
-    title: '深夜作業雑談 #fukumado',
-    gameTitle: 'Just Chatting',
-    liveSince: '2025-10-20T06:45:00+09:00',
-    viewerCount: 3200
-  },
-  {
-    id: 'nc-1',
-    displayName: 'ミラクル太郎',
-    platform: 'niconico',
-    title: '歌枠リクエストスペシャル',
-    gameTitle: 'Karaoke',
-    liveSince: '2025-10-20T08:15:00+09:00',
-    viewerCount: 980
-  },
-  {
-    id: 'yt-2',
-    displayName: '電子ひよこ',
-    platform: 'youtube',
-    title: '新作インディーゲーム初見プレイ',
-    gameTitle: 'Star Crashers',
-    liveSince: '2025-10-20T09:00:00+09:00',
-    viewerCount: 8600
-  },
-  {
-    id: 'tw-2',
-    displayName: 'MegRhythm',
-    platform: 'twitch',
-    title: '朝活デイリースクリム',
-    gameTitle: 'VALORANT',
-    liveSince: '2025-10-20T05:55:00+09:00',
-    viewerCount: 4100
-  }
-];
-
-const initialSlots: StreamSlot[] = [
-  { id: 'slot-1', muted: false, volume: 70 },
-  { id: 'slot-2', muted: false, volume: 70 },
-  { id: 'slot-3', muted: false, volume: 70 },
-  { id: 'slot-4', muted: false, volume: 70 }
-];
-
-const hydrateSlots = (slots: StreamSlot[]): StreamSlot[] =>
-  slots.map((slot) => ({
-    ...slot,
-    muted: slot.muted ?? false,
-    volume: slot.volume ?? 70
-  }));
+const initialSlots = createInitialSlots();
 
 export const useLayoutStore = create<LayoutState>()(
   persist(
     (set, get) => ({
       preset: 'twoByTwo',
       slots: initialSlots,
-      selectedSlotId: initialSlots[0].id,
+      selectedSlotId: initialSlots[0]?.id ?? null,
       mutedAll: false,
-      activeSlotsCount: initialSlots.length,
+      activeSlotsCount: DEFAULT_ACTIVE_SLOTS,
       availableStreams: initialStreams,
       platforms: ['youtube', 'twitch', 'niconico'],
       setPreset: (preset) => set({ preset }),
@@ -104,27 +140,40 @@ export const useLayoutStore = create<LayoutState>()(
           return { selectedSlotId: slotId };
         }),
       assignStream: (slotId, stream) =>
-        set((state) => ({
-          slots: state.slots.map((slot) =>
-            slot.id === slotId
-              ? {
-                  ...slot,
-                  assignedStream: stream
-                }
-              : slot
-          )
-        })),
+        set((state) => {
+          const index = state.slots.findIndex((slot) => slot.id === slotId);
+          if (index === -1 || index >= state.activeSlotsCount) {
+            return state;
+          }
+
+          return {
+            slots: state.slots.map((slot, slotIndex) =>
+              slotIndex === index
+                ? {
+                    ...slot,
+                    assignedStream: stream
+                  }
+                : slot
+            )
+          };
+        }),
       clearSlot: (slotId) =>
-        set((state) => ({
-          slots: state.slots.map((slot) =>
-            slot.id === slotId
-              ? {
-                  ...slot,
-                  assignedStream: undefined
-                }
-              : slot
-          )
-        })),
+        set((state) => {
+          const index = state.slots.findIndex((slot) => slot.id === slotId);
+          if (index === -1 || index >= state.activeSlotsCount) {
+            return state;
+          }
+          return {
+            slots: state.slots.map((slot, slotIndex) =>
+              slotIndex === index
+                ? {
+                    ...slot,
+                    assignedStream: undefined
+                  }
+                : slot
+            )
+          };
+        }),
       toggleMuteAll: () =>
         set((state) => {
           const nextMuted = !state.mutedAll;
@@ -139,7 +188,7 @@ export const useLayoutStore = create<LayoutState>()(
       toggleSlotMute: (slotId) =>
         set((state) => {
           const index = state.slots.findIndex((slot) => slot.id === slotId);
-          if (index === -1) {
+          if (index === -1 || index >= state.activeSlotsCount) {
             return state;
           }
 
@@ -152,16 +201,22 @@ export const useLayoutStore = create<LayoutState>()(
           };
         }),
       setVolume: (slotId, volume) =>
-        set((state) => ({
-          slots: state.slots.map((slot) =>
-            slot.id === slotId
-              ? {
-                  ...slot,
-                  volume
-                }
-              : slot
-          )
-        })),
+        set((state) => {
+          const index = state.slots.findIndex((slot) => slot.id === slotId);
+          if (index === -1 || index >= state.activeSlotsCount) {
+            return state;
+          }
+          return {
+            slots: state.slots.map((slot, slotIndex) =>
+              slotIndex === index
+                ? {
+                    ...slot,
+                    volume
+                  }
+                : slot
+            )
+          };
+        }),
       swapSlots: (sourceSlotId, targetSlotId) =>
         set((state) => {
           const sourceIndex = state.slots.findIndex((slot) => slot.id === sourceSlotId);
@@ -190,6 +245,11 @@ export const useLayoutStore = create<LayoutState>()(
       ensureSelection: () => {
         const state = get();
         const activeSlots = state.slots.slice(0, state.activeSlotsCount);
+        if (activeSlots.length === 0) {
+          set({ selectedSlotId: null });
+          return;
+        }
+
         if (!state.selectedSlotId) {
           const target =
             activeSlots.find((slot) => !slot.assignedStream)?.id ?? activeSlots[0]?.id ?? null;
@@ -206,7 +266,7 @@ export const useLayoutStore = create<LayoutState>()(
       },
       setActiveSlotsCount: (count) => {
         set((state) => {
-          const maxCount = state.slots.length;
+          const maxCount = TOTAL_SLOT_CAPACITY;
           const nextCount = Math.min(Math.max(count, 1), maxCount);
           if (nextCount === state.activeSlotsCount) {
             return state;
@@ -233,7 +293,11 @@ export const useLayoutStore = create<LayoutState>()(
       version: 1,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        state.slots = hydrateSlots(state.slots);
+        state.slots = hydrateSlots(state.slots.length ? state.slots : createInitialSlots());
+        state.activeSlotsCount = Math.min(
+          Math.max(state.activeSlotsCount ?? DEFAULT_ACTIVE_SLOTS, 1),
+          TOTAL_SLOT_CAPACITY
+        );
       },
       partialize: (state) => ({
         preset: state.preset,

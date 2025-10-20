@@ -4,7 +4,7 @@ import {
   Squares2X2Icon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
-import { useLayoutStore } from '../../stores/layoutStore';
+import { MAX_ACTIVE_SLOTS, useLayoutStore } from '../../stores/layoutStore';
 import type { LayoutPreset } from '../../types';
 import styles from './GlobalControls.module.css';
 
@@ -18,12 +18,10 @@ const presetLabels: Record<LayoutPreset, string> = {
   focus: 'フォーカス'
 };
 
-const displayCountLabels: Record<number, string> = {
-  4: '4画面',
-  3: '3画面',
-  2: '2画面',
-  1: '1画面'
-};
+const slotCountOptions = Array.from(
+  { length: MAX_ACTIVE_SLOTS },
+  (_, index) => MAX_ACTIVE_SLOTS - index
+);
 
 export const GlobalControls = ({ onOpenPresetModal }: GlobalControlsProps): JSX.Element => {
   const { preset, setPreset, activeSlotsCount, setActiveSlotsCount } = useLayoutStore((state) => ({
@@ -58,7 +56,7 @@ export const GlobalControls = ({ onOpenPresetModal }: GlobalControlsProps): JSX.
         <div className={styles.divider} />
         <div className={styles.subHeader}>表示する枠の数</div>
         <div className={styles.displayButtons}>
-          {[4, 3, 2, 1].map((count) => (
+          {slotCountOptions.map((count) => (
             <button
               key={count}
               type="button"
@@ -68,7 +66,7 @@ export const GlobalControls = ({ onOpenPresetModal }: GlobalControlsProps): JSX.
               )}
               onClick={() => setActiveSlotsCount(count)}
             >
-              {displayCountLabels[count]}
+              {count}画面
             </button>
           ))}
         </div>
