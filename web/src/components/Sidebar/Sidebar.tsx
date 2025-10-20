@@ -1,4 +1,8 @@
-import { SquaresPlusIcon } from '@heroicons/react/24/outline';
+import {
+  SpeakerWaveIcon,
+  SpeakerXMarkIcon,
+  SquaresPlusIcon
+} from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { type Streamer } from '../../types';
 import { useLayoutStore } from '../../stores/layoutStore';
@@ -29,7 +33,9 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     assignStream,
     clearSlot,
     ensureSelection,
-    activeSlotsCount
+    activeSlotsCount,
+    toggleSlotMute,
+    setVolume
   } = useLayoutStore((state) => ({
     slots: state.slots,
     selectedSlotId: state.selectedSlotId,
@@ -38,7 +44,9 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     assignStream: state.assignStream,
     clearSlot: state.clearSlot,
     ensureSelection: state.ensureSelection,
-    activeSlotsCount: state.activeSlotsCount
+    activeSlotsCount: state.activeSlotsCount,
+    toggleSlotMute: state.toggleSlotMute,
+    setVolume: state.setVolume
   }));
 
   const activeSlots = slots.slice(0, activeSlotsCount);
@@ -57,46 +65,105 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
           </button>
         </div>
         <div className={styles.slotList}>
-          {activeSlots.map((slot, index) => (
-            <button
-              key={slot.id}
-              type="button"
-              className={clsx(styles.slotButton, selectedSlotId === slot.id && styles.slotButtonActive)}
-              onClick={() => {
-                selectSlot(slot.id);
-                ensureSelection();
-              }}
-            >
-              <div className={styles.slotIndex}>枠 {index + 1}</div>
-              <div className={styles.slotContent}>
-                {slot.assignedStream ? (
-                  <>
-                    <span
-                      className={styles.streamerName}
-                      style={{ color: platformAccent[slot.assignedStream.platform] }}
+          {activeSlots.map((slot, index) => {
+            const isActive = selectedSlotId === slot.id;
+            const assigned = slot.assignedStream;
+            const volumeLabel = `${slot.volume}%`;
+
+            const handleSelect = (): void => {
+              selectSlot(slot.id);
+              ensureSelection();
+            };
+
+            const handleVolumeChange = (value: number): void => {
+              setVolume(slot.id, value);
+              if (slot.muted && value > 0) {
+                toggleSlotMute(slot.id);
+              }
+            };
+
+            return (
+              <div
+                key={slot.id}
+                role="button"
+                tabIndex={0}
+                className={clsx(styles.slotButton, isActive && styles.slotButtonActive)}
+                onClick={handleSelect}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleSelect();
+                  }
+                }}
+              >
+                <div className={styles.slotHeader}>
+                  <div className={styles.slotIndex}>枠 {index + 1}</div>
+                  {assigned && (
+                    <button
+                      type="button"
+                      className={styles.slotRemove}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        clearSlot(slot.id);
+                      }}
                     >
-                      {slot.assignedStream.displayName}
-                    </span>
-                    <span className={styles.streamTitle}>{slot.assignedStream.title}</span>
-                  </>
+                      ×
+                    </button>
+                  )}
+                </div>
+                <div className={styles.slotContent}>
+                  {assigned ? (
+                    <>
+                      <span
+                        className={styles.streamerName}
+                        style={{ color: platformAccent[assigned.platform] }}
+                      >
+                        {assigned.displayName}
+                      </span>
+                      <span className={styles.streamTitle}>{assigned.title}</span>
+                    </>
+                  ) : (
+                    <span className={styles.slotEmpty}>未割り当て</span>
+                  )}
+                </div>
+                {assigned ? (
+                  <div
+                    className={styles.slotControls}
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className={styles.muteButton}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleSlotMute(slot.id);
+                      }}
+                      aria-pressed={slot.muted}
+                    >
+                      {slot.muted ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
+                    </button>
+                    <label className={styles.volumeSlider}>
+                      <span className="sr-only">音量</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={slot.volume}
+                        onChange={(event) => handleVolumeChange(Number(event.target.value))}
+                        onClick={(event) => event.stopPropagation()}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onPointerDown={(event) => event.stopPropagation()}
+                      />
+                    </label>
+                    <span className={styles.volumeValue}>{volumeLabel}</span>
+                  </div>
                 ) : (
-                  <span className={styles.slotEmpty}>未割り当て</span>
+                  <div className={styles.slotHint}>配信を割り当てて操作できます</div>
                 )}
               </div>
-              {slot.assignedStream && (
-                <button
-                  type="button"
-                  className={styles.slotRemove}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    clearSlot(slot.id);
-                  }}
-                >
-                  ×
-                </button>
-              )}
-            </button>
-          ))}
+            );
+          })}
         </div>
       </section>
 
