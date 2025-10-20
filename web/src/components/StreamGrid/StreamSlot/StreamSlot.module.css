@@ -1,0 +1,264 @@
+.slot {
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.65);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+}
+
+.slot:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.4);
+}
+
+.active {
+  border-color: rgba(168, 85, 247, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+}
+
+.surface {
+  position: relative;
+  flex: 1;
+  display: flex;
+  border-radius: inherit;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.preview {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at top, color-mix(in srgb, var(--accent-color, rgba(56, 189, 248, 0.35)) 70%, rgba(15, 23, 42, 0.95)), rgba(15, 23, 42, 0.95));
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(226, 232, 240, 0.85);
+  box-shadow:
+    inset 0 0 90px rgba(15, 23, 42, 0.85),
+    0 20px 60px color-mix(in srgb, var(--accent-color, rgba(56, 189, 248, 0.4)) 60%, rgba(15, 23, 42, 0.4));
+}
+
+.preview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color, rgba(56, 189, 248, 0.4)) 60%, rgba(168, 85, 247, 0.25)), rgba(15, 23, 42, 0.4));
+  opacity: 0.7;
+}
+
+.previewBackdrop {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  mix-blend-mode: screen;
+}
+
+.noise {
+  width: 200%;
+  height: 200%;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+  background-size: 4px 4px;
+  animation: drift 12s linear infinite;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-25%, -25%, 0);
+  }
+}
+
+.previewContent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  z-index: 1;
+}
+
+.previewInitials {
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.previewStatus {
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  padding: 0.2rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  color: rgba(248, 113, 113, 0.95);
+}
+
+.placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: rgba(148, 163, 184, 0.7);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
+}
+
+.placeholderIcon {
+  font-size: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlayTop,
+.overlayBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.overlayTop {
+  top: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.8), transparent);
+}
+
+.overlayBottom {
+  bottom: 0;
+  background: linear-gradient(0deg, rgba(15, 23, 42, 0.85), transparent);
+}
+
+.platformBadge {
+  font-size: 0.75rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid currentColor;
+  background: rgba(15, 23, 42, 0.6);
+  letter-spacing: 0.08em;
+}
+
+.platformBadgeMuted {
+  font-size: 0.75rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.4);
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.focusButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.3rem 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  font-size: 0.78rem;
+  color: rgba(191, 219, 254, 0.9);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.focusButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.focusButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.focusButton:not(:disabled):hover {
+  border-color: rgba(168, 85, 247, 0.5);
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.streamInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.streamInfo h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.streamMeta {
+  display: flex;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.controlButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(226, 232, 240, 0.85);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.controlButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.controlButton:hover {
+  border-color: rgba(168, 85, 247, 0.55);
+  background: rgba(30, 41, 59, 0.75);
+}
+
+.volumeControl {
+  display: flex;
+  align-items: center;
+}
+
+.volumeControl input {
+  width: 120px;
+  accent-color: rgba(168, 85, 247, 0.8);
+  cursor: pointer;
+}
+
+.emptyHint {
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.empty {
+  border-style: dashed;
+}
