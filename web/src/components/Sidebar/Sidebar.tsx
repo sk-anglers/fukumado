@@ -28,7 +28,8 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     availableStreams,
     assignStream,
     clearSlot,
-    ensureSelection
+    ensureSelection,
+    activeSlotsCount
   } = useLayoutStore((state) => ({
     slots: state.slots,
     selectedSlotId: state.selectedSlotId,
@@ -36,11 +37,13 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     availableStreams: state.availableStreams,
     assignStream: state.assignStream,
     clearSlot: state.clearSlot,
-    ensureSelection: state.ensureSelection
+    ensureSelection: state.ensureSelection,
+    activeSlotsCount: state.activeSlotsCount
   }));
 
-  const activeSlot = slots.find((slot) => slot.id === selectedSlotId) ?? slots[0];
-  const activeSlotIndex = activeSlot ? slots.indexOf(activeSlot) : -1;
+  const activeSlots = slots.slice(0, activeSlotsCount);
+  const activeSlot = activeSlots.find((slot) => slot.id === selectedSlotId) ?? activeSlots[0];
+  const activeSlotIndex = activeSlot ? activeSlots.indexOf(activeSlot) : -1;
   const activeSlotLabel = activeSlotIndex >= 0 ? activeSlotIndex + 1 : '―';
 
   return (
@@ -54,7 +57,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
           </button>
         </div>
         <div className={styles.slotList}>
-          {slots.map((slot, index) => (
+          {activeSlots.map((slot, index) => (
             <button
               key={slot.id}
               type="button"

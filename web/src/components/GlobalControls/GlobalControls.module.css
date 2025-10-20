@@ -74,6 +74,47 @@
   background: rgba(76, 29, 149, 0.55);
 }
 
+.divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.2);
+  margin: 0.5rem 0;
+}
+
+.subHeader {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.displayButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.countButton {
+  flex: 1 1 45%;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.6);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.78rem;
+  color: rgba(191, 219, 254, 0.85);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.countButton:hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.countButtonActive {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(14, 116, 144, 0.4);
+  color: rgba(226, 232, 240, 0.95);
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+}
+
 .description {
   font-size: 0.75rem;
   color: rgba(148, 163, 184, 0.78);

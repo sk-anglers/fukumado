@@ -18,10 +18,19 @@ const presetLabels: Record<LayoutPreset, string> = {
   focus: 'フォーカス'
 };
 
+const displayCountLabels: Record<number, string> = {
+  4: '4画面',
+  3: '3画面',
+  2: '2画面',
+  1: '1画面'
+};
+
 export const GlobalControls = ({ onOpenPresetModal }: GlobalControlsProps): JSX.Element => {
-  const { preset, setPreset } = useLayoutStore((state) => ({
+  const { preset, setPreset, activeSlotsCount, setActiveSlotsCount } = useLayoutStore((state) => ({
     preset: state.preset,
-    setPreset: state.setPreset
+    setPreset: state.setPreset,
+    activeSlotsCount: state.activeSlotsCount,
+    setActiveSlotsCount: state.setActiveSlotsCount
   }));
 
   return (
@@ -46,6 +55,23 @@ export const GlobalControls = ({ onOpenPresetModal }: GlobalControlsProps): JSX.
         <button type="button" className={styles.primaryAction} onClick={onOpenPresetModal}>
           プリセットを編集
         </button>
+        <div className={styles.divider} />
+        <div className={styles.subHeader}>表示する枠の数</div>
+        <div className={styles.displayButtons}>
+          {[4, 3, 2, 1].map((count) => (
+            <button
+              key={count}
+              type="button"
+              className={clsx(
+                styles.countButton,
+                activeSlotsCount === count && styles.countButtonActive
+              )}
+              onClick={() => setActiveSlotsCount(count)}
+            >
+              {displayCountLabels[count]}
+            </button>
+          ))}
+        </div>
       </div>
       <div className={styles.card}>
         <div className={styles.header}>

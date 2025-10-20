@@ -3,6 +3,7 @@
   display: grid;
   gap: 1rem;
   min-height: 0;
+  grid-auto-rows: minmax(0, 1fr);
 }
 
 .twoByTwo {
@@ -23,6 +24,36 @@
 .focus > :first-child {
   grid-column: span 2;
   grid-row: span 2;
+}
+
+.count4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.count3 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+.count2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.count1 {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.focus.count1 > :first-child {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.focus.count2 > :first-child {
+  grid-column: span 2;
+  grid-row: span 1;
 }
 
 @media (max-width: 1200px) {

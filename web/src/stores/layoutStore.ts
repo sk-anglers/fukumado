@@ -7,6 +7,7 @@ export interface LayoutState {
   slots: StreamSlot[];
   selectedSlotId: string | null;
   mutedAll: boolean;
+  activeSlotsCount: number;
   availableStreams: Streamer[];
   platforms: Platform[];
   setPreset: (preset: LayoutPreset) => void;
@@ -18,6 +19,7 @@ export interface LayoutState {
   setVolume: (slotId: string, volume: number) => void;
   swapSlots: (sourceSlotId: string, targetSlotId: string) => void;
   ensureSelection: () => void;
+  setActiveSlotsCount: (count: number) => void;
 }
 
 const initialStreams: Streamer[] = [
@@ -89,10 +91,18 @@ export const useLayoutStore = create<LayoutState>()(
       slots: initialSlots,
       selectedSlotId: initialSlots[0].id,
       mutedAll: false,
+      activeSlotsCount: initialSlots.length,
       availableStreams: initialStreams,
       platforms: ['youtube', 'twitch', 'niconico'],
       setPreset: (preset) => set({ preset }),
-      selectSlot: (slotId) => set({ selectedSlotId: slotId }),
+      selectSlot: (slotId) =>
+        set((state) => {
+          const index = state.slots.findIndex((slot) => slot.id === slotId);
+          if (index === -1 || index >= state.activeSlotsCount) {
+            return state;
+          }
+          return { selectedSlotId: slotId };
+        }),
       assignStream: (slotId, stream) =>
         set((state) => ({
           slots: state.slots.map((slot) =>
@@ -128,12 +138,17 @@ export const useLayoutStore = create<LayoutState>()(
         }),
       toggleSlotMute: (slotId) =>
         set((state) => {
-          const nextSlots = state.slots.map((slot) =>
-            slot.id === slotId ? { ...slot, muted: !slot.muted } : slot
+          const index = state.slots.findIndex((slot) => slot.id === slotId);
+          if (index === -1) {
+            return state;
+          }
+
+          const nextSlots = state.slots.map((slot, slotIndex) =>
+            slotIndex === index ? { ...slot, muted: !slot.muted } : slot
           );
           return {
             slots: nextSlots,
-            mutedAll: nextSlots.every((slot) => slot.muted)
+            mutedAll: nextSlots.slice(0, state.activeSlotsCount).every((slot) => slot.muted)
           };
         }),
       setVolume: (slotId, volume) =>
@@ -151,7 +166,12 @@ export const useLayoutStore = create<LayoutState>()(
         set((state) => {
           const sourceIndex = state.slots.findIndex((slot) => slot.id === sourceSlotId);
           const targetIndex = state.slots.findIndex((slot) => slot.id === targetSlotId);
-          if (sourceIndex === -1 || targetIndex === -1) {
+          if (
+            sourceIndex === -1 ||
+            targetIndex === -1 ||
+            sourceIndex >= state.activeSlotsCount ||
+            targetIndex >= state.activeSlotsCount
+          ) {
             return state;
           }
 
@@ -169,10 +189,43 @@ export const useLayoutStore = create<LayoutState>()(
         }),
       ensureSelection: () => {
         const state = get();
+        const activeSlots = state.slots.slice(0, state.activeSlotsCount);
         if (!state.selectedSlotId) {
-          const target = state.slots.find((slot) => !slot.assignedStream)?.id ?? state.slots[0]?.id ?? null;
+          const target =
+            activeSlots.find((slot) => !slot.assignedStream)?.id ?? activeSlots[0]?.id ?? null;
+          set({ selectedSlotId: target });
+          return;
+        }
+
+        const currentIndex = activeSlots.findIndex((slot) => slot.id === state.selectedSlotId);
+        if (currentIndex === -1) {
+          const target =
+            activeSlots.find((slot) => !slot.assignedStream)?.id ?? activeSlots[0]?.id ?? null;
           set({ selectedSlotId: target });
         }
+      },
+      setActiveSlotsCount: (count) => {
+        set((state) => {
+          const maxCount = state.slots.length;
+          const nextCount = Math.min(Math.max(count, 1), maxCount);
+          if (nextCount === state.activeSlotsCount) {
+            return state;
+          }
+
+          let nextSelectedId = state.selectedSlotId;
+          if (nextSelectedId) {
+            const selectedIndex = state.slots.findIndex((slot) => slot.id === nextSelectedId);
+            if (selectedIndex >= nextCount) {
+              nextSelectedId = state.slots[nextCount - 1]?.id ?? null;
+            }
+          }
+
+          return {
+            activeSlotsCount: nextCount,
+            selectedSlotId: nextSelectedId
+          };
+        });
+        get().ensureSelection();
       }
     }),
     {
@@ -186,7 +239,8 @@ export const useLayoutStore = create<LayoutState>()(
         preset: state.preset,
         slots: state.slots,
         selectedSlotId: state.selectedSlotId,
-        mutedAll: state.mutedAll
+        mutedAll: state.mutedAll,
+        activeSlotsCount: state.activeSlotsCount
       })
     }
   )
