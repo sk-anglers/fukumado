@@ -16,7 +16,7 @@ interface UserState {
   clearFollowedChannels: () => void;
 }
 
-const makeKey = (channel: FollowedChannel): string => ${channel.platform}:;
+const makeKey = (channel: FollowedChannel): string => `${channel.platform}:${channel.channelId}`;
 
 export const useUserStore = create<UserState>()(
   persist(
@@ -27,9 +27,7 @@ export const useUserStore = create<UserState>()(
           const exists = state.followedChannels.some(
             (item) => item.platform === channel.platform && item.channelId === channel.channelId
           );
-          if (exists) {
-            return state;
-          }
+          if (exists) return state;
           return {
             followedChannels: [...state.followedChannels, channel]
           };
