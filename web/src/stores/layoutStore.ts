@@ -91,12 +91,15 @@ const createInitialSlots = (): StreamSlot[] =>
   }));
 
 const hydrateSlots = (slots: StreamSlot[]): StreamSlot[] =>
-  slots.map((slot, index) => ({
-    id: slot.id ?? `slot-${index + 1}`,
-    muted: slot.muted ?? false,
-    volume: slot.volume ?? DEFAULT_VOLUME,
-    assignedStream: slot.assignedStream
-  }));
+  Array.from({ length: TOTAL_SLOT_CAPACITY }, (_, index) => {
+    const source = slots[index];
+    return {
+      id: source?.id ?? `slot-${index + 1}`,
+      muted: source?.muted ?? false,
+      volume: source?.volume ?? DEFAULT_VOLUME,
+      assignedStream: source?.assignedStream
+    };
+  });
 
 export interface LayoutState {
   preset: LayoutPreset;
