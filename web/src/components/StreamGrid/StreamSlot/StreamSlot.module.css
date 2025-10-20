@@ -29,6 +29,20 @@
   min-height: 0;
 }
 
+.playerContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: rgba(2, 6, 23, 0.8);
+}
+
+.playerFrame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .preview {
   width: 100%;
   height: 100%;

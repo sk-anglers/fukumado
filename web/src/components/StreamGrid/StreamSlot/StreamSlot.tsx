@@ -1,8 +1,9 @@
 import { ArrowsPointingOutIcon, SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
-import { type CSSProperties, useMemo } from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { useLayoutStore } from '../../../stores/layoutStore';
 import type { StreamSlot } from '../../../types';
+import { loadYouTubeIframeApi } from '../../../hooks/useYouTubeIframeApi';
 import styles from './StreamSlot.module.css';
 
 interface StreamSlotCardProps {
@@ -34,6 +35,9 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
   }));
 
   const assignedStream = slot.assignedStream;
+  const playerContainerRef = useRef<HTMLDivElement | null>(null);
+  const playerInstanceRef = useRef<YT.Player | null>(null);
+  const [playerReady, setPlayerReady] = useState(false);
 
   const accentColor = useMemo(() => {
     if (!assignedStream) {
@@ -50,6 +54,80 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
         .join('')
     : '＋';
 
+  const viewerLabel =
+    assignedStream && assignedStream.viewerCount != null
+      ? `${assignedStream.viewerCount.toLocaleString()} 人視聴中`
+      : '視聴者数 -';
+
+  useEffect(() => {
+    setPlayerReady(false);
+    let isMounted = true;
+
+    const setupPlayer = async (): Promise<void> => {
+      if (!assignedStream || !playerContainerRef.current) {
+        playerInstanceRef.current?.destroy();
+        playerInstanceRef.current = null;
+        setPlayerReady(false);
+        return;
+      }
+
+      try {
+        const YT = await loadYouTubeIframeApi();
+        if (!isMounted || !playerContainerRef.current) return;
+
+        playerInstanceRef.current?.destroy();
+        playerInstanceRef.current = new YT.Player(playerContainerRef.current, {
+          videoId: assignedStream.id,
+          playerVars: {
+            autoplay: 0,
+            controls: 1,
+            rel: 0,
+            modestbranding: 1,
+            playsinline: 1
+          },
+          events: {
+            onReady: (event) => {
+              if (!isMounted) return;
+              setPlayerReady(true);
+              if (slot.muted) {
+                event.target.mute();
+              } else {
+                event.target.unMute();
+                event.target.setVolume(slot.volume);
+              }
+            }
+          }
+        });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to initialise YouTube player', error);
+        setPlayerReady(false);
+      }
+    };
+
+    setupPlayer();
+
+    return () => {
+      isMounted = false;
+      playerInstanceRef.current?.destroy();
+      playerInstanceRef.current = null;
+    };
+  }, [assignedStream?.id]);
+
+  useEffect(() => {
+    const player = playerInstanceRef.current;
+    if (!playerReady || !player) return;
+
+    if (slot.muted) {
+      if (!player.isMuted()) {
+        player.mute();
+      }
+    } else {
+      player.unMute();
+      player.setVolume(slot.volume);
+    }
+  }, [slot.muted, slot.volume, playerReady]);
+
   return (
     <article
       className={clsx(styles.slot, isActive && styles.active, !assignedStream && styles.empty)}
@@ -60,14 +138,19 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
     >
       <div className={styles.surface}>
         {assignedStream ? (
-          <div className={styles.preview} style={{ '--accent-color': accentColor } as CSSProperties}>
-            <div className={styles.previewBackdrop}>
-              <div className={styles.noise} />
-            </div>
-            <div className={styles.previewContent}>
-              <span className={styles.previewInitials}>{initials}</span>
-              <span className={styles.previewStatus}>LIVE</span>
-            </div>
+          <div className={styles.playerContainer}>
+            <div className={styles.playerFrame} ref={playerContainerRef} />
+            {!playerReady && (
+              <div className={styles.preview} style={{ '--accent-color': accentColor } as CSSProperties}>
+                <div className={styles.previewBackdrop}>
+                  <div className={styles.noise} />
+                </div>
+                <div className={styles.previewContent}>
+                  <span className={styles.previewInitials}>{initials}</span>
+                  <span className={styles.previewStatus}>LOADING</span>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className={styles.placeholder}>
@@ -106,7 +189,7 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
                 <h3>{assignedStream.title}</h3>
                 <div className={styles.streamMeta}>
                   <span>{assignedStream.displayName}</span>
-                  <span>{formatViewerLabel(assignedStream.viewerCount)}</span>
+                  <span>{viewerLabel}</span>
                 </div>
               </div>
               <div className={styles.controls}>
