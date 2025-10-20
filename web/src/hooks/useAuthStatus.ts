@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
-import { useAuthStore } from '../stores/authStore';
+﻿import { useEffect } from "react";
+import { useAuthStore } from "../stores/authStore";
+import { apiFetch } from "../utils/api";
 
 export const useAuthStatus = (): void => {
   const setStatus = useAuthStore((state) => state.setStatus);
@@ -13,7 +14,7 @@ export const useAuthStatus = (): void => {
       setLoading(true);
       setError(undefined);
       try {
-        const response = await fetch('/auth/status');
+        const response = await apiFetch("/auth/status");
         if (!response.ok) {
           throw new Error(`ステータス取得に失敗しました (${response.status})`);
         }
@@ -26,7 +27,7 @@ export const useAuthStatus = (): void => {
         });
       } catch (error) {
         if (cancelled) return;
-        const message = error instanceof Error ? error.message : '不明なエラー';
+        const message = error instanceof Error ? error.message : "不明なエラー";
         setError(message);
         setStatus({ authenticated: false, user: undefined, error: message });
       } finally {
@@ -43,3 +44,4 @@ export const useAuthStatus = (): void => {
     };
   }, [setError, setLoading, setStatus]);
 };
+

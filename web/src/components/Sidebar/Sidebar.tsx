@@ -1,4 +1,4 @@
-﻿import { FormEvent, useMemo, useState } from 'react';
+﻿import { FormEvent, useMemo, useState } from "react";
 import {
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
@@ -6,32 +6,33 @@ import {
   PlusIcon,
   TrashIcon,
   MagnifyingGlassIcon
-} from '@heroicons/react/24/outline';
-import clsx from 'clsx';
-import { type Streamer } from '../../types';
-import { useLayoutStore } from '../../stores/layoutStore';
-import { useUserStore } from '../../stores/userStore';
-import { useAuthStore } from '../../stores/authStore';
-import styles from './Sidebar.module.css';
+} from "@heroicons/react/24/outline";
+import clsx from "clsx";
+import { type Streamer } from "../../types";
+import { useLayoutStore } from "../../stores/layoutStore";
+import { useUserStore } from "../../stores/userStore";
+import { useAuthStore } from "../../stores/authStore";
+import { apiFetch, apiUrl } from "../../utils/api";
+import styles from "./Sidebar.module.css";
 
 interface SidebarProps {
   onOpenPresetModal: () => void;
 }
 
-const platformLabel: Record<Streamer['platform'], string> = {
-  youtube: 'YouTube Live',
-  twitch: 'Twitch',
-  niconico: 'ニコニコ生放送'
+const platformLabel: Record<Streamer["platform"], string> = {
+  youtube: "YouTube Live",
+  twitch: "Twitch",
+  niconico: "ニコニコ生放送"
 };
 
-const platformAccent: Record<Streamer['platform'], string> = {
-  youtube: '#ef4444',
-  twitch: '#a855f7',
-  niconico: '#facc15'
+const platformAccent: Record<Streamer["platform"], string> = {
+  youtube: "#ef4444",
+  twitch: "#a855f7",
+  niconico: "#facc15"
 };
 
 const formatViewerCount = (viewerCount?: number): string => {
-  if (viewerCount == null) return '視聴者数 -';
+  if (viewerCount == null) return "視聴者数 -";
   return `視聴 ${viewerCount.toLocaleString()} 人`;
 };
 
@@ -40,10 +41,10 @@ const formatMeta = (stream: Streamer): string => {
   if (stream.liveSince) {
     const date = new Date(stream.liveSince);
     if (!Number.isNaN(date.getTime())) {
-      return `${date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} 配信開始`;
+      return `${date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })} 配信開始`;
     }
   }
-  return stream.channelTitle ?? '配信中';
+  return stream.channelTitle ?? "配信中";
 };
 
 interface ChannelResult {
@@ -55,7 +56,7 @@ interface ChannelResult {
 }
 
 const useYoutubeChannelSearch = () => {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<ChannelResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -71,14 +72,14 @@ const useYoutubeChannelSearch = () => {
     setLoading(true);
     setError(undefined);
     try {
-      const response = await fetch(`/api/youtube/channels?q=${encodeURIComponent(trimmed)}`);
+      const response = await apiFetch(`/api/youtube/channels?q=${encodeURIComponent(trimmed)}`);
       if (!response.ok) {
         throw new Error(`検索に失敗しました (${response.status})`);
       }
       const data = (await response.json()) as { items: ChannelResult[] };
       setResults(data.items);
     } catch (err) {
-      const message = err instanceof Error ? err.message : '不明なエラー';
+      const message = err instanceof Error ? err.message : "不明なエラー";
       setError(message);
       setResults([]);
     } finally {
@@ -124,6 +125,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     toggleSlotMute: state.toggleSlotMute,
     setVolume: state.setVolume
   }));
+
   const {
     followedChannels,
     addFollowedChannel,
@@ -144,8 +146,8 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
   const setAuthLoading = useAuthStore((state) => state.setLoading);
   const setAuthError = useAuthStore((state) => state.setError);
 
-  const [channelIdInput, setChannelIdInput] = useState('');
-  const [channelLabelInput, setChannelLabelInput] = useState('');
+  const [channelIdInput, setChannelIdInput] = useState("");
+  const [channelLabelInput, setChannelLabelInput] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const {
     query: searchQuery,
@@ -163,29 +165,22 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
   const activeSlots = slots.slice(0, activeSlotsCount);
   const activeSlot = activeSlots.find((slot) => slot.id === selectedSlotId) ?? activeSlots[0];
   const activeSlotIndex = activeSlot ? activeSlots.indexOf(activeSlot) : -1;
-  const activeSlotLabel = activeSlotIndex >= 0 ? activeSlotIndex + 1 : '―';
+  const activeSlotLabel = activeSlotIndex >= 0 ? activeSlotIndex + 1 : "―";
 
-  const followIdsSet = useMemo(
-    () => new Set(followedChannels.map((channel) => channel.channelId)),
-    [followedChannels]
-  );
+  const followIdsSet = useMemo(() => new Set(followedChannels.map((channel) => channel.channelId)), [followedChannels]);
 
   const refreshAuthStatus = async (): Promise<void> => {
     setAuthLoading(true);
     setAuthError(undefined);
     try {
-      const response = await fetch('/auth/status');
+      const response = await apiFetch('/auth/status');
       if (!response.ok) {
         throw new Error(`ステータス取得に失敗しました (${response.status})`);
       }
       const data = await response.json();
-      setAuthStatus({
-        authenticated: Boolean(data.authenticated),
-        user: data.user,
-        error: undefined
-      });
+      setAuthStatus({ authenticated: Boolean(data.authenticated), user: data.user, error: undefined });
     } catch (err) {
-      const message = err instanceof Error ? err.message : '不明なエラー';
+      const message = err instanceof Error ? err.message : "不明なエラー";
       setAuthError(message);
       setAuthStatus({ authenticated: false, user: undefined, error: message });
     } finally {
@@ -195,7 +190,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
 
   const handleLogin = (): void => {
     const authWindow = window.open(
-      '/auth/google',
+      apiUrl('/auth/google'),
       'google-oauth',
       'width=500,height=650,menubar=no,toolbar=no'
     );
@@ -223,13 +218,13 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     setSyncMessage(null);
     setSyncError(null);
     try {
-      const response = await fetch('/auth/logout', { method: 'POST' });
+      const response = await apiFetch('/auth/logout', { method: 'POST' });
       if (!response.ok) {
         throw new Error(`ログアウトに失敗しました (${response.status})`);
       }
       setAuthStatus({ authenticated: false, user: undefined, error: undefined });
     } catch (err) {
-      const message = err instanceof Error ? err.message : '不明なエラー';
+      const message = err instanceof Error ? err.message : "不明なエラー";
       setAuthError(message);
     } finally {
       setAuthLoading(false);
@@ -242,7 +237,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     setSyncError(null);
     try {
       const beforeCount = useUserStore.getState().followedChannels.length;
-      const response = await fetch('/api/youtube/subscriptions');
+      const response = await apiFetch('/api/youtube/subscriptions');
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Googleアカウントへの接続が必要です');
@@ -311,16 +306,16 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
           {authError && <div className={styles.authError}>{authError}</div>}
           <div className={styles.authActions}>
             {!authenticated ? (
-              <button type="button" onClick={handleLogin} disabled={authLoading}>
+              <button type='button' onClick={handleLogin} disabled={authLoading}>
                 Googleでサインイン
               </button>
             ) : (
-              <button type="button" onClick={handleLogout} disabled={authLoading}>
+              <button type='button' onClick={handleLogout} disabled={authLoading}>
                 ログアウト
               </button>
             )}
             <button
-              type="button"
+              type='button'
               onClick={handleSubscriptionsSync}
               disabled={!authenticated || syncLoading}
             >
@@ -336,7 +331,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
         <div className={styles.sectionHeader}>
           <h2>フォロー設定</h2>
           <button
-            type="button"
+            type='button'
             className={styles.searchToggle}
             onClick={() => setShowSearch((prev) => !prev)}
           >
@@ -348,12 +343,12 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
           <div className={styles.searchPanel}>
             <form className={styles.searchForm} onSubmit={handleSearchSubmit}>
               <input
-                type="search"
-                placeholder="チャンネル名で検索"
+                type='search'
+                placeholder='チャンネル名で検索'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
-              <button type="submit" disabled={!searchQuery.trim()}>
+              <button type='submit' disabled={!searchQuery.trim()}>
                 <MagnifyingGlassIcon />
                 検索
               </button>
@@ -372,7 +367,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                     <div key={channel.id} className={styles.searchResultItem}>
                       <div className={styles.searchResultMeta}>
                         {channel.thumbnailUrl && (
-                          <img src={channel.thumbnailUrl} alt={channel.title} loading="lazy" />
+                          <img src={channel.thumbnailUrl} alt={channel.title} loading='lazy' />
                         )}
                         <div>
                           <p className={styles.searchResultTitle}>{channel.title}</p>
@@ -381,7 +376,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                         </div>
                       </div>
                       <button
-                        type="button"
+                        type='button'
                         onClick={() =>
                           addFollowedChannel({
                             platform: 'youtube',
@@ -403,18 +398,18 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
           <>
             <form className={styles.followForm} onSubmit={handleFollowSubmit}>
               <input
-                type="text"
-                placeholder="チャンネルID (例: UC...)"
+                type='text'
+                placeholder='チャンネルID (例: UC...)'
                 value={channelIdInput}
                 onChange={(event) => setChannelIdInput(event.target.value)}
               />
               <input
-                type="text"
-                placeholder="任意のメモ"
+                type='text'
+                placeholder='任意のメモ'
                 value={channelLabelInput}
                 onChange={(event) => setChannelLabelInput(event.target.value)}
               />
-              <button type="submit" disabled={!channelIdInput.trim()}>
+              <button type='submit' disabled={!channelIdInput.trim()}>
                 <PlusIcon />
                 追加
               </button>
@@ -428,11 +423,11 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                       {channel.label && <span className={styles.followLabel}>{channel.label}</span>}
                     </div>
                     <button
-                      type="button"
+                      type='button'
                       onClick={() => {
                         removeFollowedChannel(channel.channelId);
                       }}
-                      title="フォロー削除"
+                      title='フォロー削除'
                     >
                       <TrashIcon />
                     </button>
@@ -449,7 +444,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2>視聴枠</h2>
-          <button className={styles.sectionAction} type="button" onClick={onOpenPresetModal}>
+          <button className={styles.sectionAction} type='button' onClick={onOpenPresetModal}>
             <SquaresPlusIcon />
             <span>プリセット</span>
           </button>
@@ -475,7 +470,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
             return (
               <div
                 key={slot.id}
-                role="button"
+                role='button'
                 tabIndex={0}
                 className={clsx(styles.slotButton, isActive && styles.slotButtonActive)}
                 onClick={handleSelect}
@@ -490,7 +485,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                   <div className={styles.slotIndex}>枠 {index + 1}</div>
                   {assigned && (
                     <button
-                      type="button"
+                      type='button'
                       className={styles.slotRemove}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -523,7 +518,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                     onKeyDown={(event) => event.stopPropagation()}
                   >
                     <button
-                      type="button"
+                      type='button'
                       className={styles.muteButton}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -534,9 +529,9 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                       {slot.muted ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
                     </button>
                     <label className={styles.volumeSlider}>
-                      <span className="sr-only">音量</span>
+                      <span className='sr-only'>音量</span>
                       <input
-                        type="range"
+                        type='range'
                         min={0}
                         max={100}
                         value={slot.volume}
@@ -592,7 +587,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                 </div>
                 {activeSlot ? (
                   <button
-                    type="button"
+                    type='button'
                     className={styles.assignButton}
                     onClick={() => {
                       assignStream(activeSlot.id, stream);

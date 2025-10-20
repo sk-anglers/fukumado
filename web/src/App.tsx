@@ -1,15 +1,16 @@
-import { useEffect, useRef } from 'react';
-import { AppShell } from './components/AppShell/AppShell';
-import { useYoutubeStreams } from './hooks/useYoutubeStreams';
-import { useLayoutStore } from './stores/layoutStore';
-import { useUserStore } from './stores/userStore';
-import { useAuthStatus } from './hooks/useAuthStatus';
-import { useAuthStore } from './stores/authStore';
+﻿import { useEffect, useRef } from "react";
+import { AppShell } from "./components/AppShell/AppShell";
+import { useYoutubeStreams } from "./hooks/useYoutubeStreams";
+import { useLayoutStore } from "./stores/layoutStore";
+import { useUserStore } from "./stores/userStore";
+import { useAuthStatus } from "./hooks/useAuthStatus";
+import { useAuthStore } from "./stores/authStore";
+import { apiFetch } from "./utils/api";
 
 function App(): JSX.Element {
   const ensureSelection = useLayoutStore((state) => state.ensureSelection);
   const followedChannelIds = useUserStore((state) =>
-    state.followedChannels.filter((item) => item.platform === 'youtube').map((item) => item.channelId)
+    state.followedChannels.filter((item) => item.platform === "youtube").map((item) => item.channelId)
   );
   const addFollowedChannels = useUserStore((state) => state.addFollowedChannels);
   const authenticated = useAuthStore((state) => state.authenticated);
@@ -27,14 +28,14 @@ function App(): JSX.Element {
     const syncSubscriptions = async (): Promise<void> => {
       if (!authenticated || hasSyncedSubscriptions.current) return;
       try {
-        const response = await fetch('/api/youtube/subscriptions');
+        const response = await apiFetch("/api/youtube/subscriptions");
         if (!response.ok) {
           throw new Error(`購読チャンネルの取得に失敗しました (${response.status})`);
         }
         const data = await response.json();
         if (Array.isArray(data.items)) {
           const channels = data.items.map((item: { id: string; title: string }) => ({
-            platform: 'youtube' as const,
+            platform: "youtube" as const,
             channelId: item.id,
             label: item.title
           }));
@@ -59,3 +60,4 @@ function App(): JSX.Element {
 }
 
 export default App;
+
