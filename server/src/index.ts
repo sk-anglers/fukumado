@@ -1,7 +1,6 @@
 import express from 'express';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { env } from './config/env';
+import { youtubeRouter } from './routes/youtube';
 
 const app = express();
 
@@ -11,9 +10,9 @@ app.get('/health', (_, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
+app.use('/api/youtube', youtubeRouter);
 
-app.listen(PORT, () => {
+app.listen(env.port, () => {
   // eslint-disable-next-line no-console
-  console.log(`[server] listening on http://localhost:${PORT}`);
+  console.log(`[server] listening on http://localhost:${env.port}`);
 });
