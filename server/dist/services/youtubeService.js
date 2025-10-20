@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchLiveStreams = void 0;
+exports.searchChannels = exports.fetchLiveStreams = void 0;
 const undici_1 = require("undici");
 const env_1 = require("../config/env");
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
@@ -74,4 +74,33 @@ const fetchLiveStreams = async (options) => {
     return results;
 };
 exports.fetchLiveStreams = fetchLiveStreams;
+const normalizeChannelItems = (items) => items
+    .filter((item) => item.id.channelId)
+    .map((item) => ({
+    id: item.id.channelId,
+    title: item.snippet.title,
+    description: item.snippet.description,
+    thumbnailUrl: item.snippet.thumbnails.high?.url ??
+        item.snippet.thumbnails.medium?.url ??
+        item.snippet.thumbnails.default?.url ??
+        '',
+    customUrl: item.snippet.customUrl
+}));
+const searchChannels = async (query, maxResults = 10) => {
+    const apiKey = (0, env_1.ensureYouTubeApiKey)();
+    if (!query.trim()) {
+        return [];
+    }
+    const params = new URLSearchParams({
+        part: 'snippet',
+        type: 'channel',
+        key: apiKey,
+        maxResults: Math.min(Math.max(maxResults, 1), 25).toString(),
+        q: query
+    });
+    const url = buildSearchUrl(params);
+    const data = await performRequest(url);
+    return normalizeChannelItems(data.items);
+};
+exports.searchChannels = searchChannels;
 //# sourceMappingURL=youtubeService.js.map

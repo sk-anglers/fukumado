@@ -32,4 +32,20 @@ exports.youtubeRouter.get('/live', async (req, res) => {
         res.status(500).json({ error: message });
     }
 });
+exports.youtubeRouter.get('/channels', async (req, res) => {
+    try {
+        const query = req.query.q;
+        const maxResultsParam = req.query.maxResults;
+        if (!query || typeof query !== 'string') {
+            return res.status(400).json({ error: '"q" query parameter is required' });
+        }
+        const maxResults = maxResultsParam ? Number(maxResultsParam) : undefined;
+        const channels = await (0, youtubeService_1.searchChannels)(query, maxResults);
+        res.json({ items: channels });
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        res.status(500).json({ error: message });
+    }
+});
 //# sourceMappingURL=youtube.js.map

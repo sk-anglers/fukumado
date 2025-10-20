@@ -13,6 +13,14 @@ export interface YouTubeLiveStream {
   publishedAt: string;
 }
 
+export interface YouTubeChannel {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  customUrl?: string;
+}
+
 interface YouTubeSearchListResponse {
   items: Array<{
     id: { videoId?: string };
@@ -26,6 +34,21 @@ interface YouTubeSearchListResponse {
         { url: string; width?: number; height?: number }
       >;
       channelTitle: string;
+    };
+  }>;
+}
+
+interface YouTubeChannelSearchResponse {
+  items: Array<{
+    id: { channelId?: string };
+    snippet: {
+      title: string;
+      description: string;
+      thumbnails: Record<
+        'default' | 'medium' | 'high',
+        { url: string; width?: number; height?: number }
+      >;
+      customUrl?: string;
     };
   }>;
 }
@@ -118,4 +141,38 @@ export const fetchLiveStreams = async (
   }
 
   return results;
+};
+
+const normalizeChannelItems = (items: YouTubeChannelSearchResponse['items']): YouTubeChannel[] =>
+  items
+    .filter((item) => item.id.channelId)
+    .map((item) => ({
+      id: item.id.channelId as string,
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnailUrl:
+        item.snippet.thumbnails.high?.url ??
+        item.snippet.thumbnails.medium?.url ??
+        item.snippet.thumbnails.default?.url ??
+        '',
+      customUrl: item.snippet.customUrl
+    }));
+
+export const searchChannels = async (query: string, maxResults: number = 10): Promise<YouTubeChannel[]> => {
+  const apiKey = ensureYouTubeApiKey();
+  if (!query.trim()) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    part: 'snippet',
+    type: 'channel',
+    key: apiKey,
+    maxResults: Math.min(Math.max(maxResults, 1), 25).toString(),
+    q: query
+  });
+
+  const url = buildSearchUrl(params);
+  const data = await performRequest<YouTubeChannelSearchResponse>(url);
+  return normalizeChannelItems(data.items);
 };

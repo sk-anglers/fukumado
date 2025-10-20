@@ -1,10 +1,11 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import {
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
   SquaresPlusIcon,
   PlusIcon,
-  TrashIcon
+  TrashIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { type Streamer } from '../../types';
@@ -44,6 +45,56 @@ const formatMeta = (stream: Streamer): string => {
   return stream.channelTitle ?? '配信中';
 };
 
+interface ChannelResult {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  customUrl?: string;
+}
+
+const useYoutubeChannelSearch = () => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<ChannelResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
+
+  const search = async (keyword: string): Promise<void> => {
+    const trimmed = keyword.trim();
+    if (!trimmed) {
+      setResults([]);
+      setError(undefined);
+      return;
+    }
+
+    setLoading(true);
+    setError(undefined);
+    try {
+      const response = await fetch(`/api/youtube/channels?q=${encodeURIComponent(trimmed)}`);
+      if (!response.ok) {
+        throw new Error(`検索に失敗しました (${response.status})`);
+      }
+      const data = (await response.json()) as { items: ChannelResult[] };
+      setResults(data.items);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '不明なエラー';
+      setError(message);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    query,
+    setQuery,
+    results,
+    loading,
+    error,
+    search
+  };
+};
+
 export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
   const {
     slots,
@@ -80,11 +131,17 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
 
   const [channelIdInput, setChannelIdInput] = useState('');
   const [channelLabelInput, setChannelLabelInput] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
+  const { query: searchQuery, setQuery: setSearchQuery, results: searchResults, loading: searchLoading, error: searchError, search: executeSearch } =
+    useYoutubeChannelSearch();
 
   const activeSlots = slots.slice(0, activeSlotsCount);
   const activeSlot = activeSlots.find((slot) => slot.id === selectedSlotId) ?? activeSlots[0];
   const activeSlotIndex = activeSlot ? activeSlots.indexOf(activeSlot) : -1;
   const activeSlotLabel = activeSlotIndex >= 0 ? activeSlotIndex + 1 : '―';
+
+  const followIdsSet = useMemo(() => new Set(followedChannels.map((channel) => channel.channelId)), [followedChannels]);
 
   const handleFollowSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -99,52 +156,124 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     setChannelLabelInput('');
   };
 
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    executeSearch(searchQuery);
+  };
+
   return (
     <aside className={styles.sidebar}>
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2>フォロー設定</h2>
-        </div>
-        <form className={styles.followForm} onSubmit={handleFollowSubmit}>
-          <input
-            type="text"
-            placeholder="チャンネルID (例: UC...)"
-            value={channelIdInput}
-            onChange={(event) => setChannelIdInput(event.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="任意のメモ"
-            value={channelLabelInput}
-            onChange={(event) => setChannelLabelInput(event.target.value)}
-          />
-          <button type="submit" disabled={!channelIdInput.trim()}>
-            <PlusIcon />
-            追加
+          <button
+            type="button"
+            className={styles.searchToggle}
+            onClick={() => setShowSearch((prev) => !prev)}
+          >
+            <MagnifyingGlassIcon />
+            {showSearch ? '閉じる' : 'チャンネル検索'}
           </button>
-        </form>
-        {followedChannels.length > 0 ? (
-          <ul className={styles.followList}>
-            {followedChannels.map((channel) => (
-              <li key={channel.channelId}>
-                <div>
-                  <span className={styles.followId}>{channel.channelId}</span>
-                  {channel.label && <span className={styles.followLabel}>{channel.label}</span>}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    removeFollowedChannel(channel.channelId);
-                  }}
-                  title="フォロー削除"
-                >
-                  <TrashIcon />
-                </button>
-              </li>
-            ))}
-          </ul>
+        </div>
+        {showSearch ? (
+          <div className={styles.searchPanel}>
+            <form className={styles.searchForm} onSubmit={handleSearchSubmit}>
+              <input
+                type="search"
+                placeholder="チャンネル名で検索"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+              <button type="submit" disabled={!searchQuery.trim()}>
+                <MagnifyingGlassIcon />
+                検索
+              </button>
+            </form>
+            <div className={styles.searchResults}>
+              {searchLoading ? (
+                <div className={styles.searchMessage}>検索中…</div>
+              ) : searchError ? (
+                <div className={clsx(styles.searchMessage, styles.searchMessageError)}>{searchError}</div>
+              ) : searchResults.length === 0 ? (
+                <div className={styles.searchMessage}>検索結果がありません。</div>
+              ) : (
+                searchResults.map((channel) => {
+                  const alreadyFollowed = followIdsSet.has(channel.id);
+                  return (
+                    <div key={channel.id} className={styles.searchResultItem}>
+                      <div className={styles.searchResultMeta}>
+                        {channel.thumbnailUrl && (
+                          <img src={channel.thumbnailUrl} alt={channel.title} loading="lazy" />
+                        )}
+                        <div>
+                          <p className={styles.searchResultTitle}>{channel.title}</p>
+                          {channel.customUrl && <p className={styles.searchResultUrl}>@{channel.customUrl}</p>}
+                          <p className={styles.searchResultDescription}>{channel.description}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addFollowedChannel({
+                            platform: 'youtube',
+                            channelId: channel.id,
+                            label: channel.title
+                          })
+                        }
+                        disabled={alreadyFollowed}
+                      >
+                        {alreadyFollowed ? 'フォロー済み' : 'フォローに追加'}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         ) : (
-          <div className={styles.followHint}>チャンネルIDを追加すると、その配信のみが表示されます。</div>
+          <>
+            <form className={styles.followForm} onSubmit={handleFollowSubmit}>
+              <input
+                type="text"
+                placeholder="チャンネルID (例: UC...)"
+                value={channelIdInput}
+                onChange={(event) => setChannelIdInput(event.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="任意のメモ"
+                value={channelLabelInput}
+                onChange={(event) => setChannelLabelInput(event.target.value)}
+              />
+              <button type="submit" disabled={!channelIdInput.trim()}>
+                <PlusIcon />
+                追加
+              </button>
+            </form>
+            {followedChannels.length > 0 ? (
+              <ul className={styles.followList}>
+                {followedChannels.map((channel) => (
+                  <li key={channel.channelId}>
+                    <div>
+                      <span className={styles.followId}>{channel.channelId}</span>
+                      {channel.label && <span className={styles.followLabel}>{channel.label}</span>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        removeFollowedChannel(channel.channelId);
+                      }}
+                      title="フォロー削除"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className={styles.followHint}>チャンネルIDを追加すると、その配信のみが表示されます。</div>
+            )}
+          </>
         )}
       </section>
 
@@ -272,7 +401,9 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
               配信情報の取得に失敗しました：{streamsError}
             </div>
           ) : availableStreams.length === 0 ? (
-            <div className={styles.streamListMessage}>現在表示できる配信が見つかりません。</div>
+            <div className={styles.streamListMessage}>
+              現在表示できる配信が見つかりません。キーワード検索結果が表示されます。
+            </div>
           ) : (
             availableStreams.map((stream) => (
               <div key={stream.id} className={styles.streamListItem}>
