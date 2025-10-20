@@ -418,10 +418,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
               <ul className={styles.followList}>
                 {followedChannels.map((channel) => (
                   <li key={channel.channelId}>
-                    <div>
-                      <span className={styles.followId}>{channel.channelId}</span>
-                      {channel.label && <span className={styles.followLabel}>{channel.label}</span>}
-                    </div>
+                    <span className={styles.followLabel}>{channel.label ?? channel.channelId}</span>
                     <button
                       type='button'
                       onClick={() => {

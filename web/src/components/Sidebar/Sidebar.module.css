@@ -1,4 +1,4 @@
-.sidebar {
+﻿.sidebar {
   height: 100%;
   padding: 1.5rem;
   background: rgba(15, 23, 42, 0.92);
@@ -127,6 +127,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .followList li {
@@ -164,15 +167,12 @@
   height: 16px;
 }
 
-.followId {
-  font-size: 0.75rem;
-  color: rgba(191, 219, 254, 0.9);
-}
+
 
 .followLabel {
-  margin-left: 0.4rem;
-  font-size: 0.7rem;
-  color: rgba(148, 163, 184, 0.75);
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+  font-weight: 600;
 }
 
 .followHint {
@@ -232,8 +232,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  max-height: 260px;
+  max-height: 38vh;
   overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .searchMessage {

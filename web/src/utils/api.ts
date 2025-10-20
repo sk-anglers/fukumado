@@ -1,23 +1,21 @@
-const inferBackendOrigin = (): string => {
-  const envOrigin = import.meta.env.VITE_BACKEND_ORIGIN as string | undefined;
-  if (envOrigin) return envOrigin;
+const backendOrigin =
+  (import.meta.env.VITE_BACKEND_ORIGIN as string | undefined) ??
+  (window.location.origin.includes('5173')
+    ? window.location.origin.replace('5173', '4000')
+    : window.location.origin);
 
-  const { origin } = window.location;
-  if (origin.includes('5173')) {
-    return origin.replace('5173', '4000');
+export const apiUrl = (path: string): string => {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
   }
-  return origin;
+  if (path.startsWith('/auth')) {
+    return `${backendOrigin}${path}`;
+  }
+  return path;
 };
 
-export const backendOrigin = inferBackendOrigin();
-
-export const apiUrl = (path: string): string =>
-  path.startsWith('http://') || path.startsWith('https://')
-    ? path
-    : `${backendOrigin}${path.startsWith('/') ? path : `/${path}`}`;
-
 export const apiFetch = (input: string, init?: RequestInit): Promise<Response> => {
-  return fetch(apiUrl(input), {
+  return fetch(input, {
     credentials: 'include',
     ...init
   });
