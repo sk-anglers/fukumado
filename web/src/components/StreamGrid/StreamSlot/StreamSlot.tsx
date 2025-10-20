@@ -23,6 +23,9 @@ const platformLabel = {
   niconico: 'ニコニコ'
 } as const;
 
+const formatViewerLabel = (viewerCount?: number): string =>
+  viewerCount != null ? `${viewerCount.toLocaleString()} 人視聴中` : '視聴者数 -';
+
 export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps): JSX.Element => {
   const { setVolume, toggleSlotMute, setPreset } = useLayoutStore((state) => ({
     setVolume: state.setVolume,
@@ -103,7 +106,7 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
                 <h3>{assignedStream.title}</h3>
                 <div className={styles.streamMeta}>
                   <span>{assignedStream.displayName}</span>
-                  <span>{assignedStream.viewerCount.toLocaleString()} 人視聴中</span>
+                  <span>{formatViewerLabel(assignedStream.viewerCount)}</span>
                 </div>
               </div>
               <div className={styles.controls}>

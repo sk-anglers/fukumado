@@ -24,12 +24,30 @@ const platformAccent: Record<Streamer['platform'], string> = {
   niconico: '#facc15'
 };
 
+const formatViewerCount = (viewerCount?: number): string => {
+  if (viewerCount == null) return '視聴者数 -';
+  return `視聴 ${viewerCount.toLocaleString()} 人`;
+};
+
+const formatMeta = (stream: Streamer): string => {
+  if (stream.gameTitle) return stream.gameTitle;
+  if (stream.liveSince) {
+    const date = new Date(stream.liveSince);
+    if (!Number.isNaN(date.getTime())) {
+      return `${date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} 配信開始`;
+    }
+  }
+  return stream.channelTitle ?? '配信中';
+};
+
 export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
   const {
     slots,
     selectedSlotId,
     selectSlot,
     availableStreams,
+    streamsLoading,
+    streamsError,
     assignStream,
     clearSlot,
     ensureSelection,
@@ -41,6 +59,8 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     selectedSlotId: state.selectedSlotId,
     selectSlot: state.selectSlot,
     availableStreams: state.availableStreams,
+    streamsLoading: state.streamsLoading,
+    streamsError: state.streamsError,
     assignStream: state.assignStream,
     clearSlot: state.clearSlot,
     ensureSelection: state.ensureSelection,
@@ -172,39 +192,52 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
           <h2>フォロー中の配信</h2>
           <span className={styles.sectionHint}>選択中の枠: 枠 {activeSlotLabel}</span>
         </div>
-        <ul className={styles.streamList}>
-          {availableStreams.map((stream) => (
-            <li key={stream.id} className={styles.streamListItem}>
-              <div className={styles.streamHeader}>
-                <span className={styles.streamerLabel}>{stream.displayName}</span>
-                <span className={styles.platformTag} style={{ color: platformAccent[stream.platform] }}>
-                  {platformLabel[stream.platform]}
-                </span>
+        <div className={styles.streamList}>
+          {streamsLoading ? (
+            <div className={styles.streamListMessage}>配信情報を取得しています…</div>
+          ) : streamsError ? (
+            <div className={clsx(styles.streamListMessage, styles.streamListMessageError)}>
+              配信情報の取得に失敗しました：{streamsError}
+            </div>
+          ) : availableStreams.length === 0 ? (
+            <div className={styles.streamListMessage}>現在表示できる配信が見つかりません。</div>
+          ) : (
+            availableStreams.map((stream) => (
+              <div key={stream.id} className={styles.streamListItem}>
+                <div className={styles.streamHeader}>
+                  <span className={styles.streamerLabel}>{stream.displayName}</span>
+                  <span
+                    className={styles.platformTag}
+                    style={{ color: platformAccent[stream.platform] }}
+                  >
+                    {platformLabel[stream.platform]}
+                  </span>
+                </div>
+                <p className={styles.streamTitle}>{stream.title}</p>
+                <div className={styles.streamMeta}>
+                  <span>{formatMeta(stream)}</span>
+                  <span>{formatViewerCount(stream.viewerCount)}</span>
+                </div>
+                {activeSlot ? (
+                  <button
+                    type="button"
+                    className={styles.assignButton}
+                    onClick={() => {
+                      assignStream(activeSlot.id, stream);
+                      if (!selectedSlotId) {
+                        ensureSelection();
+                      }
+                    }}
+                  >
+                    この枠に割り当て
+                  </button>
+                ) : (
+                  <div className={styles.assignDisabled}>枠がありません</div>
+                )}
               </div>
-              <p className={styles.streamTitle}>{stream.title}</p>
-              <div className={styles.streamMeta}>
-                <span>{stream.gameTitle}</span>
-                <span>視聴 {stream.viewerCount.toLocaleString()} 人</span>
-              </div>
-              {activeSlot ? (
-                <button
-                  type="button"
-                  className={styles.assignButton}
-                  onClick={() => {
-                    assignStream(activeSlot.id, stream);
-                    if (!selectedSlotId) {
-                      ensureSelection();
-                    }
-                  }}
-                >
-                  この枠に割り当て
-                </button>
-              ) : (
-                <div className={styles.assignDisabled}>枠がありません</div>
-              )}
-            </li>
-          ))}
-        </ul>
+            ))
+          )}
+        </div>
       </section>
 
       <section className={styles.section}>

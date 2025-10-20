@@ -2,12 +2,17 @@ export type Platform = 'youtube' | 'twitch' | 'niconico';
 
 export interface Streamer {
   id: string;
-  displayName: string;
   platform: Platform;
   title: string;
-  gameTitle: string;
-  liveSince: string;
-  viewerCount: number;
+  displayName: string;
+  channelId?: string;
+  channelTitle?: string;
+  thumbnailUrl?: string;
+  liveSince?: string;
+  viewerCount?: number;
+  gameTitle?: string;
+  description?: string;
+  embedUrl?: string;
 }
 
 export interface StreamSlot {

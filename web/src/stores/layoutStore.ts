@@ -8,81 +8,6 @@ const DEFAULT_VOLUME = 70;
 
 export const MAX_ACTIVE_SLOTS = TOTAL_SLOT_CAPACITY;
 
-const initialStreams: Streamer[] = [
-  {
-    id: 'yt-1',
-    displayName: 'Sorane Tsubame',
-    platform: 'youtube',
-    title: 'ランクマッチ耐久',
-    gameTitle: 'APEX LEGENDS',
-    liveSince: '2025-10-20T07:30:00+09:00',
-    viewerCount: 12340
-  },
-  {
-    id: 'tw-1',
-    displayName: 'neonfox',
-    platform: 'twitch',
-    title: '深夜作業雑談 #fukumado',
-    gameTitle: 'Just Chatting',
-    liveSince: '2025-10-20T06:45:00+09:00',
-    viewerCount: 3200
-  },
-  {
-    id: 'nc-1',
-    displayName: 'Miracle Taro',
-    platform: 'niconico',
-    title: '歌枠リクエストスペシャル',
-    gameTitle: 'Karaoke',
-    liveSince: '2025-10-20T08:15:00+09:00',
-    viewerCount: 980
-  },
-  {
-    id: 'yt-2',
-    displayName: 'Digital Chick',
-    platform: 'youtube',
-    title: '新作インディーゲーム初見プレイ',
-    gameTitle: 'Star Crashers',
-    liveSince: '2025-10-20T09:00:00+09:00',
-    viewerCount: 8600
-  },
-  {
-    id: 'tw-2',
-    displayName: 'MegRhythm',
-    platform: 'twitch',
-    title: '朝活デイリースクリム',
-    gameTitle: 'VALORANT',
-    liveSince: '2025-10-20T05:55:00+09:00',
-    viewerCount: 4100
-  },
-  {
-    id: 'yt-3',
-    displayName: 'YoruKuma',
-    platform: 'youtube',
-    title: '深夜のパズル全クリ耐久',
-    gameTitle: 'Puzzle Storm',
-    liveSince: '2025-10-20T07:15:00+09:00',
-    viewerCount: 5400
-  },
-  {
-    id: 'tw-3',
-    displayName: 'RaccoonLab',
-    platform: 'twitch',
-    title: '建築勢のサバイバル日誌',
-    gameTitle: 'Minecraft',
-    liveSince: '2025-10-20T04:20:00+09:00',
-    viewerCount: 2800
-  },
-  {
-    id: 'nc-2',
-    displayName: 'Fika Network',
-    platform: 'niconico',
-    title: '朝活ラジオとニュースまとめ',
-    gameTitle: 'Talk Show',
-    liveSince: '2025-10-20T09:20:00+09:00',
-    viewerCount: 1250
-  }
-];
-
 const createInitialSlots = (): StreamSlot[] =>
   Array.from({ length: TOTAL_SLOT_CAPACITY }, (_, index) => ({
     id: `slot-${index + 1}`,
@@ -108,6 +33,8 @@ export interface LayoutState {
   mutedAll: boolean;
   activeSlotsCount: number;
   availableStreams: Streamer[];
+  streamsLoading: boolean;
+  streamsError?: string;
   platforms: Platform[];
   setPreset: (preset: LayoutPreset) => void;
   selectSlot: (slotId: string) => void;
@@ -119,6 +46,9 @@ export interface LayoutState {
   swapSlots: (sourceSlotId: string, targetSlotId: string) => void;
   ensureSelection: () => void;
   setActiveSlotsCount: (count: number) => void;
+  setAvailableStreams: (streams: Streamer[]) => void;
+  setStreamsLoading: (loading: boolean) => void;
+  setStreamsError: (message?: string) => void;
 }
 
 const initialSlots = createInitialSlots();
@@ -131,7 +61,9 @@ export const useLayoutStore = create<LayoutState>()(
       selectedSlotId: initialSlots[0]?.id ?? null,
       mutedAll: false,
       activeSlotsCount: DEFAULT_ACTIVE_SLOTS,
-      availableStreams: initialStreams,
+      availableStreams: [],
+      streamsLoading: false,
+      streamsError: undefined,
       platforms: ['youtube', 'twitch', 'niconico'],
       setPreset: (preset) => set({ preset }),
       selectSlot: (slotId) =>
@@ -166,6 +98,7 @@ export const useLayoutStore = create<LayoutState>()(
           if (index === -1 || index >= state.activeSlotsCount) {
             return state;
           }
+
           return {
             slots: state.slots.map((slot, slotIndex) =>
               slotIndex === index
@@ -198,6 +131,7 @@ export const useLayoutStore = create<LayoutState>()(
           const nextSlots = state.slots.map((slot, slotIndex) =>
             slotIndex === index ? { ...slot, muted: !slot.muted } : slot
           );
+
           return {
             slots: nextSlots,
             mutedAll: nextSlots.slice(0, state.activeSlotsCount).every((slot) => slot.muted)
@@ -289,7 +223,10 @@ export const useLayoutStore = create<LayoutState>()(
           };
         });
         get().ensureSelection();
-      }
+      },
+      setAvailableStreams: (streams) => set({ availableStreams: streams }),
+      setStreamsLoading: (loading) => set({ streamsLoading: loading }),
+      setStreamsError: (message) => set({ streamsError: message })
     }),
     {
       name: 'fukumado-layout',
