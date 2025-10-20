@@ -46,7 +46,7 @@ export interface LayoutState {
   swapSlots: (sourceSlotId: string, targetSlotId: string) => void;
   ensureSelection: () => void;
   setActiveSlotsCount: (count: number) => void;
-  setAvailableStreams: (streams: Streamer[]) => void;
+  setAvailableStreamsForPlatform: (platform: Platform, streams: Streamer[]) => void;
   setStreamsLoading: (loading: boolean) => void;
   setStreamsError: (message?: string) => void;
   fullscreen: boolean;
@@ -227,10 +227,15 @@ export const useLayoutStore = create<LayoutState>()(
         });
         get().ensureSelection();
       },
-      setAvailableStreams: (streams) => set({ availableStreams: streams }),
+      setAvailableStreamsForPlatform: (platform, streams) =>
+        set((state) => ({
+          availableStreams: [
+            ...state.availableStreams.filter((item) => item.platform !== platform),
+            ...streams
+          ]
+        })),
       setStreamsLoading: (loading) => set({ streamsLoading: loading }),
-      setStreamsError: (message) => set({ streamsError: message })
-      ,
+      setStreamsError: (message) => set({ streamsError: message }),
       setFullscreen: (value) => set({ fullscreen: value })
     }),
     {

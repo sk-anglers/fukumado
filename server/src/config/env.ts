@@ -20,7 +20,8 @@ export const env = {
   },
   twitch: {
     clientId: process.env.TWITCH_CLIENT_ID,
-    clientSecret: process.env.TWITCH_CLIENT_SECRET
+    clientSecret: process.env.TWITCH_CLIENT_SECRET,
+    redirectUri: process.env.TWITCH_REDIRECT_URI
   }
 };
 
@@ -35,4 +36,14 @@ export const ensureYouTubeOAuthConfig = (): {
   clientId: required(env.youtube.clientId, 'YOUTUBE_CLIENT_ID'),
   clientSecret: required(env.youtube.clientSecret, 'YOUTUBE_CLIENT_SECRET'),
   redirectUri: required(env.youtube.redirectUri, 'YOUTUBE_REDIRECT_URI')
+});
+
+export const ensureTwitchOAuthConfig = (): {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+} => ({
+  clientId: required(env.twitch.clientId, 'TWITCH_CLIENT_ID'),
+  clientSecret: required(env.twitch.clientSecret, 'TWITCH_CLIENT_SECRET'),
+  redirectUri: required(env.twitch.redirectUri, 'TWITCH_REDIRECT_URI')
 });

@@ -124,7 +124,7 @@ export const fetchLiveStreams = async (
   const results: YouTubeLiveStream[] = [];
 
   if (options.channelIds?.length) {
-    const responses = await Promise.all(
+    const responses = await Promise.allSettled(
       options.channelIds.map(async (channelId) => {
         const params = new URLSearchParams({
           part: 'snippet',
@@ -140,9 +140,11 @@ export const fetchLiveStreams = async (
       })
     );
 
-    responses.forEach((streams) => {
-      results.push(...streams);
-    });
+    for (const response of responses) {
+      if (response.status === 'fulfilled') {
+        results.push(...response.value);
+      }
+    }
   } else if (options.query) {
     const params = new URLSearchParams({
       part: 'snippet',

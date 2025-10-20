@@ -1,8 +1,9 @@
 import express from 'express';
 import session from 'express-session';
 import { env } from './config/env';
-import { youtubeRouter } from './routes/youtube';
 import { authRouter } from './routes/auth';
+import { youtubeRouter } from './routes/youtube';
+import { twitchRouter } from './routes/twitch';
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.get('/health', (_, res) => {
 
 app.use('/auth', authRouter);
 app.use('/api/youtube', youtubeRouter);
+app.use('/api/twitch', twitchRouter);
 
 app.listen(env.port, () => {
   // eslint-disable-next-line no-console

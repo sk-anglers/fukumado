@@ -38,7 +38,7 @@ const fetchLiveStreams = async (options) => {
     const maxResults = options.maxResults ?? maxResultsDefault;
     const results = [];
     if (options.channelIds?.length) {
-        const responses = await Promise.all(options.channelIds.map(async (channelId) => {
+        const responses = await Promise.allSettled(options.channelIds.map(async (channelId) => {
             const params = new URLSearchParams({
                 part: 'snippet',
                 channelId,
@@ -51,9 +51,11 @@ const fetchLiveStreams = async (options) => {
             const data = await performRequest(url);
             return normalizeSearchItems(data.items);
         }));
-        responses.forEach((streams) => {
-            results.push(...streams);
-        });
+        for (const response of responses) {
+            if (response.status === 'fulfilled') {
+                results.push(...response.value);
+            }
+        }
     }
     else if (options.query) {
         const params = new URLSearchParams({

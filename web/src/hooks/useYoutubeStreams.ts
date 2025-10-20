@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { useLayoutStore } from '../stores/layoutStore';
 import type { Streamer } from '../types';
 
@@ -26,56 +26,102 @@ const mapItemToStreamer = (item: YouTubeApiResponseItem): Streamer => ({
   description: item.description,
   thumbnailUrl: item.thumbnailUrl,
   liveSince: item.publishedAt,
-  embedUrl: `https://www.youtube.com/embed/${item.id}?enablejsapi=1`
+  embedUrl: https://www.youtube.com/embed/?enablejsapi=1
 });
 
 const DEFAULT_QUERY = 'Apex Legends';
+const NO_STREAMS_MESSAGE = 'フォロー中のチャンネルでは現在ライブ配信が見つかりませんでした。';
 
 const buildChannelQuery = (channelIds: string[]): string =>
-  channelIds.map((id) => `channelId=${encodeURIComponent(id)}`).join('&');
+  channelIds.map((id) => channelId=).join('&');
+
+const fetchStreamResponse = async (endpoint: string): Promise<YouTubeApiResponse> => {
+  const response = await fetch(endpoint, { credentials: 'include' });
+  if (!response.ok) {
+    throw new Error(Failed to fetch YouTube streams:  );
+  }
+  return await response.json();
+};
 
 export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: string = DEFAULT_QUERY): void => {
-  const setAvailableStreams = useLayoutStore((state) => state.setAvailableStreams);
+  const setAvailableStreamsForPlatform = useLayoutStore((state) => state.setAvailableStreamsForPlatform);
   const setStreamsLoading = useLayoutStore((state) => state.setStreamsLoading);
   const setStreamsError = useLayoutStore((state) => state.setStreamsError);
 
   useEffect(() => {
-    let ignore = false;
+    let cancelled = false;
 
-    const fetchStreams = async (): Promise<void> => {
+    const showNoStreams = (): void => {
+      setAvailableStreamsForPlatform('youtube', []);
+      setStreamsError(NO_STREAMS_MESSAGE);
+    };
+
+    const applyStreams = (items: YouTubeApiResponseItem[]): void => {
+      const mapped = items.map(mapItemToStreamer);
+      setAvailableStreamsForPlatform('youtube', mapped);
+    };
+
+    const run = async (): Promise<void> => {
       setStreamsLoading(true);
       setStreamsError(undefined);
+
+      const tryChannelFetch = async (): Promise<boolean> => {
+        if (channelIds.length === 0) return false;
+        try {
+          const data = await fetchStreamResponse(/api/youtube/live?);
+          if (cancelled) return true;
+          if (data.items.length > 0) {
+            applyStreams(data.items);
+            return true;
+          }
+          return false;
+        } catch {
+          if (!cancelled) {
+            setStreamsError(NO_STREAMS_MESSAGE);
+          }
+          return false;
+        }
+      };
+
+      const tryFallbackFetch = async (): Promise<void> => {
+        try {
+          const data = await fetchStreamResponse(/api/youtube/live?q=);
+          if (!cancelled) {
+            if (data.items.length > 0) {
+              applyStreams(data.items);
+              setStreamsError(undefined);
+            } else {
+              showNoStreams();
+            }
+          }
+        } catch {
+          if (!cancelled) {
+            showNoStreams();
+          }
+        }
+      };
+
       try {
-        let endpoint = '';
-        if (channelIds.length > 0) {
-          endpoint = `/api/youtube/live?${buildChannelQuery(channelIds)}`;
-        } else {
-          endpoint = `/api/youtube/live?q=${encodeURIComponent(fallbackQuery)}`;
+        const loadedFromChannels = await tryChannelFetch();
+        if (!loadedFromChannels) {
+          await tryFallbackFetch();
         }
-        const response = await fetch(endpoint);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch YouTube streams: ${response.status} ${response.statusText}`);
-        }
-        const data = (await response.json()) as YouTubeApiResponse;
-        if (ignore) return;
-        const streams = data.items.map(mapItemToStreamer);
-        setAvailableStreams(streams);
-      } catch (error) {
-        if (ignore) return;
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        setStreamsError(message);
-        setAvailableStreams([]);
       } finally {
-        if (!ignore) {
+        if (!cancelled) {
           setStreamsLoading(false);
         }
       }
     };
 
-    fetchStreams();
+    run().catch(() => {
+      if (!cancelled) {
+        showNoStreams();
+        setStreamsLoading(false);
+      }
+    });
 
     return () => {
-      ignore = true;
+      cancelled = true;
     };
-  }, [channelIds, fallbackQuery, setAvailableStreams, setStreamsError, setStreamsLoading]);
+  }, [channelIds, fallbackQuery, setAvailableStreamsForPlatform, setStreamsError, setStreamsLoading]);
 };

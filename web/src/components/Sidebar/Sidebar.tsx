@@ -59,7 +59,7 @@ const useYoutubeChannelSearch = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ChannelResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | undefined>();
 
   const search = async (keyword: string): Promise<void> => {
     const trimmed = keyword.trim();
@@ -87,14 +87,7 @@ const useYoutubeChannelSearch = () => {
     }
   };
 
-  return {
-    query,
-    setQuery,
-    results,
-    loading,
-    error,
-    search
-  };
+  return { query, setQuery, results, loading, error, search };
 };
 
 export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
@@ -167,13 +160,16 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
   const activeSlotIndex = activeSlot ? activeSlots.indexOf(activeSlot) : -1;
   const activeSlotLabel = activeSlotIndex >= 0 ? activeSlotIndex + 1 : "―";
 
-  const followIdsSet = useMemo(() => new Set(followedChannels.map((channel) => channel.channelId)), [followedChannels]);
+  const followIdsSet = useMemo(
+    () => new Set(followedChannels.map((channel) => channel.channelId)),
+    [followedChannels]
+  );
 
   const refreshAuthStatus = async (): Promise<void> => {
     setAuthLoading(true);
     setAuthError(undefined);
     try {
-      const response = await apiFetch('/auth/status');
+      const response = await apiFetch("/auth/status");
       if (!response.ok) {
         throw new Error(`ステータス取得に失敗しました (${response.status})`);
       }
@@ -190,9 +186,9 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
 
   const handleLogin = (): void => {
     const authWindow = window.open(
-      apiUrl('/auth/google'),
-      'google-oauth',
-      'width=500,height=650,menubar=no,toolbar=no'
+      apiUrl("/auth/google"),
+      "google-oauth",
+      "width=500,height=650,menubar=no,toolbar=no"
     );
     if (!authWindow) {
       void refreshAuthStatus();
@@ -218,7 +214,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     setSyncMessage(null);
     setSyncError(null);
     try {
-      const response = await apiFetch('/auth/logout', { method: 'POST' });
+      const response = await apiFetch("/auth/logout", { method: "POST" });
       if (!response.ok) {
         throw new Error(`ログアウトに失敗しました (${response.status})`);
       }
@@ -237,17 +233,17 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     setSyncError(null);
     try {
       const beforeCount = useUserStore.getState().followedChannels.length;
-      const response = await apiFetch('/api/youtube/subscriptions');
+      const response = await apiFetch("/api/youtube/subscriptions");
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Googleアカウントへの接続が必要です');
+          throw new Error("Googleアカウントへの接続が必要です");
         }
         throw new Error(`購読チャンネルの取得に失敗しました (${response.status})`);
       }
       const data = await response.json();
       if (Array.isArray(data.items)) {
         const channels = data.items.map((item: ChannelResult) => ({
-          platform: 'youtube' as const,
+          platform: "youtube" as const,
           channelId: item.id,
           label: item.title
         }));
@@ -256,10 +252,10 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
         const added = afterCount - beforeCount;
         setSyncMessage(`購読チャンネルを同期しました（新規 ${added} 件）`);
       } else {
-        setSyncMessage('購読チャンネルは見つかりませんでした。');
+        setSyncMessage("購読チャンネルは見つかりませんでした。");
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '不明なエラー';
+      const message = err instanceof Error ? err.message : "不明なエラー";
       setSyncError(message);
     } finally {
       setSyncLoading(false);
@@ -271,12 +267,12 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     const trimmedId = channelIdInput.trim();
     if (!trimmedId) return;
     addFollowedChannel({
-      platform: 'youtube',
+      platform: "youtube",
       channelId: trimmedId,
       label: channelLabelInput.trim() || undefined
     });
-    setChannelIdInput('');
-    setChannelLabelInput('');
+    setChannelIdInput("");
+    setChannelLabelInput("");
   };
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -296,7 +292,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
               <span>ステータス確認中…</span>
             ) : authenticated ? (
               <>
-                <span>接続中: {authUser?.name ?? 'YouTube'}</span>
+                <span>接続中: {authUser?.name ?? "YouTube"}</span>
                 {authUser?.email && <span className={styles.authSubtext}>{authUser.email}</span>}
               </>
             ) : (
@@ -306,16 +302,16 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
           {authError && <div className={styles.authError}>{authError}</div>}
           <div className={styles.authActions}>
             {!authenticated ? (
-              <button type='button' onClick={handleLogin} disabled={authLoading}>
+              <button type="button" onClick={handleLogin} disabled={authLoading}>
                 Googleでサインイン
               </button>
             ) : (
-              <button type='button' onClick={handleLogout} disabled={authLoading}>
+              <button type="button" onClick={handleLogout} disabled={authLoading}>
                 ログアウト
               </button>
             )}
             <button
-              type='button'
+              type="button"
               onClick={handleSubscriptionsSync}
               disabled={!authenticated || syncLoading}
             >
@@ -324,228 +320,6 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
           </div>
           {syncMessage && <div className={styles.syncMessage}>{syncMessage}</div>}
           {syncError && <div className={styles.syncError}>{syncError}</div>}
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2>フォロー設定</h2>
-          <button
-            type='button'
-            className={styles.searchToggle}
-            onClick={() => setShowSearch((prev) => !prev)}
-          >
-            <MagnifyingGlassIcon />
-            {showSearch ? '閉じる' : 'チャンネル検索'}
-          </button>
-        </div>
-        {showSearch ? (
-          <div className={styles.searchPanel}>
-            <form className={styles.searchForm} onSubmit={handleSearchSubmit}>
-              <input
-                type='search'
-                placeholder='チャンネル名で検索'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-              <button type='submit' disabled={!searchQuery.trim()}>
-                <MagnifyingGlassIcon />
-                検索
-              </button>
-            </form>
-            <div className={styles.searchResults}>
-              {searchLoading ? (
-                <div className={styles.searchMessage}>検索中…</div>
-              ) : searchError ? (
-                <div className={clsx(styles.searchMessage, styles.searchMessageError)}>{searchError}</div>
-              ) : searchResults.length === 0 ? (
-                <div className={styles.searchMessage}>検索結果がありません。</div>
-              ) : (
-                searchResults.map((channel) => {
-                  const alreadyFollowed = followIdsSet.has(channel.id);
-                  return (
-                    <div key={channel.id} className={styles.searchResultItem}>
-                      <div className={styles.searchResultMeta}>
-                        {channel.thumbnailUrl && (
-                          <img src={channel.thumbnailUrl} alt={channel.title} loading='lazy' />
-                        )}
-                        <div>
-                          <p className={styles.searchResultTitle}>{channel.title}</p>
-                          {channel.customUrl && <p className={styles.searchResultUrl}>@{channel.customUrl}</p>}
-                          <p className={styles.searchResultDescription}>{channel.description}</p>
-                        </div>
-                      </div>
-                      <button
-                        type='button'
-                        onClick={() =>
-                          addFollowedChannel({
-                            platform: 'youtube',
-                            channelId: channel.id,
-                            label: channel.title
-                          })
-                        }
-                        disabled={alreadyFollowed}
-                      >
-                        {alreadyFollowed ? 'フォロー済み' : 'フォローに追加'}
-                      </button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        ) : (
-          <>
-            <form className={styles.followForm} onSubmit={handleFollowSubmit}>
-              <input
-                type='text'
-                placeholder='チャンネルID (例: UC...)'
-                value={channelIdInput}
-                onChange={(event) => setChannelIdInput(event.target.value)}
-              />
-              <input
-                type='text'
-                placeholder='任意のメモ'
-                value={channelLabelInput}
-                onChange={(event) => setChannelLabelInput(event.target.value)}
-              />
-              <button type='submit' disabled={!channelIdInput.trim()}>
-                <PlusIcon />
-                追加
-              </button>
-            </form>
-            {followedChannels.length > 0 ? (
-              <ul className={styles.followList}>
-                {followedChannels.map((channel) => (
-                  <li key={channel.channelId}>
-                    <span className={styles.followLabel}>{channel.label ?? channel.channelId}</span>
-                    <button
-                      type='button'
-                      onClick={() => {
-                        removeFollowedChannel(channel.channelId);
-                      }}
-                      title='フォロー削除'
-                    >
-                      <TrashIcon />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className={styles.followHint}>チャンネルIDを追加すると、その配信のみが表示されます。</div>
-            )}
-          </>
-        )}
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2>視聴枠</h2>
-          <button className={styles.sectionAction} type='button' onClick={onOpenPresetModal}>
-            <SquaresPlusIcon />
-            <span>プリセット</span>
-          </button>
-        </div>
-        <div className={styles.slotList}>
-          {activeSlots.map((slot, index) => {
-            const isActive = selectedSlotId === slot.id;
-            const assigned = slot.assignedStream;
-            const volumeLabel = `${slot.volume}%`;
-
-            const handleSelect = (): void => {
-              selectSlot(slot.id);
-              ensureSelection();
-            };
-
-            const handleVolumeChange = (value: number): void => {
-              setVolume(slot.id, value);
-              if (slot.muted && value > 0) {
-                toggleSlotMute(slot.id);
-              }
-            };
-
-            return (
-              <div
-                key={slot.id}
-                role='button'
-                tabIndex={0}
-                className={clsx(styles.slotButton, isActive && styles.slotButtonActive)}
-                onClick={handleSelect}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    handleSelect();
-                  }
-                }}
-              >
-                <div className={styles.slotHeader}>
-                  <div className={styles.slotIndex}>枠 {index + 1}</div>
-                  {assigned && (
-                    <button
-                      type='button'
-                      className={styles.slotRemove}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        clearSlot(slot.id);
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-                <div className={styles.slotContent}>
-                  {assigned ? (
-                    <>
-                      <span
-                        className={styles.streamerName}
-                        style={{ color: platformAccent[assigned.platform] }}
-                      >
-                        {assigned.displayName}
-                      </span>
-                      <span className={styles.streamTitle}>{assigned.title}</span>
-                    </>
-                  ) : (
-                    <span className={styles.slotEmpty}>未割り当て</span>
-                  )}
-                </div>
-                {assigned ? (
-                  <div
-                    className={styles.slotControls}
-                    onClick={(event) => event.stopPropagation()}
-                    onKeyDown={(event) => event.stopPropagation()}
-                  >
-                    <button
-                      type='button'
-                      className={styles.muteButton}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleSlotMute(slot.id);
-                      }}
-                      aria-pressed={slot.muted}
-                    >
-                      {slot.muted ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
-                    </button>
-                    <label className={styles.volumeSlider}>
-                      <span className='sr-only'>音量</span>
-                      <input
-                        type='range'
-                        min={0}
-                        max={100}
-                        value={slot.volume}
-                        onChange={(event) => handleVolumeChange(Number(event.target.value))}
-                        onClick={(event) => event.stopPropagation()}
-                        onMouseDown={(event) => event.stopPropagation()}
-                        onPointerDown={(event) => event.stopPropagation()}
-                      />
-                    </label>
-                    <span className={styles.volumeValue}>{volumeLabel}</span>
-                  </div>
-                ) : (
-                  <div className={styles.slotHint}>配信を割り当てて操作できます</div>
-                )}
-              </div>
-            );
-          })}
         </div>
       </section>
 
@@ -584,7 +358,7 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                 </div>
                 {activeSlot ? (
                   <button
-                    type='button'
+                    type="button"
                     className={styles.assignButton}
                     onClick={() => {
                       assignStream(activeSlot.id, stream);
@@ -601,6 +375,228 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
               </div>
             ))
           )}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2>フォロー設定</h2>
+          <button
+            type="button"
+            className={styles.searchToggle}
+            onClick={() => setShowSearch((prev) => !prev)}
+          >
+            <MagnifyingGlassIcon />
+            {showSearch ? "閉じる" : "チャンネル検索"}
+          </button>
+        </div>
+        {showSearch ? (
+          <div className={styles.searchPanel}>
+            <form className={styles.searchForm} onSubmit={handleSearchSubmit}>
+              <input
+                type="search"
+                placeholder="チャンネル名で検索"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+              <button type="submit" disabled={!searchQuery.trim()}>
+                <MagnifyingGlassIcon />
+                検索
+              </button>
+            </form>
+            <div className={styles.searchResults}>
+              {searchLoading ? (
+                <div className={styles.searchMessage}>検索中…</div>
+              ) : searchError ? (
+                <div className={clsx(styles.searchMessage, styles.searchMessageError)}>{searchError}</div>
+              ) : searchResults.length === 0 ? (
+                <div className={styles.searchMessage}>検索結果がありません。</div>
+              ) : (
+                searchResults.map((channel) => {
+                  const alreadyFollowed = followIdsSet.has(channel.id);
+                  return (
+                    <div key={channel.id} className={styles.searchResultItem}>
+                      <div className={styles.searchResultMeta}>
+                        {channel.thumbnailUrl && (
+                          <img src={channel.thumbnailUrl} alt={channel.title} loading="lazy" />
+                        )}
+                        <div>
+                          <p className={styles.searchResultTitle}>{channel.title}</p>
+                          {channel.customUrl && <p className={styles.searchResultUrl}>@{channel.customUrl}</p>}
+                          <p className={styles.searchResultDescription}>{channel.description}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addFollowedChannel({
+                            platform: "youtube",
+                            channelId: channel.id,
+                            label: channel.title
+                          })
+                        }
+                        disabled={alreadyFollowed}
+                      >
+                        {alreadyFollowed ? "フォロー済み" : "フォローに追加"}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            <form className={styles.followForm} onSubmit={handleFollowSubmit}>
+              <input
+                type="text"
+                placeholder="チャンネルID (例: UC...)"
+                value={channelIdInput}
+                onChange={(event) => setChannelIdInput(event.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="任意のメモ"
+                value={channelLabelInput}
+                onChange={(event) => setChannelLabelInput(event.target.value)}
+              />
+              <button type="submit" disabled={!channelIdInput.trim()}>
+                <PlusIcon />
+                追加
+              </button>
+            </form>
+            {followedChannels.length > 0 ? (
+              <ul className={styles.followList}>
+                {followedChannels.map((channel) => (
+                  <li key={channel.channelId}>
+                    <span className={styles.followLabel}>{channel.label ?? channel.channelId}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        removeFollowedChannel(channel.channelId);
+                      }}
+                      title="フォロー削除"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className={styles.followHint}>チャンネルIDを追加すると、その配信のみが表示されます。</div>
+            )}
+          </>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2>視聴枠</h2>
+          <button className={styles.sectionAction} type="button" onClick={onOpenPresetModal}>
+            <SquaresPlusIcon />
+            <span>プリセット</span>
+          </button>
+        </div>
+        <div className={styles.slotList}>
+          {activeSlots.map((slot, index) => {
+            const isActive = selectedSlotId === slot.id;
+            const assigned = slot.assignedStream;
+            const volumeLabel = `${slot.volume}%`;
+
+            const handleSelect = (): void => {
+              selectSlot(slot.id);
+              ensureSelection();
+            };
+
+            const handleVolumeChange = (value: number): void => {
+              setVolume(slot.id, value);
+              if (slot.muted && value > 0) {
+                toggleSlotMute(slot.id);
+              }
+            };
+
+            return (
+              <div
+                key={slot.id}
+                role="button"
+                tabIndex={0}
+                className={clsx(styles.slotButton, isActive && styles.slotButtonActive)}
+                onClick={handleSelect}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleSelect();
+                  }
+                }}
+              >
+                <div className={styles.slotHeader}>
+                  <div className={styles.slotIndex}>枠 {index + 1}</div>
+                  {assigned && (
+                    <button
+                      type="button"
+                      className={styles.slotRemove}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        clearSlot(slot.id);
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <div className={styles.slotContent}>
+                  {assigned ? (
+                    <>
+                      <span
+                        className={styles.streamerName}
+                        style={{ color: platformAccent[assigned.platform] }}
+                      >
+                        {assigned.displayName}
+                      </span>
+                      <span className={styles.streamTitle}>{assigned.title}</span>
+                    </>
+                  ) : (
+                    <span className={styles.slotEmpty}>未割り当て</span>
+                  )}
+                </div>
+                {assigned ? (
+                  <div
+                    className={styles.slotControls}
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className={styles.muteButton}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleSlotMute(slot.id);
+                      }}
+                      aria-pressed={slot.muted}
+                    >
+                      {slot.muted ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
+                    </button>
+                    <label className={styles.volumeSlider}>
+                      <span className="sr-only">音量</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={slot.volume}
+                        onChange={(event) => handleVolumeChange(Number(event.target.value))}
+                        onClick={(event) => event.stopPropagation()}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onPointerDown={(event) => event.stopPropagation()}
+                      />
+                    </label>
+                    <span className={styles.volumeValue}>{volumeLabel}</span>
+                  </div>
+                ) : (
+                  <div className={styles.slotHint}>配信を割り当てて操作できます</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
     </aside>

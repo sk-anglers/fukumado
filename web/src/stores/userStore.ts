@@ -1,8 +1,9 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { Platform } from '../types';
 
 export interface FollowedChannel {
-  platform: 'youtube';
+  platform: Platform;
   channelId: string;
   label?: string;
 }
@@ -11,13 +12,15 @@ interface UserState {
   followedChannels: FollowedChannel[];
   addFollowedChannel: (channel: FollowedChannel) => void;
   addFollowedChannels: (channels: FollowedChannel[]) => void;
-  removeFollowedChannel: (channelId: string) => void;
+  removeFollowedChannel: (channelId: string, platform?: Platform) => void;
   clearFollowedChannels: () => void;
 }
 
+const makeKey = (channel: FollowedChannel): string => ${channel.platform}:;
+
 export const useUserStore = create<UserState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       followedChannels: [],
       addFollowedChannel: (channel) => {
         set((state) => {
@@ -34,17 +37,20 @@ export const useUserStore = create<UserState>()(
       },
       addFollowedChannels: (channels) => {
         set((state) => {
-          const currentIds = new Set(state.followedChannels.map((item) => item.channelId));
-          const newOnes = channels.filter((channel) => !currentIds.has(channel.channelId));
+          if (channels.length === 0) return state;
+          const currentKeys = new Set(state.followedChannels.map(makeKey));
+          const newOnes = channels.filter((channel) => !currentKeys.has(makeKey(channel)));
           if (newOnes.length === 0) return state;
           return {
             followedChannels: [...state.followedChannels, ...newOnes]
           };
         });
       },
-      removeFollowedChannel: (channelId) => {
+      removeFollowedChannel: (channelId, platform) => {
         set((state) => ({
-          followedChannels: state.followedChannels.filter((item) => item.channelId !== channelId)
+          followedChannels: state.followedChannels.filter((item) =>
+            platform ? item.channelId !== channelId || item.platform !== platform : item.channelId !== channelId
+          )
         }));
       },
       clearFollowedChannels: () => {
