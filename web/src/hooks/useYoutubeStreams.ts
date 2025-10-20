@@ -1,4 +1,4 @@
-﻿import { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useLayoutStore } from '../stores/layoutStore';
 import type { Streamer } from '../types';
 
@@ -26,19 +26,19 @@ const mapItemToStreamer = (item: YouTubeApiResponseItem): Streamer => ({
   description: item.description,
   thumbnailUrl: item.thumbnailUrl,
   liveSince: item.publishedAt,
-  embedUrl: https://www.youtube.com/embed/?enablejsapi=1
+  embedUrl: `https://www.youtube.com/embed/${item.id}?enablejsapi=1`
 });
 
 const DEFAULT_QUERY = 'Apex Legends';
 const NO_STREAMS_MESSAGE = 'フォロー中のチャンネルでは現在ライブ配信が見つかりませんでした。';
 
 const buildChannelQuery = (channelIds: string[]): string =>
-  channelIds.map((id) => channelId=).join('&');
+  channelIds.map((id) => `channelId=${id}`).join('&');
 
 const fetchStreamResponse = async (endpoint: string): Promise<YouTubeApiResponse> => {
   const response = await fetch(endpoint, { credentials: 'include' });
   if (!response.ok) {
-    throw new Error(Failed to fetch YouTube streams:  );
+    throw new Error(`Failed to fetch YouTube streams: ${response.status}`);
   }
   return await response.json();
 };
@@ -68,7 +68,7 @@ export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: stri
       const tryChannelFetch = async (): Promise<boolean> => {
         if (channelIds.length === 0) return false;
         try {
-          const data = await fetchStreamResponse(/api/youtube/live?);
+          const data = await fetchStreamResponse(`/api/youtube/live?${buildChannelQuery(channelIds)}`);
           if (cancelled) return true;
           if (data.items.length > 0) {
             applyStreams(data.items);
@@ -85,7 +85,7 @@ export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: stri
 
       const tryFallbackFetch = async (): Promise<void> => {
         try {
-          const data = await fetchStreamResponse(/api/youtube/live?q=);
+          const data = await fetchStreamResponse(`/api/youtube/live?q=${encodeURIComponent(fallbackQuery)}`);
           if (!cancelled) {
             if (data.items.length > 0) {
               applyStreams(data.items);
