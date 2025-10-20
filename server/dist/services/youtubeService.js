@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.searchChannels = exports.fetchLiveStreams = void 0;
+exports.fetchUserSubscriptions = exports.searchChannels = exports.fetchLiveStreams = void 0;
 const undici_1 = require("undici");
 const env_1 = require("../config/env");
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
@@ -103,4 +103,35 @@ const searchChannels = async (query, maxResults = 10) => {
     return normalizeChannelItems(data.items);
 };
 exports.searchChannels = searchChannels;
+const normalizeSubscriptionItem = (item) => ({
+    id: item.snippet.resourceId.channelId,
+    title: item.snippet.title,
+    description: item.snippet.description,
+    thumbnailUrl: item.snippet.thumbnails.high?.url ??
+        item.snippet.thumbnails.medium?.url ??
+        item.snippet.thumbnails.default?.url ??
+        '',
+    customUrl: item.snippet.channelTitle
+});
+const fetchUserSubscriptions = async (accessToken) => {
+    const params = new URLSearchParams({
+        part: 'snippet',
+        mine: 'true',
+        maxResults: '50',
+        order: 'alphabetical'
+    });
+    const response = await (0, undici_1.request)(`${YOUTUBE_API_BASE}/subscriptions?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    });
+    if (response.statusCode >= 400) {
+        const body = await response.body.text();
+        throw new Error(`Failed to fetch subscriptions: ${response.statusCode} - ${body}`);
+    }
+    const data = (await response.body.json());
+    return data.items.map(normalizeSubscriptionItem);
+};
+exports.fetchUserSubscriptions = fetchUserSubscriptions;
 //# sourceMappingURL=youtubeService.js.map

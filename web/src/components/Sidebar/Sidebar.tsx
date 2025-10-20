@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+﻿import { FormEvent, useMemo, useState } from 'react';
 import {
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
@@ -11,6 +11,7 @@ import clsx from 'clsx';
 import { type Streamer } from '../../types';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useUserStore } from '../../stores/userStore';
+import { useAuthStore } from '../../stores/authStore';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -123,25 +124,152 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     toggleSlotMute: state.toggleSlotMute,
     setVolume: state.setVolume
   }));
-  const { followedChannels, addFollowedChannel, removeFollowedChannel } = useUserStore((state) => ({
+  const {
+    followedChannels,
+    addFollowedChannel,
+    addFollowedChannels,
+    removeFollowedChannel
+  } = useUserStore((state) => ({
     followedChannels: state.followedChannels,
     addFollowedChannel: state.addFollowedChannel,
+    addFollowedChannels: state.addFollowedChannels,
     removeFollowedChannel: state.removeFollowedChannel
   }));
+
+  const authenticated = useAuthStore((state) => state.authenticated);
+  const authUser = useAuthStore((state) => state.user);
+  const authLoading = useAuthStore((state) => state.loading);
+  const authError = useAuthStore((state) => state.error);
+  const setAuthStatus = useAuthStore((state) => state.setStatus);
+  const setAuthLoading = useAuthStore((state) => state.setLoading);
+  const setAuthError = useAuthStore((state) => state.setError);
 
   const [channelIdInput, setChannelIdInput] = useState('');
   const [channelLabelInput, setChannelLabelInput] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    results: searchResults,
+    loading: searchLoading,
+    error: searchError,
+    search: executeSearch
+  } = useYoutubeChannelSearch();
 
-  const { query: searchQuery, setQuery: setSearchQuery, results: searchResults, loading: searchLoading, error: searchError, search: executeSearch } =
-    useYoutubeChannelSearch();
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncLoading, setSyncLoading] = useState(false);
 
   const activeSlots = slots.slice(0, activeSlotsCount);
   const activeSlot = activeSlots.find((slot) => slot.id === selectedSlotId) ?? activeSlots[0];
   const activeSlotIndex = activeSlot ? activeSlots.indexOf(activeSlot) : -1;
   const activeSlotLabel = activeSlotIndex >= 0 ? activeSlotIndex + 1 : '―';
 
-  const followIdsSet = useMemo(() => new Set(followedChannels.map((channel) => channel.channelId)), [followedChannels]);
+  const followIdsSet = useMemo(
+    () => new Set(followedChannels.map((channel) => channel.channelId)),
+    [followedChannels]
+  );
+
+  const refreshAuthStatus = async (): Promise<void> => {
+    setAuthLoading(true);
+    setAuthError(undefined);
+    try {
+      const response = await fetch('/auth/status');
+      if (!response.ok) {
+        throw new Error(`ステータス取得に失敗しました (${response.status})`);
+      }
+      const data = await response.json();
+      setAuthStatus({
+        authenticated: Boolean(data.authenticated),
+        user: data.user,
+        error: undefined
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '不明なエラー';
+      setAuthError(message);
+      setAuthStatus({ authenticated: false, user: undefined, error: message });
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogin = (): void => {
+    const authWindow = window.open(
+      '/auth/google',
+      'google-oauth',
+      'width=500,height=650,menubar=no,toolbar=no'
+    );
+    if (!authWindow) {
+      void refreshAuthStatus();
+      return;
+    }
+
+    const timer = window.setInterval(async () => {
+      if (authWindow.closed) {
+        window.clearInterval(timer);
+        await refreshAuthStatus();
+        return;
+      }
+      await refreshAuthStatus();
+      if (useAuthStore.getState().authenticated) {
+        window.clearInterval(timer);
+        authWindow.close();
+      }
+    }, 2000);
+  };
+
+  const handleLogout = async (): Promise<void> => {
+    setAuthLoading(true);
+    setSyncMessage(null);
+    setSyncError(null);
+    try {
+      const response = await fetch('/auth/logout', { method: 'POST' });
+      if (!response.ok) {
+        throw new Error(`ログアウトに失敗しました (${response.status})`);
+      }
+      setAuthStatus({ authenticated: false, user: undefined, error: undefined });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '不明なエラー';
+      setAuthError(message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSubscriptionsSync = async (): Promise<void> => {
+    setSyncLoading(true);
+    setSyncMessage(null);
+    setSyncError(null);
+    try {
+      const beforeCount = useUserStore.getState().followedChannels.length;
+      const response = await fetch('/api/youtube/subscriptions');
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Googleアカウントへの接続が必要です');
+        }
+        throw new Error(`購読チャンネルの取得に失敗しました (${response.status})`);
+      }
+      const data = await response.json();
+      if (Array.isArray(data.items)) {
+        const channels = data.items.map((item: ChannelResult) => ({
+          platform: 'youtube' as const,
+          channelId: item.id,
+          label: item.title
+        }));
+        addFollowedChannels(channels);
+        const afterCount = useUserStore.getState().followedChannels.length;
+        const added = afterCount - beforeCount;
+        setSyncMessage(`購読チャンネルを同期しました（新規 ${added} 件）`);
+      } else {
+        setSyncMessage('購読チャンネルは見つかりませんでした。');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '不明なエラー';
+      setSyncError(message);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   const handleFollowSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -163,6 +291,47 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
 
   return (
     <aside className={styles.sidebar}>
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2>アカウント連携</h2>
+        </div>
+        <div className={styles.authPanel}>
+          <div className={styles.authStatus}>
+            {authLoading ? (
+              <span>ステータス確認中…</span>
+            ) : authenticated ? (
+              <>
+                <span>接続中: {authUser?.name ?? 'YouTube'}</span>
+                {authUser?.email && <span className={styles.authSubtext}>{authUser.email}</span>}
+              </>
+            ) : (
+              <span>未接続</span>
+            )}
+          </div>
+          {authError && <div className={styles.authError}>{authError}</div>}
+          <div className={styles.authActions}>
+            {!authenticated ? (
+              <button type="button" onClick={handleLogin} disabled={authLoading}>
+                Googleでサインイン
+              </button>
+            ) : (
+              <button type="button" onClick={handleLogout} disabled={authLoading}>
+                ログアウト
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleSubscriptionsSync}
+              disabled={!authenticated || syncLoading}
+            >
+              購読チャンネルを同期
+            </button>
+          </div>
+          {syncMessage && <div className={styles.syncMessage}>{syncMessage}</div>}
+          {syncError && <div className={styles.syncError}>{syncError}</div>}
+        </div>
+      </section>
+
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2>フォロー設定</h2>
@@ -441,26 +610,6 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
             ))
           )}
         </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2>連携プラットフォーム</h2>
-        </div>
-        <ul className={styles.accountList}>
-          <li>
-            <span className={styles.accountPlatform}>YouTube</span>
-            <button type="button">連携予定</button>
-          </li>
-          <li>
-            <span className={styles.accountPlatform}>Twitch</span>
-            <button type="button">連携予定</button>
-          </li>
-          <li>
-            <span className={styles.accountPlatform}>ニコニコ</span>
-            <button type="button">連携予定</button>
-          </li>
-        </ul>
       </section>
     </aside>
   );

@@ -592,3 +592,66 @@
     padding: 1rem;
   }
 }
+.authPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(30, 41, 59, 0.7);
+  padding: 1rem;
+}
+
+.authStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.authSubtext {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.authError {
+  font-size: 0.75rem;
+  color: rgba(252, 165, 165, 0.9);
+}
+
+.authActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.authActions button {
+  border-radius: 10px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  background: rgba(14, 116, 144, 0.35);
+  padding: 0.45rem 0.8rem;
+  font-size: 0.8rem;
+  color: rgba(191, 219, 254, 0.92);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.authActions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.authActions button:not(:disabled):hover {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(8, 145, 178, 0.5);
+}
+
+.syncMessage {
+  font-size: 0.75rem;
+  color: rgba(134, 239, 172, 0.9);
+}
+
+.syncError {
+  font-size: 0.75rem;
+  color: rgba(252, 165, 165, 0.9);
+}

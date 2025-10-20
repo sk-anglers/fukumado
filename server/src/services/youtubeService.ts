@@ -21,6 +21,25 @@ export interface YouTubeChannel {
   customUrl?: string;
 }
 
+interface YouTubeSubscriptionResponse {
+  items: Array<{
+    snippet: {
+      resourceId: {
+        channelId: string;
+      };
+      title: string;
+      description: string;
+      thumbnails: Record<
+        'default' | 'medium' | 'high',
+        { url: string; width?: number; height?: number }
+      >;
+      channelId: string;
+      channelTitle: string;
+    };
+  }>;
+  nextPageToken?: string;
+}
+
 interface YouTubeSearchListResponse {
   items: Array<{
     id: { videoId?: string };
@@ -175,4 +194,40 @@ export const searchChannels = async (query: string, maxResults: number = 10): Pr
   const url = buildSearchUrl(params);
   const data = await performRequest<YouTubeChannelSearchResponse>(url);
   return normalizeChannelItems(data.items);
+};
+
+const normalizeSubscriptionItem = (item: YouTubeSubscriptionResponse['items'][number]): YouTubeChannel => ({
+  id: item.snippet.resourceId.channelId,
+  title: item.snippet.title,
+  description: item.snippet.description,
+  thumbnailUrl:
+    item.snippet.thumbnails.high?.url ??
+    item.snippet.thumbnails.medium?.url ??
+    item.snippet.thumbnails.default?.url ??
+    '',
+  customUrl: item.snippet.channelTitle
+});
+
+export const fetchUserSubscriptions = async (accessToken: string): Promise<YouTubeChannel[]> => {
+  const params = new URLSearchParams({
+    part: 'snippet',
+    mine: 'true',
+    maxResults: '50',
+    order: 'alphabetical'
+  });
+
+  const response = await request(`${YOUTUBE_API_BASE}/subscriptions?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (response.statusCode >= 400) {
+    const body = await response.body.text();
+    throw new Error(`Failed to fetch subscriptions: ${response.statusCode} - ${body}`);
+  }
+
+  const data = (await response.body.json()) as YouTubeSubscriptionResponse;
+  return data.items.map(normalizeSubscriptionItem);
 };

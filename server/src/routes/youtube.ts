@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { fetchLiveStreams, searchChannels } from '../services/youtubeService';
+import { ensureAccessToken } from './auth';
+import { fetchLiveStreams, fetchUserSubscriptions, searchChannels } from '../services/youtubeService';
 
 export const youtubeRouter = Router();
 
@@ -47,6 +48,20 @@ youtubeRouter.get('/channels', async (req, res) => {
 
     const maxResults = maxResultsParam ? Number(maxResultsParam) : undefined;
     const channels = await searchChannels(query, maxResults);
+    res.json({ items: channels });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: message });
+  }
+});
+
+youtubeRouter.get('/subscriptions', async (req, res) => {
+  try {
+    const accessToken = await ensureAccessToken(req);
+    if (!accessToken) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const channels = await fetchUserSubscriptions(accessToken);
     res.json({ items: channels });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

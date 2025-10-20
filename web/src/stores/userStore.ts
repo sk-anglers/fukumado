@@ -10,6 +10,7 @@ export interface FollowedChannel {
 interface UserState {
   followedChannels: FollowedChannel[];
   addFollowedChannel: (channel: FollowedChannel) => void;
+  addFollowedChannels: (channels: FollowedChannel[]) => void;
   removeFollowedChannel: (channelId: string) => void;
   clearFollowedChannels: () => void;
 }
@@ -28,6 +29,16 @@ export const useUserStore = create<UserState>()(
           }
           return {
             followedChannels: [...state.followedChannels, channel]
+          };
+        });
+      },
+      addFollowedChannels: (channels) => {
+        set((state) => {
+          const currentIds = new Set(state.followedChannels.map((item) => item.channelId));
+          const newOnes = channels.filter((channel) => !currentIds.has(channel.channelId));
+          if (newOnes.length === 0) return state;
+          return {
+            followedChannels: [...state.followedChannels, ...newOnes]
           };
         });
       },

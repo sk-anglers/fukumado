@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.youtubeRouter = void 0;
 const express_1 = require("express");
+const auth_1 = require("./auth");
 const youtubeService_1 = require("../services/youtubeService");
 exports.youtubeRouter = (0, express_1.Router)();
 exports.youtubeRouter.get('/live', async (req, res) => {
@@ -41,6 +42,20 @@ exports.youtubeRouter.get('/channels', async (req, res) => {
         }
         const maxResults = maxResultsParam ? Number(maxResultsParam) : undefined;
         const channels = await (0, youtubeService_1.searchChannels)(query, maxResults);
+        res.json({ items: channels });
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        res.status(500).json({ error: message });
+    }
+});
+exports.youtubeRouter.get('/subscriptions', async (req, res) => {
+    try {
+        const accessToken = await (0, auth_1.ensureAccessToken)(req);
+        if (!accessToken) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        const channels = await (0, youtubeService_1.fetchUserSubscriptions)(accessToken);
         res.json({ items: channels });
     }
     catch (error) {
