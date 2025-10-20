@@ -1,11 +1,15 @@
+import { FormEvent, useState } from 'react';
 import {
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
-  SquaresPlusIcon
+  SquaresPlusIcon,
+  PlusIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { type Streamer } from '../../types';
 import { useLayoutStore } from '../../stores/layoutStore';
+import { useUserStore } from '../../stores/userStore';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -68,14 +72,82 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     toggleSlotMute: state.toggleSlotMute,
     setVolume: state.setVolume
   }));
+  const { followedChannels, addFollowedChannel, removeFollowedChannel } = useUserStore((state) => ({
+    followedChannels: state.followedChannels,
+    addFollowedChannel: state.addFollowedChannel,
+    removeFollowedChannel: state.removeFollowedChannel
+  }));
+
+  const [channelIdInput, setChannelIdInput] = useState('');
+  const [channelLabelInput, setChannelLabelInput] = useState('');
 
   const activeSlots = slots.slice(0, activeSlotsCount);
   const activeSlot = activeSlots.find((slot) => slot.id === selectedSlotId) ?? activeSlots[0];
   const activeSlotIndex = activeSlot ? activeSlots.indexOf(activeSlot) : -1;
   const activeSlotLabel = activeSlotIndex >= 0 ? activeSlotIndex + 1 : '―';
 
+  const handleFollowSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const trimmedId = channelIdInput.trim();
+    if (!trimmedId) return;
+    addFollowedChannel({
+      platform: 'youtube',
+      channelId: trimmedId,
+      label: channelLabelInput.trim() || undefined
+    });
+    setChannelIdInput('');
+    setChannelLabelInput('');
+  };
+
   return (
     <aside className={styles.sidebar}>
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2>フォロー設定</h2>
+        </div>
+        <form className={styles.followForm} onSubmit={handleFollowSubmit}>
+          <input
+            type="text"
+            placeholder="チャンネルID (例: UC...)"
+            value={channelIdInput}
+            onChange={(event) => setChannelIdInput(event.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="任意のメモ"
+            value={channelLabelInput}
+            onChange={(event) => setChannelLabelInput(event.target.value)}
+          />
+          <button type="submit" disabled={!channelIdInput.trim()}>
+            <PlusIcon />
+            追加
+          </button>
+        </form>
+        {followedChannels.length > 0 ? (
+          <ul className={styles.followList}>
+            {followedChannels.map((channel) => (
+              <li key={channel.channelId}>
+                <div>
+                  <span className={styles.followId}>{channel.channelId}</span>
+                  {channel.label && <span className={styles.followLabel}>{channel.label}</span>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    removeFollowedChannel(channel.channelId);
+                  }}
+                  title="フォロー削除"
+                >
+                  <TrashIcon />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className={styles.followHint}>チャンネルIDを追加すると、その配信のみが表示されます。</div>
+        )}
+      </section>
+
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2>視聴枠</h2>

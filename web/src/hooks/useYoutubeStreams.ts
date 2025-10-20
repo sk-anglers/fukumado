@@ -31,7 +31,10 @@ const mapItemToStreamer = (item: YouTubeApiResponseItem): Streamer => ({
 
 const DEFAULT_QUERY = 'Apex Legends';
 
-export const useYoutubeStreams = (query: string = DEFAULT_QUERY): void => {
+const buildChannelQuery = (channelIds: string[]): string =>
+  channelIds.map((id) => `channelId=${encodeURIComponent(id)}`).join('&');
+
+export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: string = DEFAULT_QUERY): void => {
   const setAvailableStreams = useLayoutStore((state) => state.setAvailableStreams);
   const setStreamsLoading = useLayoutStore((state) => state.setStreamsLoading);
   const setStreamsError = useLayoutStore((state) => state.setStreamsError);
@@ -43,7 +46,13 @@ export const useYoutubeStreams = (query: string = DEFAULT_QUERY): void => {
       setStreamsLoading(true);
       setStreamsError(undefined);
       try {
-        const response = await fetch(`/api/youtube/live?q=${encodeURIComponent(query)}`);
+        let endpoint = '';
+        if (channelIds.length > 0) {
+          endpoint = `/api/youtube/live?${buildChannelQuery(channelIds)}`;
+        } else {
+          endpoint = `/api/youtube/live?q=${encodeURIComponent(fallbackQuery)}`;
+        }
+        const response = await fetch(endpoint);
         if (!response.ok) {
           throw new Error(`Failed to fetch YouTube streams: ${response.status} ${response.statusText}`);
         }
@@ -68,5 +77,5 @@ export const useYoutubeStreams = (query: string = DEFAULT_QUERY): void => {
     return () => {
       ignore = true;
     };
-  }, [query, setAvailableStreams, setStreamsError, setStreamsLoading]);
+  }, [channelIds, fallbackQuery, setAvailableStreams, setStreamsError, setStreamsLoading]);
 };
