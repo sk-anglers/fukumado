@@ -1,12 +1,8 @@
 .container {
-  position: absolute;
-  right: 1.5rem;
-  top: 1.5rem;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
-  width: 240px;
-  z-index: 4;
+  align-self: stretch;
 }
 
 .card {
@@ -93,35 +89,12 @@
   color: rgba(148, 163, 184, 0.6);
 }
 
-@media (max-width: 1440px) {
-  .container {
-    position: static;
-    width: 100%;
-  }
-
-  .card {
-    flex-direction: row;
-    align-items: center;
-    gap: 1rem;
-    justify-content: space-between;
-  }
-
-  .buttons {
-    flex: 1;
-  }
-
-  .primaryAction {
-    flex-shrink: 0;
-  }
-}
-
 @media (max-width: 960px) {
   .container {
-    flex-direction: row;
-    flex-wrap: wrap;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 
   .card {
-    flex: 1 1 45%;
+    align-items: stretch;
   }
 }
