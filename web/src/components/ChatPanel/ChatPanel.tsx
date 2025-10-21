@@ -56,6 +56,9 @@ export const ChatPanel = (): JSX.Element => {
             <div className={styles.messageBody}>
               <div className={styles.messageHeader}>
                 <span className={styles.author}>{message.author}</span>
+                {message.channelName && (
+                  <span className={styles.channelName}>@ {message.channelName}</span>
+                )}
                 <span className={styles.timestamp}>{message.timestamp}</span>
               </div>
               <p>{message.message}</p>

@@ -4,7 +4,7 @@ import { Sidebar } from '../Sidebar/Sidebar';
 import { StreamGrid } from '../StreamGrid/StreamGrid';
 import { ChatPanel } from '../ChatPanel/ChatPanel';
 import { LayoutPresetModal } from '../LayoutPresetModal/LayoutPresetModal';
-import { GlobalControls } from '../GlobalControls/GlobalControls';
+import { Footer } from '../Footer/Footer';
 import { useLayoutStore } from '../../stores/layoutStore';
 import styles from './AppShell.module.css';
 
@@ -32,7 +32,6 @@ export const AppShell = (): JSX.Element => {
         {!fullscreen && <Sidebar onOpenPresetModal={() => setPresetModalOpen(true)} />}
         <main className={fullscreen ? styles.mainFullscreen : styles.main}>
           <StreamGrid />
-          {!fullscreen && <GlobalControls onOpenPresetModal={() => setPresetModalOpen(true)} />}
         </main>
         {!fullscreen && (
           <aside className={styles.chatArea}>
@@ -40,6 +39,7 @@ export const AppShell = (): JSX.Element => {
           </aside>
         )}
       </div>
+      {!fullscreen && <Footer />}
       <LayoutPresetModal open={presetModalOpen} onClose={() => setPresetModalOpen(false)} />
     </div>
   );

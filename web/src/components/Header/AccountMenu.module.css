@@ -1,0 +1,354 @@
+.menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  min-width: 320px;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.section {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.section:first-child {
+  padding-top: 0;
+}
+
+.section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sectionHeader svg {
+  width: 20px;
+  height: 20px;
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.sectionTitle {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.authStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+  margin-bottom: 0.75rem;
+}
+
+.authSubtext {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.actions button {
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  background: rgba(14, 116, 144, 0.35);
+  padding: 0.5rem 0.8rem;
+  font-size: 0.8rem;
+  color: rgba(191, 219, 254, 0.92);
+  transition: border-color 0.2s ease, background 0.2s ease;
+  text-align: left;
+}
+
+.actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.actions button:not(:disabled):hover {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(8, 145, 178, 0.5);
+}
+
+.syncMessage {
+  font-size: 0.75rem;
+  color: rgba(134, 239, 172, 0.9);
+  margin-top: 0.5rem;
+}
+
+.syncError {
+  font-size: 0.75rem;
+  color: rgba(252, 165, 165, 0.9);
+  margin-top: 0.5rem;
+}
+
+.description {
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.75);
+  line-height: 1.4;
+  margin: 0 0 0.75rem 0;
+}
+
+.disabledButton {
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.5);
+  padding: 0.5rem 0.8rem;
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.6);
+  cursor: not-allowed;
+  width: 100%;
+}
+
+/* 同期設定 */
+.syncSettings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settingItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+  cursor: pointer;
+}
+
+.settingItem input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.settingItem input[type="checkbox"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.syncIntervalControl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.syncIntervalLabel {
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+  min-width: 80px;
+}
+
+.syncIntervalSelect {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(30, 41, 59, 0.6);
+  color: rgba(226, 232, 240, 0.95);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.syncIntervalSelect:hover:not(:disabled) {
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.syncIntervalSelect:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.syncStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.4);
+  font-size: 0.8rem;
+}
+
+.syncStatusLabel {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.syncingIndicator {
+  color: rgba(56, 189, 248, 0.9);
+  font-weight: 600;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.syncManualButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  background: rgba(14, 116, 144, 0.35);
+  padding: 0.5rem 0.8rem;
+  font-size: 0.8rem;
+  color: rgba(191, 219, 254, 0.92);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.syncManualButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.syncManualButton:not(:disabled):hover {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(8, 145, 178, 0.5);
+}
+
+.syncManualButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* データ使用量 */
+.dataUsageSettings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.totalBandwidth {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.5);
+  font-size: 0.85rem;
+}
+
+.totalBandwidthLabel {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.totalBandwidthValue {
+  color: rgba(56, 189, 248, 0.95);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.slotQualityList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.slotQualityItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.slotQualityHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.slotQualityLabel {
+  font-size: 0.8rem;
+  color: rgba(226, 232, 240, 0.9);
+  font-weight: 500;
+}
+
+.slotBandwidth {
+  font-size: 0.75rem;
+  color: rgba(56, 189, 248, 0.85);
+  font-weight: 600;
+}
+
+.qualitySelect {
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(30, 41, 59, 0.6);
+  color: rgba(226, 232, 240, 0.95);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.qualitySelect:hover:not(:disabled) {
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.qualitySelect:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qualityInfo {
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: rgba(14, 116, 144, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.qualityInfoTitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.qualityInfoList {
+  margin: 0 0 0.5rem 1rem;
+  padding: 0;
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.85);
+  line-height: 1.6;
+}
+
+.qualityInfoList li {
+  margin-bottom: 0.25rem;
+}
+
+.qualityInfoNote {
+  margin: 0;
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.7);
+  font-style: italic;
+}

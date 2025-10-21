@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { LayoutPreset, Platform, StreamSlot, Streamer } from '../types';
+import type { LayoutPreset, Platform, StreamSlot, Streamer, ChannelSearchResult, VideoQuality } from '../types';
 
 const DEFAULT_ACTIVE_SLOTS = 4;
 const TOTAL_SLOT_CAPACITY = 8;
@@ -12,7 +12,8 @@ const createInitialSlots = (): StreamSlot[] =>
   Array.from({ length: TOTAL_SLOT_CAPACITY }, (_, index) => ({
     id: `slot-${index + 1}`,
     muted: false,
-    volume: DEFAULT_VOLUME
+    volume: DEFAULT_VOLUME,
+    quality: 'auto' as VideoQuality
   }));
 
 const hydrateSlots = (slots: StreamSlot[]): StreamSlot[] =>
@@ -22,6 +23,7 @@ const hydrateSlots = (slots: StreamSlot[]): StreamSlot[] =>
       id: source?.id ?? `slot-${index + 1}`,
       muted: source?.muted ?? false,
       volume: source?.volume ?? DEFAULT_VOLUME,
+      quality: source?.quality ?? ('auto' as VideoQuality),
       assignedStream: source?.assignedStream
     };
   });
@@ -31,26 +33,45 @@ export interface LayoutState {
   slots: StreamSlot[];
   selectedSlotId: string | null;
   mutedAll: boolean;
+  masterVolume: number;
   activeSlotsCount: number;
   availableStreams: Streamer[];
   streamsLoading: boolean;
   streamsError?: string;
   platforms: Platform[];
+  searchQuery: string;
+  channelSearchResults: ChannelSearchResult[];
+  channelSearchLoading: boolean;
+  channelSearchError?: string;
+  pendingStream: Streamer | null;
+  autoQualityEnabled: boolean;
+  isModalOpen: boolean;
   setPreset: (preset: LayoutPreset) => void;
   selectSlot: (slotId: string) => void;
+  clearSelection: () => void;
   assignStream: (slotId: string, stream: Streamer) => void;
   clearSlot: (slotId: string) => void;
   toggleMuteAll: () => void;
   toggleSlotMute: (slotId: string) => void;
   setVolume: (slotId: string, volume: number) => void;
+  setMasterVolume: (volume: number) => void;
+  setSlotQuality: (slotId: string, quality: VideoQuality) => void;
+  setAutoQualityEnabled: (enabled: boolean) => void;
   swapSlots: (sourceSlotId: string, targetSlotId: string) => void;
   ensureSelection: () => void;
   setActiveSlotsCount: (count: number) => void;
   setAvailableStreamsForPlatform: (platform: Platform, streams: Streamer[]) => void;
   setStreamsLoading: (loading: boolean) => void;
   setStreamsError: (message?: string) => void;
+  setSearchQuery: (query: string) => void;
+  setChannelSearchResults: (results: ChannelSearchResult[]) => void;
+  setChannelSearchLoading: (loading: boolean) => void;
+  setChannelSearchError: (error?: string) => void;
+  clearChannelSearch: () => void;
   fullscreen: boolean;
   setFullscreen: (value: boolean) => void;
+  setPendingStream: (stream: Streamer | null) => void;
+  setModalOpen: (isOpen: boolean) => void;
 }
 
 const initialSlots = createInitialSlots();
@@ -62,12 +83,20 @@ export const useLayoutStore = create<LayoutState>()(
       slots: initialSlots,
       selectedSlotId: initialSlots[0]?.id ?? null,
       mutedAll: false,
+      masterVolume: 100,
       activeSlotsCount: DEFAULT_ACTIVE_SLOTS,
       availableStreams: [],
       streamsLoading: false,
       streamsError: undefined,
       fullscreen: false,
       platforms: ['youtube', 'twitch', 'niconico'],
+      searchQuery: '',
+      channelSearchResults: [],
+      channelSearchLoading: false,
+      channelSearchError: undefined,
+      pendingStream: null,
+      autoQualityEnabled: true,
+      isModalOpen: false,
       setPreset: (preset) => set({ preset }),
       selectSlot: (slotId) =>
         set((state) => {
@@ -77,6 +106,7 @@ export const useLayoutStore = create<LayoutState>()(
           }
           return { selectedSlotId: slotId };
         }),
+      clearSelection: () => set({ selectedSlotId: null }),
       assignStream: (slotId, stream) =>
         set((state) => {
           const index = state.slots.findIndex((slot) => slot.id === slotId);
@@ -84,12 +114,15 @@ export const useLayoutStore = create<LayoutState>()(
             return state;
           }
 
+          // ストリームオブジェクトをコピーして、同期処理の影響を受けないようにする
+          const independentStream = { ...stream };
+
           return {
             slots: state.slots.map((slot, slotIndex) =>
               slotIndex === index
                 ? {
                     ...slot,
-                    assignedStream: stream
+                    assignedStream: independentStream
                   }
                 : slot
             )
@@ -157,6 +190,33 @@ export const useLayoutStore = create<LayoutState>()(
             )
           };
         }),
+      setMasterVolume: (volume) => set({ masterVolume: volume }),
+      setSlotQuality: (slotId, quality) =>
+        set((state) => {
+          const index = state.slots.findIndex((slot) => slot.id === slotId);
+          if (index === -1 || index >= state.activeSlotsCount) {
+            return state;
+          }
+          return {
+            slots: state.slots.map((slot, slotIndex) =>
+              slotIndex === index
+                ? {
+                    ...slot,
+                    quality
+                  }
+                : slot
+            )
+          };
+        }),
+      setAutoQualityEnabled: (enabled) => {
+        set({ autoQualityEnabled: enabled });
+        // 自動画質が有効になったら、全スロットを'auto'に設定
+        if (enabled) {
+          set((state) => ({
+            slots: state.slots.map((slot) => ({ ...slot, quality: 'auto' as VideoQuality }))
+          }));
+        }
+      },
       swapSlots: (sourceSlotId, targetSlotId) =>
         set((state) => {
           const sourceIndex = state.slots.findIndex((slot) => slot.id === sourceSlotId);
@@ -236,7 +296,14 @@ export const useLayoutStore = create<LayoutState>()(
         })),
       setStreamsLoading: (loading) => set({ streamsLoading: loading }),
       setStreamsError: (message) => set({ streamsError: message }),
-      setFullscreen: (value) => set({ fullscreen: value })
+      setSearchQuery: (query) => set({ searchQuery: query }),
+      setChannelSearchResults: (results) => set({ channelSearchResults: results }),
+      setChannelSearchLoading: (loading) => set({ channelSearchLoading: loading }),
+      setChannelSearchError: (error) => set({ channelSearchError: error }),
+      clearChannelSearch: () => set({ channelSearchResults: [], channelSearchError: undefined }),
+      setFullscreen: (value) => set({ fullscreen: value }),
+      setPendingStream: (stream) => set({ pendingStream: stream }),
+      setModalOpen: (isOpen) => set({ isModalOpen: isOpen })
     }),
     {
       name: 'fukumado-layout',
@@ -254,7 +321,9 @@ export const useLayoutStore = create<LayoutState>()(
         slots: state.slots,
         selectedSlotId: state.selectedSlotId,
         mutedAll: state.mutedAll,
-        activeSlotsCount: state.activeSlotsCount
+        masterVolume: state.masterVolume,
+        activeSlotsCount: state.activeSlotsCount,
+        autoQualityEnabled: state.autoQualityEnabled
       })
     }
   )

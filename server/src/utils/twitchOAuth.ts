@@ -31,16 +31,24 @@ export const buildTwitchAuthUrl = (state: string): string => {
     scope: scopes.join(' '),
     state
   });
-  return ${TWITCH_AUTH_BASE}?;
+  return `${TWITCH_AUTH_BASE}?${params.toString()}`;
 };
 
 const formUrlEncoded = (data: Record<string, string>): string =>
   Object.entries(data)
-    .map(([key, value]) => ${encodeURIComponent(key)}=)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join('&');
 
 export const exchangeTwitchCodeForTokens = async (code: string): Promise<TwitchTokenResponse> => {
   const { clientId, clientSecret, redirectUri } = ensureTwitchOAuthConfig();
+
+  // Debug log
+  console.log('[Twitch OAuth Debug] Token exchange parameters:');
+  console.log('  client_id:', clientId);
+  console.log('  client_secret:', clientSecret ? `${clientSecret.substring(0, 5)}...` : 'MISSING');
+  console.log('  redirect_uri:', redirectUri);
+  console.log('  code:', code ? `${code.substring(0, 10)}...` : 'MISSING');
+
   const body = formUrlEncoded({
     client_id: clientId,
     client_secret: clientSecret,
@@ -59,7 +67,10 @@ export const exchangeTwitchCodeForTokens = async (code: string): Promise<TwitchT
 
   if (response.statusCode >= 400) {
     const text = await response.body.text();
-    throw new Error(Failed to exchange Twitch code:  - );
+    console.error('[Twitch OAuth Error] Token exchange failed:');
+    console.error('  Status:', response.statusCode);
+    console.error('  Response:', text);
+    throw new Error(`Failed to exchange Twitch code: ${response.statusCode} - ${text}`);
   }
 
   return (await response.body.json()) as TwitchTokenResponse;
@@ -84,7 +95,7 @@ export const refreshTwitchAccessToken = async (refreshToken: string): Promise<Tw
 
   if (response.statusCode >= 400) {
     const text = await response.body.text();
-    throw new Error(Failed to refresh Twitch token:  - );
+    throw new Error(`Failed to refresh Twitch token: ${response.statusCode} - ${text}`);
   }
 
   return (await response.body.json()) as TwitchTokenResponse;
@@ -95,14 +106,14 @@ export const fetchTwitchUserInfo = async (accessToken: string): Promise<TwitchUs
   const response = await request(TWITCH_USER_ENDPOINT, {
     method: 'GET',
     headers: {
-      Authorization: Bearer ,
+      Authorization: `Bearer ${accessToken}`,
       'Client-ID': clientId
     }
   });
 
   if (response.statusCode >= 400) {
     const text = await response.body.text();
-    throw new Error(Failed to fetch Twitch user info:  - );
+    throw new Error(`Failed to fetch Twitch user info: ${response.statusCode} - ${text}`);
   }
 
   const data = (await response.body.json()) as { data: TwitchUserInfo[] };

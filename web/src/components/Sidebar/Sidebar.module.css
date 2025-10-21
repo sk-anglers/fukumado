@@ -471,6 +471,9 @@
   gap: 0.85rem;
   padding: 0;
   margin: 0;
+  max-height: 75vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .streamListMessage {
@@ -655,4 +658,64 @@
 .syncError {
   font-size: 0.75rem;
   color: rgba(252, 165, 165, 0.9);
+}
+
+.searchResultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.searchResultInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.searchResultHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.platformBadge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+.addChannelButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  background: rgba(14, 116, 144, 0.35);
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+  color: rgba(191, 219, 254, 0.92);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.addChannelButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+.addChannelButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.addChannelButton:not(:disabled):hover {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(8, 145, 178, 0.5);
 }

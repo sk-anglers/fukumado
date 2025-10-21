@@ -1,0 +1,2878 @@
+=============================================================================
+ふくまど！- マルチプラットフォーム配信同時視聴ツール
+包括的技術仕様書
+=============================================================================
+
+Document Version: 2.0
+Last Updated: 2025-01-20
+Project Name: ふくまど！(Fukumado)
+Repository: C:\Users\s_kus\開発
+
+=============================================================================
+目次
+=============================================================================
+
+第1章:  プロジェクト概要
+第2章:  システムアーキテクチャ
+第3章:  技術スタック詳細
+第4章:  YouTube API統合
+第5章:  Twitch API統合
+第6章:  WebSocketチャット機能
+第7章:  Redisキャッシュシステム
+第8章:  ストリーム自動同期サービス
+第9章:  フロントエンド状態管理
+第10章: 認証・認可フロー
+第11章: データフローとシーケンス
+第12章: ストレージとプライバシー
+第13章: APIクォータ管理と最適化
+第14章: UI/UXコンポーネント構造
+第15章: エラーハンドリングとロギング
+第16章: コード構造とファイル参照
+第17章: 環境変数と設定
+第18章: デプロイメント手順
+第19章: テスト戦略
+第20章: 今後の拡張計画
+付録A:  APIリファレンス一覧
+付録B:  用語集
+
+=============================================================================
+第1章: プロジェクト概要
+=============================================================================
+
+1.1 プロジェクト名
+------------------
+ふくまど！(Fukumado)
+- 「複数の窓」を意味し、複数の配信を同時に視聴できることを表現
+
+1.2 プロジェクトの目的
+----------------------
+YouTube、Twitch、ニコニコ動画などの複数プラットフォームのライブ配信を
+最大8枠まで同時に視聴できるWebアプリケーションの提供。
+
+各配信プラットフォームの公式Embed APIとIframe APIを使用し、
+ユーザーの視聴体験を最適化する補助ツールとして機能する。
+
+1.3 主要機能
+------------
+[基本機能]
+✓ 最大8スロットのマルチストリーム同時視聴
+✓ YouTube/Twitch/ニコニコ動画対応（ニコニコは実装準備中）
+✓ 各スロットの個別音量・ミュート制御
+✓ マスター音量制御
+✓ レイアウトプリセット（2×2、1×3等）
+✓ フルスクリーンモード
+✓ 画質自動調整/手動選択
+
+[チャンネル管理]
+✓ チャンネル検索（YouTube/Twitch）
+✓ フォローチャンネル管理
+✓ 購読チャンネル自動同期（OAuth連携）
+✓ フォロー中の配信自動検出
+✓ ブラウザlocalStorageベースの永続化
+
+[チャット機能]
+✓ Twitchリアルタイムチャット表示（WebSocket）
+✓ プラットフォーム別タブ切り替え
+✓ チャットフィルタリング機能
+✓ ハイライト表示
+
+[認証・連携]
+✓ Google OAuth 2.0（YouTube）
+✓ Twitch OAuth 2.0
+✓ アクセストークン非永続化（セッション限定）
+
+[自動化機能]
+✓ バックグラウンドストリーム同期（5分ごと）
+✓ Redisキャッシュによる高速化
+✓ 配信ステータス自動更新
+
+1.4 ターゲットユーザー
+----------------------
+- 複数の配信者を同時に視聴したいユーザー
+- e-sports大会を複数視点で楽しみたいユーザー
+- 配信者のコラボ配信を全視点で見たいユーザー
+- マルチタスクで配信を楽しむヘビーユーザー
+
+1.5 プラットフォーム対応状況
+----------------------------
+[実装済み]
+✓ YouTube (Data API v3 + IFrame Player API)
+✓ Twitch (Helix API + Embed Player + IRC Chat)
+
+[実装準備中]
+○ ニコニコ動画 (型定義のみ存在、API統合未実装)
+
+1.6 開発状況
+------------
+現在: MVP (Minimum Viable Product) 開発完了
+ステータス: ローカル開発環境で動作確認済み
+次フェーズ: 本番デプロイメント、ニコニコ動画対応
+
+=============================================================================
+第2章: システムアーキテクチャ
+=============================================================================
+
+2.1 全体アーキテクチャ図
+------------------------
+
+┌──────────────────────────────────────────────────────────┐
+│                      User Browser                        │
+│  ┌────────────────────────────────────────────────┐      │
+│  │         React Frontend (Vite + TypeScript)     │      │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐     │      │
+│  │  │ Zustand  │  │ Zustand  │  │ Zustand  │     │      │
+│  │  │ Layout   │  │  Auth    │  │  Sync    │     │      │
+│  │  │  Store   │  │  Store   │  │  Store   │     │      │
+│  │  └──────────┘  └──────────┘  └──────────┘     │      │
+│  │                                                 │      │
+│  │  ┌──────────────────────────────────────┐      │      │
+│  │  │       localStorage (Persistent)      │      │      │
+│  │  │  - followedChannels                  │      │      │
+│  │  │  - layoutSettings                    │      │      │
+│  │  │  - syncSettings                      │      │      │
+│  │  └──────────────────────────────────────┘      │      │
+│  └────────────────────────────────────────────────┘      │
+│              │                    │                       │
+│         HTTPS REST            WebSocket                   │
+└──────────────┼────────────────────┼───────────────────────┘
+               │                    │
+               ▼                    ▼
+┌──────────────────────────────────────────────────────────┐
+│            Express Server (Node.js + TypeScript)         │
+│  ┌────────────────────────────────────────────────┐      │
+│  │              REST API Endpoints                │      │
+│  │  /auth/*        - OAuth認証フロー              │      │
+│  │  /api/youtube/* - YouTube API プロキシ          │      │
+│  │  /api/twitch/*  - Twitch API プロキシ           │      │
+│  │  /health        - ヘルスチェック                │      │
+│  └────────────────────────────────────────────────┘      │
+│  ┌────────────────────────────────────────────────┐      │
+│  │          WebSocket Server (/chat)              │      │
+│  │  - Twitch IRC接続管理                          │      │
+│  │  - チャンネル購読管理                          │      │
+│  │  - メッセージブロードキャスト                  │      │
+│  └────────────────────────────────────────────────┘      │
+│  ┌────────────────────────────────────────────────┐      │
+│  │         Background Services                    │      │
+│  │  - streamSyncService (5分ごと)                │      │
+│  │  - twitchChatService (IRC接続)                │      │
+│  └────────────────────────────────────────────────┘      │
+│  ┌────────────────────────────────────────────────┐      │
+│  │           Session Storage                      │      │
+│  │  express-session (7日間有効)                   │      │
+│  │  - googleUser, googleAccessToken               │      │
+│  │  - twitchUser, twitchAccessToken               │      │
+│  └────────────────────────────────────────────────┘      │
+└──────────────┬───────────────────┬────────────────────────┘
+               │                   │
+          HTTPS API            TCP (ioredis)
+               │                   │
+   ┌───────────┴──────────┐        │
+   │                      │        │
+   ▼                      ▼        ▼
+┌──────────┐      ┌──────────┐  ┌────────┐
+│ YouTube  │      │ Twitch   │  │ Redis  │
+│ Data API │      │ Helix    │  │ Cache  │
+│   v3     │      │   API    │  │ Server │
+└──────────┘      └──────────┘  └────────┘
+                       │
+                  Twitch IRC
+                       │
+                  ┌────────┐
+                  │  TMI   │
+                  │  IRC   │
+                  └────────┘
+
+2.2 通信プロトコル
+------------------
+[クライアント ←→ サーバー]
+- REST API: HTTPS (開発環境ではHTTP)
+- WebSocket: WSS (開発環境ではWS)
+- セッション: Cookie-based (httpOnly, maxAge: 7日)
+
+[サーバー ←→ 外部API]
+- YouTube API: HTTPS (undici library)
+- Twitch API: HTTPS (undici library)
+- Twitch IRC: TCP (tmi.js library)
+- Redis: TCP (ioredis library)
+
+2.3 データフロー概要
+--------------------
+1. ユーザーがブラウザでアクセス
+2. フロントエンドがlocalStorageから設定を復元
+3. バックエンドAPIを通じて外部サービスにアクセス
+4. Redisキャッシュで高速化
+5. WebSocketでリアルタイムチャット受信
+6. 状態をZustandストアで管理
+7. 設定をlocalStorageに永続化
+
+=============================================================================
+第3章: 技術スタック詳細
+=============================================================================
+
+3.1 フロントエンド
+------------------
+[コアライブラリ]
+- React: 18.3.1
+  - 最新安定版、Concurrent Featuresサポート
+- TypeScript: 5.5.4
+  - 型安全性の確保、開発効率向上
+- Vite: 5.4.2
+  - 高速なHMR、最適化されたビルド
+
+[状態管理]
+- Zustand: 4.5.2
+  - persist middleware使用
+  - 軽量でシンプルなAPI
+  - Redux比で約1/10のコード量
+
+[UI/スタイリング]
+- CSS Modules (ベース)
+- clsx: 2.1.0 (条件付きクラス名)
+- Heroicons React: 2.1.3 (アイコン)
+
+[開発ツール]
+- ESLint: 9.10.0
+  - @typescript-eslint/eslint-plugin: 8.4.0
+  - eslint-plugin-react-hooks: 5.1.0
+- @vitejs/plugin-react: 4.3.1
+
+3.2 バックエンド
+----------------
+[ランタイム・フレームワーク]
+- Node.js: (LTS推奨)
+- Express: 5.1.0
+  - TypeScript対応版
+- TypeScript: 5.9.3
+
+[HTTP通信]
+- undici: 7.16.0
+  - Node.js公式推奨のHTTPクライアント
+  - fetch API互換
+
+[リアルタイム通信]
+- ws: 8.18.3 (WebSocketサーバー)
+- tmi.js: 1.8.5 (Twitch IRC クライアント)
+
+[セッション管理]
+- express-session: 1.18.2
+  - サーバー側セッションストア
+  - Cookie-based認証
+
+[キャッシュ]
+- ioredis: 5.4.1
+  - Redisクライアント
+  - Promise対応、TypeScript型定義完備
+
+[環境変数]
+- dotenv: 17.2.3
+
+[開発ツール]
+- ts-node: 10.9.2
+- ts-node-dev: 2.0.0 (開発時ホットリロード)
+
+3.3 外部サービス
+----------------
+[動画プラットフォームAPI]
+- YouTube Data API v3
+  - Base URL: https://www.googleapis.com/youtube/v3
+  - 認証: API Key + OAuth 2.0
+  - クォータ: 10,000 units/day (デフォルト)
+
+- Twitch Helix API
+  - Base URL: https://api.twitch.tv/helix
+  - 認証: OAuth 2.0 (Client ID + Secret)
+  - レート制限: 800 requests/minute
+
+- Twitch IRC (Chat)
+  - Server: irc.chat.twitch.tv:6697 (SSL)
+  - Protocol: IRC (tmi.js wrapper)
+  - 認証: 匿名接続（読み取り専用）
+
+[キャッシュストア]
+- Redis
+  - Version: 5.x以上推奨
+  - 用途: API応答キャッシュ、セッションストア
+  - TTL: 5分（ストリームデータ）
+
+3.4 デプロイメント環境
+----------------------
+[開発環境]
+- OS: Windows (開発機)
+- Node.js: LTS
+- Redis: ローカルインスタンス
+- Port: 4000 (Express), 3000 (Vite dev server)
+
+[本番環境（想定）]
+- Platform: Google Cloud Run / AWS ECS 等
+- Container: Docker
+- Redis: Managed Service (Cloud Memorystore等)
+- HTTPS: 自動証明書
+
+=============================================================================
+第4章: YouTube API統合
+=============================================================================
+
+4.1 使用するYouTube API
+-----------------------
+[YouTube Data API v3]
+- チャンネル検索
+- ライブ配信検索
+- 購読チャンネル取得
+
+[YouTube IFrame Player API]
+- 埋め込み動画プレイヤー
+- 再生制御 (フロントエンドのみ、本仕様書ではAPI統合に焦点)
+
+4.2 認証方式
+------------
+[API Key認証]
+- 用途: 公開データへのアクセス（チャンネル検索、ライブ配信検索）
+- 環境変数: YOUTUBE_API_KEY
+- サーバー側で管理、クライアントに露出しない
+
+[OAuth 2.0認証]
+- 用途: ユーザー固有データへのアクセス（購読チャンネル）
+- スコープ: https://www.googleapis.com/auth/youtube.readonly
+- フロー: Authorization Code Flow
+- トークン保存: サーバーセッション（セッション限定、永続化しない）
+
+4.3 APIエンドポイント詳細
+-------------------------
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4.3.1 チャンネル検索
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[外部API]
+Endpoint: GET https://www.googleapis.com/youtube/v3/search
+認証: API Key
+
+[クエリパラメータ]
+{
+  "part": "snippet",              // 必須
+  "type": "channel",              // チャンネル検索
+  "key": "{YOUTUBE_API_KEY}",     // API Key
+  "maxResults": 10,               // 1-25 (デフォルト: 10)
+  "q": "{検索クエリ}"             // ユーザー入力
+}
+
+[レスポンス例]
+{
+  "items": [
+    {
+      "id": {
+        "channelId": "UC-lHJZR3Gqxm24_Vd_AJ5Yw"
+      },
+      "snippet": {
+        "title": "PewDiePie",
+        "description": "...",
+        "thumbnails": {
+          "default": { "url": "...", "width": 88, "height": 88 },
+          "medium": { "url": "...", "width": 240, "height": 240 },
+          "high": { "url": "...", "width": 800, "height": 800 }
+        },
+        "customUrl": "@pewdiepie"
+      }
+    }
+  ]
+}
+
+[内部APIエンドポイント]
+Endpoint: GET /api/youtube/channels
+実装: server/src/routes/youtube.ts (Line 54-70)
+Service: server/src/services/youtubeService.ts::searchChannels()
+
+[リクエスト]
+GET /api/youtube/channels?q={query}&maxResults={number}
+
+[レスポンス]
+{
+  "items": [
+    {
+      "id": "UC-lHJZR3Gqxm24_Vd_AJ5Yw",
+      "title": "PewDiePie",
+      "description": "...",
+      "thumbnailUrl": "https://...",
+      "customUrl": "@pewdiepie"
+    }
+  ]
+}
+
+[使用箇所]
+- フロントエンド: web/src/components/Header/Header.tsx
+- トリガー: ヘッダー検索ボックスで検索実行
+- 表示: ドロップダウンメニューに結果表示
+
+[クォータ消費]
+100 units / 検索
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4.3.2 ライブ配信検索
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[外部API]
+Endpoint: GET https://www.googleapis.com/youtube/v3/search
+認証: API Key
+
+[クエリパラメータ - チャンネル指定]
+{
+  "part": "snippet",
+  "channelId": "{チャンネルID}",
+  "type": "video",
+  "eventType": "live",            // ライブ配信のみ
+  "key": "{YOUTUBE_API_KEY}",
+  "maxResults": 10
+}
+
+[クエリパラメータ - キーワード検索]
+{
+  "part": "snippet",
+  "type": "video",
+  "eventType": "live",
+  "key": "{YOUTUBE_API_KEY}",
+  "maxResults": 10,
+  "q": "Apex Legends"             // 検索クエリ
+}
+
+[レスポンス例]
+{
+  "items": [
+    {
+      "id": {
+        "videoId": "dQw4w9WgXcQ"
+      },
+      "snippet": {
+        "publishedAt": "2025-01-20T10:00:00Z",
+        "channelId": "UC-lHJZR3Gqxm24_Vd_AJ5Yw",
+        "title": "【LIVE】Apex Legends ランクマ",
+        "description": "...",
+        "thumbnails": { ... },
+        "channelTitle": "PewDiePie"
+      }
+    }
+  ]
+}
+
+[内部APIエンドポイント]
+Endpoint: GET /api/youtube/live
+実装: server/src/routes/youtube.ts (Line 8-52)
+Service: server/src/services/youtubeService.ts::fetchLiveStreams()
+
+[リクエストパターン1: チャンネルID指定]
+GET /api/youtube/live?channelId=UC-xxx&channelId=UC-yyy&maxResults=10
+
+[リクエストパターン2: キーワード検索]
+GET /api/youtube/live?q=Apex+Legends&maxResults=10
+
+[リクエストパターン3: キャッシュ取得（パラメータなし）]
+GET /api/youtube/live
+→ streamSyncServiceのキャッシュから返却
+
+[レスポンス]
+{
+  "items": [
+    {
+      "id": "dQw4w9WgXcQ",
+      "title": "【LIVE】Apex Legends ランクマ",
+      "channelId": "UC-lHJZR3Gqxm24_Vd_AJ5Yw",
+      "channelTitle": "PewDiePie",
+      "description": "...",
+      "thumbnailUrl": "https://...",
+      "publishedAt": "2025-01-20T10:00:00Z"
+    }
+  ]
+}
+
+[使用箇所]
+- サイドバー「フォロー中の配信」リスト
+- バックグラウンド自動同期（streamSyncService）
+
+[クォータ消費]
+100 units / チャンネル or 検索クエリ
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4.3.3 購読チャンネル同期
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[外部API]
+Endpoint: GET https://www.googleapis.com/youtube/v3/subscriptions
+認証: OAuth 2.0 (Bearer Token)
+
+[クエリパラメータ]
+{
+  "part": "snippet",
+  "mine": "true",                 // 認証ユーザーの購読
+  "maxResults": 50,               // 最大50件/リクエスト
+  "order": "alphabetical"         // アルファベット順
+}
+
+[ヘッダー]
+{
+  "Authorization": "Bearer {accessToken}"
+}
+
+[レスポンス例]
+{
+  "items": [
+    {
+      "snippet": {
+        "resourceId": {
+          "channelId": "UC-lHJZR3Gqxm24_Vd_AJ5Yw"
+        },
+        "title": "PewDiePie",
+        "description": "...",
+        "thumbnails": { ... },
+        "channelId": "...",         // 購読者のチャンネルID
+        "channelTitle": "PewDiePie"
+      }
+    }
+  ],
+  "nextPageToken": "..."            // ページング用（未実装）
+}
+
+[内部APIエンドポイント]
+Endpoint: GET /api/youtube/subscriptions
+実装: server/src/routes/youtube.ts (Line 72-84)
+Service: server/src/services/youtubeService.ts::fetchUserSubscriptions()
+
+[リクエスト]
+GET /api/youtube/subscriptions
+→ セッションからアクセストークンを取得
+
+[レスポンス]
+{
+  "items": [
+    {
+      "id": "UC-lHJZR3Gqxm24_Vd_AJ5Yw",
+      "title": "PewDiePie",
+      "description": "...",
+      "thumbnailUrl": "https://...",
+      "customUrl": "PewDiePie"
+    }
+  ]
+}
+
+[使用箇所]
+- サイドバー「購読チャンネルを同期」ボタン
+- OAuth認証後に自動実行
+
+[認証フロー]
+1. ユーザーが「購読チャンネルを同期」クリック
+2. /auth/google にリダイレクト
+3. Google OAuth同意画面表示
+4. ユーザーが許可
+5. /auth/google/callback にリダイレクト
+6. アクセストークン取得、セッションに保存
+7. フロントエンドが /api/youtube/subscriptions を呼び出し
+8. 購読チャンネル取得、フォローリストに追加
+9. アクセストークンはセッション有効期間中のみ保持
+
+[クォータ消費]
+50 units / リクエスト
+
+4.4 エラーハンドリング
+----------------------
+[403 Quota Exceeded]
+{
+  "error": "YouTube API error: 403 - quotaExceeded"
+}
+→ ユーザーに「検索に失敗しました」と表示
+
+[401 Unauthorized]
+{
+  "error": "Authentication required"
+}
+→ ユーザーに「Googleアカウントへの接続が必要です」と表示
+
+[Network Error]
+→ フォールバック: キャッシュから返却（可能な場合）
+
+4.5 レート制限・ベストプラクティス
+----------------------------------
+- APIキーは環境変数で管理、クライアントに露出しない
+- 検索結果は必要最小限（maxResults: 10）
+- キャッシュ活用（Redis TTL: 5分）
+- エラー時は空配列を返却、アプリケーションクラッシュを防ぐ
+- OAuth トークンはセッション限定、永続化しない
+
+=============================================================================
+第5章: Twitch API統合
+=============================================================================
+
+5.1 使用するTwitch API
+----------------------
+[Twitch Helix API]
+- チャンネル検索
+- ライブストリーム検索
+- フォローチャンネル取得
+
+[Twitch IRC (TMI)]
+- リアルタイムチャット受信
+
+[Twitch Embed Player]
+- 埋め込み動画プレイヤー（フロントエンド、本章では扱わない）
+
+5.2 認証方式
+------------
+[OAuth 2.0 - App Access Token]
+- 用途: 公開API呼び出し（チャンネル検索、ストリーム検索）
+- フロー: Client Credentials Flow
+- トークン保存: サーバーセッション
+
+[OAuth 2.0 - User Access Token]
+- 用途: ユーザー固有データ（フォローチャンネル）
+- スコープ: user:read:follows
+- フロー: Authorization Code Flow
+- トークン保存: サーバーセッション（セッション限定）
+
+[IRC匿名接続]
+- 用途: チャット読み取り専用
+- 認証不要（匿名）
+
+5.3 APIエンドポイント詳細
+-------------------------
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5.3.1 チャンネル検索
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[外部API]
+Endpoint: GET https://api.twitch.tv/helix/search/channels
+認証: OAuth 2.0 Bearer Token + Client-ID
+
+[クエリパラメータ]
+{
+  "query": "{検索クエリ}",
+  "first": 10                      // 結果数 (最大100)
+}
+
+[ヘッダー]
+{
+  "Authorization": "Bearer {accessToken}",
+  "Client-ID": "{TWITCH_CLIENT_ID}"
+}
+
+[レスポンス例]
+{
+  "data": [
+    {
+      "id": "12345678",
+      "broadcaster_login": "xqc",
+      "display_name": "xQc",
+      "thumbnail_url": "https://...",
+      "game_id": "516575",
+      "game_name": "VALORANT",
+      "is_live": true
+    }
+  ],
+  "pagination": {
+    "cursor": "..."
+  }
+}
+
+[内部APIエンドポイント]
+Endpoint: GET /api/twitch/channels
+実装: server/src/routes/twitch.ts (Line 45-66)
+Service: server/src/services/twitchService.ts::searchChannels()
+
+[リクエスト]
+GET /api/twitch/channels?q={query}&maxResults={number}
+
+[レスポンス]
+{
+  "items": [
+    {
+      "id": "12345678",
+      "login": "xqc",
+      "displayName": "xQc",
+      "description": "VALORANT",
+      "thumbnailUrl": "https://..."
+    }
+  ]
+}
+
+[使用箇所]
+- ヘッダー検索ボックス（YouTube検索と統合）
+
+[レート制限]
+800 requests/minute (Twitch全体)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5.3.2 ライブストリーム検索
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[外部API]
+Endpoint: GET https://api.twitch.tv/helix/streams
+認証: OAuth 2.0 Bearer Token + Client-ID
+
+[クエリパラメータ]
+{
+  "user_id": "12345678",           // 複数指定可能（最大100）
+  "user_id": "87654321",
+  ...
+}
+
+[ヘッダー]
+{
+  "Authorization": "Bearer {accessToken}",
+  "Client-ID": "{TWITCH_CLIENT_ID}"
+}
+
+[レスポンス例]
+{
+  "data": [
+    {
+      "id": "stream_id_123",
+      "user_id": "12345678",
+      "user_login": "xqc",
+      "user_name": "xQc",
+      "title": "VALORANT RANKED",
+      "viewer_count": 50000,
+      "thumbnail_url": "https://...{width}x{height}.jpg",
+      "started_at": "2025-01-20T10:00:00Z"
+    }
+  ]
+}
+
+[内部APIエンドポイント]
+Endpoint: GET /api/twitch/live
+実装: server/src/routes/twitch.ts (Line 23-43)
+Service: server/src/services/twitchService.ts::fetchLiveStreams()
+
+[リクエスト]
+GET /api/twitch/live?channelId=12345678&channelId=87654321
+
+[レスポンス]
+{
+  "items": [
+    {
+      "id": "stream_id_123",
+      "userId": "12345678",
+      "login": "xqc",
+      "displayName": "xQc",
+      "title": "VALORANT RANKED",
+      "viewerCount": 50000,
+      "thumbnailUrl": "https://...640x360.jpg",
+      "startedAt": "2025-01-20T10:00:00Z"
+    }
+  ]
+}
+
+[実装の特徴]
+- バッチ処理: 100チャンネルずつまとめて取得
+- チャンネルID配列を100件ずつ分割
+- 各バッチに対して並列リクエスト
+
+[コード例]
+server/src/services/twitchService.ts (Line 129-186)
+```typescript
+const batchSize = 100;
+const batches: string[][] = [];
+for (let i = 0; i < channelIds.length; i += batchSize) {
+  batches.push(channelIds.slice(i, i + batchSize));
+}
+
+for (const batch of batches) {
+  const params = new URLSearchParams();
+  batch.forEach((id) => params.append('user_id', id));
+  // API call...
+}
+```
+
+[使用箇所]
+- サイドバー「フォロー中の配信」
+- 自動更新（同期間隔に従う）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5.3.3 フォローチャンネル取得
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[外部API]
+Endpoint: GET https://api.twitch.tv/helix/channels/followed
+認証: OAuth 2.0 User Access Token + Client-ID
+
+[クエリパラメータ]
+{
+  "user_id": "{認証ユーザーのID}",
+  "first": 100,                    // 最大100件/リクエスト
+  "after": "{cursor}"              // ページング用（オプション）
+}
+
+[ヘッダー]
+{
+  "Authorization": "Bearer {userAccessToken}",
+  "Client-ID": "{TWITCH_CLIENT_ID}"
+}
+
+[レスポンス例]
+{
+  "data": [
+    {
+      "broadcaster_id": "12345678",
+      "broadcaster_login": "xqc",
+      "broadcaster_name": "xQc"
+    }
+  ],
+  "pagination": {
+    "cursor": "eyJiIjp..."          // 次ページ用カーソル
+  }
+}
+
+[内部APIエンドポイント]
+Endpoint: GET /api/twitch/subscriptions
+実装: server/src/routes/twitch.ts (Line 7-21)
+Service: server/src/services/twitchService.ts::fetchFollowedChannels()
+
+[リクエスト]
+GET /api/twitch/subscriptions
+→ セッションからアクセストークンとユーザーIDを取得
+
+[レスポンス]
+{
+  "items": [
+    {
+      "id": "12345678",
+      "login": "xqc",
+      "displayName": "xQc"
+    }
+  ]
+}
+
+[実装の特徴]
+- ページング対応: cursor を使って全チャンネル取得
+- ループ処理で全ページを取得
+
+[コード例]
+server/src/services/twitchService.ts (Line 73-127)
+```typescript
+let cursor: string | undefined = undefined;
+do {
+  const params = new URLSearchParams({
+    user_id: userId,
+    first: '100'
+  });
+  if (cursor) {
+    params.append('after', cursor);
+  }
+  // API call...
+  cursor = data.pagination?.cursor;
+} while (cursor);
+```
+
+[使用箇所]
+- サイドバー「フォローチャンネルを同期」ボタン
+- OAuth認証後に自動実行
+
+[認証フロー]
+1. ユーザーが「フォローチャンネルを同期」クリック
+2. /auth/twitch にリダイレクト
+3. Twitch OAuth同意画面表示
+4. ユーザーが許可
+5. /auth/twitch/callback にリダイレクト
+6. アクセストークン取得、セッションに保存
+7. フロントエンドが /api/twitch/subscriptions を呼び出し
+8. フォローチャンネル取得、フォローリストに追加
+
+5.4 Twitch IRC (チャット)
+-------------------------
+
+[接続情報]
+Server: irc.chat.twitch.tv:6697 (SSL)
+Protocol: IRC (RFC 1459)
+Library: tmi.js 1.8.5
+
+[認証]
+匿名接続（読み取り専用）
+- ユーザー名不要
+- トークン不要
+
+[チャンネル参加]
+Command: JOIN #{channel_login}
+例: JOIN #xqc
+
+[メッセージ受信]
+Event: message
+```typescript
+client.on('message', (channel, tags, message, self) => {
+  // channel: "#xqc"
+  // tags: { username: "viewer123", "display-name": "Viewer123", ... }
+  // message: "Hello world!"
+});
+```
+
+[実装]
+Service: server/src/services/twitchChatService.ts
+- シングルトンインスタンス
+- 複数チャンネル参加可能
+- メッセージハンドラー登録機能
+
+[WebSocket統合]
+- サーバーがTwitch IRCに接続
+- ブラウザがWebSocketでサーバーに接続
+- サーバーがIRCメッセージをWebSocketクライアントに転送
+
+5.5 エラーハンドリング
+----------------------
+[401 Unauthorized]
+→ OAuth再認証が必要
+
+[429 Too Many Requests]
+→ レート制限超過、リトライ待機
+
+[Network Error]
+→ 再接続試行（tmi.js自動再接続機能）
+
+=============================================================================
+第6章: WebSocketチャット機能
+=============================================================================
+
+6.1 WebSocket概要
+-----------------
+[エンドポイント]
+ws://localhost:4000/chat (開発環境)
+wss://your-domain.com/chat (本番環境)
+
+[ライブラリ]
+- サーバー: ws 8.18.3
+- クライアント: ブラウザネイティブ WebSocket API
+
+6.2 接続フロー
+--------------
+1. クライアントがWebSocket接続を確立
+2. サーバーがクライアント情報を保存
+3. クライアントが購読チャンネルを送信 (subscribe メッセージ)
+4. サーバーがTwitch IRCチャンネルに参加
+5. IRCメッセージ受信時、購読中のクライアントに転送
+6. クライアント切断時、IRCチャンネルから退出
+
+6.3 メッセージフォーマット
+--------------------------
+
+[クライアント → サーバー: チャンネル購読]
+```json
+{
+  "type": "subscribe",
+  "channels": ["xqc", "shroud", "ninja"],
+  "channelMapping": {
+    "xqc": "xQc",
+    "shroud": "Shroud",
+    "ninja": "Ninja"
+  }
+}
+```
+
+[サーバー → クライアント: チャットメッセージ]
+```json
+{
+  "id": "msg-12345-67890",
+  "platform": "twitch",
+  "author": "Viewer123",
+  "message": "Hello world!",
+  "timestamp": "10:30",
+  "avatarColor": "#38bdf8",
+  "channelLogin": "xqc",
+  "channelName": "xQc"
+}
+```
+
+6.4 サーバー側実装
+------------------
+
+[WebSocketサーバー初期化]
+server/src/index.ts (Line 35-162)
+```typescript
+const wss = new WebSocketServer({ server, path: '/chat' });
+```
+
+[クライアント管理]
+```typescript
+interface ClientData {
+  channels: Set<string>;           // 購読中チャンネル（login名）
+  channelMapping: Record<string, string>; // login → displayName
+  cleanup?: () => void;             // クリーンアップ関数
+}
+
+const clients = new Map<WebSocket, ClientData>();
+```
+
+[メッセージ処理ロジック]
+1. Twitch IRCからメッセージ受信
+2. メッセージの channelLogin を確認
+3. 全クライアントをループ
+4. そのチャンネルを購読しているクライアントにのみ送信
+
+[コード例]
+server/src/index.ts (Line 62-82)
+```typescript
+const messageHandler = (message: any) => {
+  if (clientData.channels.has(message.channelLogin)) {
+    const displayName = clientData.channelMapping[message.channelLogin]
+                        || message.channelLogin;
+    const payload = JSON.stringify({
+      ...message,
+      channelName: displayName
+    });
+    ws.send(payload);
+  }
+};
+```
+
+[チャンネル参加最適化]
+- 同じチャンネルに複数クライアントが購読
+- IRCには1回のみ参加（重複JOIN回避）
+- 最後のクライアントが退出時のみIRCから退出
+
+6.5 クライアント側実装
+----------------------
+
+[接続確立]
+```typescript
+const ws = new WebSocket('ws://localhost:4000/chat');
+```
+
+[チャンネル購読]
+```typescript
+ws.send(JSON.stringify({
+  type: 'subscribe',
+  channels: ['xqc', 'shroud'],
+  channelMapping: { xqc: 'xQc', shroud: 'Shroud' }
+}));
+```
+
+[メッセージ受信]
+```typescript
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  // Zustand chatStore に追加
+  addChatMessage(message);
+};
+```
+
+6.6 エラーハンドリング
+----------------------
+- WebSocket切断時: 自動再接続試行
+- IRC接続失敗時: エラーログ、ユーザーに通知
+- メッセージパースエラー: エラーログ、無視
+
+=============================================================================
+第7章: Redisキャッシュシステム
+=============================================================================
+
+7.1 Redis概要
+-------------
+[用途]
+- API応答のキャッシュ（YouTube/Twitch）
+- セッションストア（将来的に導入可能）
+
+[接続情報]
+- Host: localhost (開発環境)
+- Port: 6379
+- DB: 0
+- Password: オプション
+
+7.2 キャッシュ戦略
+------------------
+
+[TTL (Time To Live)]
+- ストリームデータ: 300秒（5分）
+- 理由: リアルタイム性とAPI節約のバランス
+
+[キャッシュキー設計]
+```
+streams:youtube:default         - YouTubeデフォルトストリーム
+streams:youtube:channel:{id}    - 特定チャンネルのストリーム
+streams:twitch:channel:{id}     - 特定チャンネルのストリーム
+```
+
+7.3 実装詳細
+------------
+
+[CacheService]
+server/src/services/cacheService.ts
+
+[主要メソッド]
+```typescript
+class CacheService {
+  async set(key: string, value: any, ttlSeconds: number): Promise<void>
+  async get<T>(key: string): Promise<T | null>
+  async delete(key: string): Promise<void>
+  async deletePattern(pattern: string): Promise<void>
+  isConnected(): boolean
+}
+```
+
+[使用例]
+```typescript
+// 保存
+await cacheService.set('streams:youtube:default', streams, 300);
+
+// 取得
+const cached = await cacheService.get<YouTubeLiveStream[]>('streams:youtube:default');
+
+// 削除
+await cacheService.delete('streams:youtube:default');
+
+// パターン削除
+await cacheService.deletePattern('streams:youtube:*');
+```
+
+7.4 Redis接続管理
+-----------------
+
+[接続イベント]
+- connect: 接続成功時
+- error: エラー時
+- close: 接続切断時
+
+[リトライ戦略]
+```typescript
+retryStrategy: (times) => {
+  const delay = Math.min(times * 50, 2000);
+  return delay;
+}
+```
+- 初回: 50ms待機
+- 2回目: 100ms待機
+- ...
+- 最大: 2000ms待機
+
+[最大リトライ回数]
+maxRetriesPerRequest: 3
+
+7.5 キャッシュヒット率の最適化
+------------------------------
+- バックグラウンド同期でキャッシュをプリウォーム
+- TTL切れ前に再取得（自動同期サービス）
+- キャッシュミス時のみAPI呼び出し
+
+=============================================================================
+第8章: ストリーム自動同期サービス
+=============================================================================
+
+8.1 概要
+--------
+[目的]
+- 定期的にYouTubeライブストリームを取得
+- Redisにキャッシュ
+- フロントエンドへの高速応答を実現
+
+[実装]
+server/src/services/streamSyncService.ts
+
+8.2 同期間隔
+------------
+SYNC_INTERVAL: 300000ms (5分)
+CACHE_TTL: 300秒 (5分)
+
+8.3 同期対象
+------------
+[デフォルトクエリ]
+```typescript
+const DEFAULT_QUERIES = [
+  'Apex Legends',
+  'Valorant',
+  'League of Legends',
+  'Minecraft'
+];
+```
+
+各クエリで最大10件のライブストリーム取得
+→ 合計40件程度（重複除去後）
+
+8.4 動作フロー
+--------------
+1. サーバー起動時に即座に1回実行
+2. 以降、5分ごとに定期実行
+3. 各クエリでYouTube API呼び出し
+4. 結果を統合、重複除去
+5. Redisにキャッシュ保存
+
+[コード例]
+```typescript
+class StreamSyncService {
+  start(): void {
+    // 即座に1回実行
+    this.syncYouTubeStreams().catch(err => {
+      console.error('[StreamSync] Initial sync failed:', err);
+    });
+
+    // 定期実行
+    this.intervalId = setInterval(() => {
+      this.syncYouTubeStreams().catch(err => {
+        console.error('[StreamSync] Periodic sync failed:', err);
+      });
+    }, SYNC_INTERVAL);
+  }
+
+  private async syncYouTubeStreams(): Promise<void> {
+    const allStreams: YouTubeLiveStream[] = [];
+
+    for (const query of DEFAULT_QUERIES) {
+      const streams = await fetchLiveStreams({ query, maxResults: 10 });
+      allStreams.push(...streams);
+    }
+
+    // 重複除去
+    const uniqueStreams = Array.from(
+      new Map(allStreams.map(stream => [stream.id, stream])).values()
+    );
+
+    // キャッシュ保存
+    await cacheService.set(YOUTUBE_CACHE_KEY, uniqueStreams, CACHE_TTL);
+  }
+}
+```
+
+8.5 エラーハンドリング
+----------------------
+- API呼び出し失敗: エラーログ、次回同期まで待機
+- Redis接続失敗: エラーログ、キャッシュスキップ
+- サービス継続、アプリケーション全体は停止しない
+
+8.6 手動同期
+------------
+```typescript
+await streamSyncService.manualSync();
+```
+管理エンドポイント経由で手動トリガー可能（将来実装）
+
+=============================================================================
+第9章: フロントエンド状態管理
+=============================================================================
+
+9.1 Zustand Store一覧
+----------------------
+
+[1] layoutStore (web/src/stores/layoutStore.ts)
+- 役割: レイアウト、スロット、配信割り当て
+- 永続化: あり (localStorage, "fukumado-layout")
+
+[2] authStore (web/src/stores/authStore.ts)
+- 役割: Google/Twitch認証状態
+- 永続化: なし (セッション限定)
+
+[3] userStore (web/src/stores/userStore.ts)
+- 役割: フォローチャンネル管理
+- 永続化: あり (localStorage, "fukumado-user")
+
+[4] syncStore (web/src/stores/syncStore.ts)
+- 役割: 同期設定（自動更新間隔等）
+- 永続化: あり (localStorage, "fukumado-sync")
+
+[5] chatStore (web/src/stores/chatStore.ts)
+- 役割: チャットメッセージ、フィルター
+- 永続化: なし (セッション限定)
+
+[6] notificationStore (web/src/stores/notificationStore.ts)
+- 役割: 通知メッセージ管理
+- 永続化: なし (セッション限定)
+
+9.2 layoutStore詳細
+-------------------
+
+[状態]
+```typescript
+interface LayoutState {
+  preset: LayoutPreset;              // 'twoByTwo' | 'oneByThree' | ...
+  slots: StreamSlot[];               // 8スロット分
+  selectedSlotId: string | null;     // 選択中スロット
+  mutedAll: boolean;                 // 全体ミュート
+  masterVolume: number;              // マスター音量 (0-100)
+  activeSlotsCount: number;          // アクティブスロット数 (1-8)
+  availableStreams: Streamer[];      // 利用可能配信リスト
+  streamsLoading: boolean;
+  streamsError?: string;
+  platforms: Platform[];             // ['youtube', 'twitch', 'niconico']
+  searchQuery: string;               // 検索クエリ
+  channelSearchResults: ChannelSearchResult[];
+  channelSearchLoading: boolean;
+  channelSearchError?: string;
+  pendingStream: Streamer | null;    // 割り当て待ち配信
+  autoQualityEnabled: boolean;       // 自動画質調整
+  isModalOpen: boolean;
+  fullscreen: boolean;
+}
+```
+
+[StreamSlot構造]
+```typescript
+interface StreamSlot {
+  id: string;                        // 'slot-1' ~ 'slot-8'
+  muted: boolean;
+  volume: number;                    // 0-100
+  quality: VideoQuality;             // 'auto' | '1080p' | '720p' | '480p' | '360p'
+  assignedStream?: Streamer;         // 割り当て済み配信
+}
+```
+
+[主要アクション]
+- setPreset(preset): レイアウト変更
+- assignStream(slotId, stream): 配信割り当て
+- clearSlot(slotId): スロットクリア
+- toggleMuteAll(): 全体ミュートトグル
+- setVolume(slotId, volume): スロット音量設定
+- swapSlots(sourceId, targetId): スロット入れ替え
+
+[永続化対象]
+```typescript
+partialize: (state) => ({
+  preset: state.preset,
+  slots: state.slots,
+  selectedSlotId: state.selectedSlotId,
+  mutedAll: state.mutedAll,
+  masterVolume: state.masterVolume,
+  activeSlotsCount: state.activeSlotsCount,
+  autoQualityEnabled: state.autoQualityEnabled
+})
+```
+
+9.3 userStore詳細
+-----------------
+
+[状態]
+```typescript
+interface UserState {
+  followedChannels: FollowedChannel[];
+}
+
+interface FollowedChannel {
+  platform: Platform;                // 'youtube' | 'twitch' | 'niconico'
+  channelId: string;                 // チャンネルID
+  label?: string;                    // 表示名（オプション）
+}
+```
+
+[主要アクション]
+- addFollowedChannel(channel): チャンネル追加
+- addFollowedChannels(channels): 複数チャンネル追加
+- removeFollowedChannel(channelId, platform): チャンネル削除
+- clearFollowedChannels(): 全削除
+
+[重複チェック]
+```typescript
+const exists = state.followedChannels.some(
+  (item) => item.platform === channel.platform
+         && item.channelId === channel.channelId
+);
+```
+
+9.4 syncStore詳細
+-----------------
+
+[状態]
+```typescript
+interface SyncState {
+  settings: SyncSettings;
+  syncing: boolean;
+  lastSyncTime?: number;
+  manualSyncTrigger: number;
+}
+
+interface SyncSettings {
+  enabled: boolean;
+  interval: SyncInterval;            // 30000 | 60000 | 180000 | 300000
+}
+```
+
+[同期間隔選択肢]
+```typescript
+const SYNC_INTERVAL_OPTIONS = [
+  { value: 30000, label: '30秒' },
+  { value: 60000, label: '1分' },
+  { value: 180000, label: '3分' },
+  { value: 300000, label: '5分' }
+];
+```
+
+9.5 authStore詳細
+-----------------
+
+[状態]
+```typescript
+interface AuthState {
+  // Google (YouTube)
+  authenticated: boolean;
+  loading: boolean;
+  error?: string;
+  user?: AuthUser;
+
+  // Twitch
+  twitchAuthenticated: boolean;
+  twitchLoading: boolean;
+  twitchError?: string;
+  twitchUser?: TwitchUser;
+}
+```
+
+[アクション]
+- setStatus({ authenticated, user, error }): Google認証状態更新
+- setTwitchStatus({ authenticated, user, error }): Twitch認証状態更新
+
+9.6 状態の流れ
+--------------
+1. アプリ起動時、localStorageから永続化ストアを復元
+2. 認証状態チェック（authStore）
+3. フォローチャンネル取得（userStore）
+4. 配信リスト更新（layoutStore.availableStreams）
+5. ユーザー操作で状態変更
+6. Zustandが自動的にlocalStorageに保存
+
+=============================================================================
+第10章: 認証・認可フロー
+=============================================================================
+
+10.1 Google OAuth 2.0 (YouTube)
+-------------------------------
+
+[スコープ]
+https://www.googleapis.com/auth/youtube.readonly
+- 購読チャンネル読み取り専用
+
+[認証フロー]
+1. ユーザーが「購読チャンネルを同期」クリック
+2. GET /auth/google
+3. サーバーがGoogle OAuth URLにリダイレクト
+   ```
+   https://accounts.google.com/o/oauth2/v2/auth?
+     client_id={YOUTUBE_CLIENT_ID}&
+     redirect_uri={YOUTUBE_REDIRECT_URI}&
+     response_type=code&
+     scope=https://www.googleapis.com/auth/youtube.readonly&
+     access_type=offline
+   ```
+4. ユーザーがGoogleアカウントで認証
+5. Googleが /auth/google/callback にリダイレクト
+   ```
+   /auth/google/callback?code={authorization_code}
+   ```
+6. サーバーが authorization_code を access_token に交換
+   ```
+   POST https://oauth2.googleapis.com/token
+   {
+     code: authorization_code,
+     client_id: YOUTUBE_CLIENT_ID,
+     client_secret: YOUTUBE_CLIENT_SECRET,
+     redirect_uri: YOUTUBE_REDIRECT_URI,
+     grant_type: 'authorization_code'
+   }
+   ```
+7. access_token をセッションに保存
+   ```typescript
+   req.session.googleAccessToken = access_token;
+   req.session.googleUser = { id, email, name, picture };
+   ```
+8. フロントエンドにリダイレクト
+9. フロントエンドが /api/youtube/subscriptions 呼び出し
+10. サーバーがセッションから access_token 取得、API呼び出し
+11. 購読チャンネルリスト返却
+
+[トークン保存期間]
+- セッション有効期間: 7日間
+- セッション切れ後は再認証が必要
+
+[実装]
+server/src/routes/auth.ts
+
+10.2 Twitch OAuth 2.0
+---------------------
+
+[スコープ]
+user:read:follows
+- フォローチャンネル読み取り
+
+[認証フロー]
+1. ユーザーが「フォローチャンネルを同期」クリック
+2. GET /auth/twitch
+3. サーバーがTwitch OAuth URLにリダイレクト
+   ```
+   https://id.twitch.tv/oauth2/authorize?
+     client_id={TWITCH_CLIENT_ID}&
+     redirect_uri={TWITCH_REDIRECT_URI}&
+     response_type=code&
+     scope=user:read:follows
+   ```
+4. ユーザーがTwitchアカウントで認証
+5. Twitchが /auth/twitch/callback にリダイレクト
+6. サーバーが authorization_code を access_token に交換
+7. access_token をセッションに保存
+   ```typescript
+   req.session.twitchAccessToken = access_token;
+   req.session.twitchUser = { id, login, displayName };
+   ```
+8. フロントエンドにリダイレクト
+9. フロントエンドが /api/twitch/subscriptions 呼び出し
+10. フォローチャンネルリスト返却
+
+[App Access Token（公開API用）]
+- チャンネル検索、ライブストリーム検索に使用
+- サーバー起動時にClient Credentials Flowで取得
+- セッションに保存、全クライアント共有
+
+10.3 セッション管理
+-------------------
+
+[express-session設定]
+```typescript
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,                  // XSS対策
+    maxAge: 1000 * 60 * 60 * 24 * 7  // 7日間
+  }
+}));
+```
+
+[セッションデータ構造]
+```typescript
+declare module 'express-session' {
+  interface SessionData {
+    googleAccessToken?: string;
+    googleUser?: {
+      id: string;
+      email?: string;
+      name?: string;
+      picture?: string;
+    };
+    twitchAccessToken?: string;
+    twitchUser?: {
+      id: string;
+      login: string;
+      displayName: string;
+      profileImageUrl?: string;
+    };
+  }
+}
+```
+
+10.4 セキュリティ対策
+---------------------
+- アクセストークンはサーバーセッションのみ、クライアント露出なし
+- HTTPS通信（本番環境）
+- httpOnly Cookie（XSS対策）
+- セッション有効期限: 7日間
+- OAuth state パラメータ（CSRF対策、実装推奨）
+
+=============================================================================
+第11章: データフローとシーケンス
+=============================================================================
+
+11.1 アプリケーション起動フロー
+-------------------------------
+
+[1] ブラウザアクセス
+Browser → Vite Dev Server (Port 3000)
+
+[2] React初期化
+- Zustand Store初期化
+- localStorage から永続化データ復元
+  - layoutStore: スロット設定、音量等
+  - userStore: フォローチャンネル
+  - syncStore: 同期設定
+
+[3] 認証状態チェック
+Browser → GET /auth/google/status
+Browser → GET /auth/twitch/status
+
+[4] 配信リスト取得
+Browser → GET /api/youtube/live (キャッシュから)
+Browser → GET /api/twitch/live?channelId=... (フォローチャンネル)
+
+[5] WebSocket接続
+Browser → WebSocket /chat
+Browser → Send { type: 'subscribe', channels: [...] }
+
+[6] UI描画完了
+
+11.2 チャンネル検索フロー
+-------------------------
+
+[シーケンス]
+User → 検索ボックスに "xQc" 入力
+User → 検索ボタンクリック
+
+Browser → layoutStore.setSearchQuery("xQc")
+Browser → layoutStore.setChannelSearchLoading(true)
+
+[YouTube検索]
+Browser → GET /api/youtube/channels?q=xQc&maxResults=10
+Server → GET https://www.googleapis.com/youtube/v3/search?...
+Server → レスポンス正規化
+Server ← YouTube API Response
+Browser ← { items: [ { id, title, description, thumbnailUrl, ... } ] }
+
+[Twitch検索]
+Browser → GET /api/twitch/channels?q=xQc&maxResults=10
+Server → GET https://api.twitch.tv/helix/search/channels?...
+Server → レスポンス正規化
+Server ← Twitch API Response
+Browser ← { items: [ { id, login, displayName, ... } ] }
+
+[結果統合・表示]
+Browser → layoutStore.setChannelSearchResults([...youtube, ...twitch])
+Browser → layoutStore.setChannelSearchLoading(false)
+Browser → ドロップダウンメニュー表示
+
+[フォロー追加]
+User → "フォロー" ボタンクリック
+Browser → userStore.addFollowedChannel({ platform, channelId, label })
+Browser → localStorage自動保存
+Browser → 通知表示 "チャンネルをフォローしました"
+
+11.3 購読チャンネル同期フロー（YouTube）
+---------------------------------------
+
+[シーケンス]
+User → "購読チャンネルを同期" ボタンクリック
+
+Browser → GET /auth/google
+Server → Redirect to Google OAuth
+Google → ユーザー認証画面表示
+User → Google アカウントで認証、許可
+Google → Redirect /auth/google/callback?code=xxx
+Server → POST https://oauth2.googleapis.com/token (code交換)
+Server → access_token 取得
+Server → req.session.googleAccessToken = access_token
+Server → Redirect to Browser (/)
+
+Browser → authStore 更新確認
+Browser → GET /api/youtube/subscriptions
+Server → req.session.googleAccessToken 取得
+Server → GET https://www.googleapis.com/youtube/v3/subscriptions?mine=true
+Server ← YouTube API Response
+Browser ← { items: [ { id, title, ... } ] }
+
+Browser → 既存フォローと重複チェック
+Browser → userStore.addFollowedChannels(newChannels)
+Browser → 通知表示 "購読チャンネルを同期しました（新規 X 件）"
+
+11.4 配信割り当てフロー
+-----------------------
+
+[シーケンス]
+User → サイドバー配信リストで「この枠に割り当て」クリック
+
+Browser → layoutStore.ensureSelection() (スロット選択確認)
+Browser → layoutStore.assignStream(selectedSlotId, stream)
+
+[状態更新]
+- slots[index].assignedStream = stream
+- localStorage自動保存
+
+[プレイヤー描画]
+- StreamSlot コンポーネント再レンダリング
+- platform に応じて YouTube/Twitch Embed Player 初期化
+
+11.5 リアルタイムチャット受信フロー
+-----------------------------------
+
+[接続・購読]
+Browser → WebSocket接続確立
+Browser → Send { type: 'subscribe', channels: ['xqc', 'shroud'] }
+Server → twitchChatService.joinChannel('xqc')
+Server → twitchChatService.joinChannel('shroud')
+Server → Twitch IRC JOIN #xqc
+Server → Twitch IRC JOIN #shroud
+
+[メッセージ受信]
+Twitch IRC → PRIVMSG #xqc :Hello world!
+Server → tmi.js message イベント
+Server → TwitchChatMessage 生成
+  {
+    id: "msg-xxx",
+    platform: "twitch",
+    author: "Viewer123",
+    message: "Hello world!",
+    timestamp: "10:30",
+    avatarColor: "#38bdf8",
+    channelLogin: "xqc",
+    channelName: "xQc"
+  }
+Server → WebSocket clients フィルタ
+  - clientData.channels.has('xqc') のクライアントのみ
+Server → ws.send(JSON.stringify(message))
+
+Browser ← WebSocket メッセージ受信
+Browser → chatStore.addMessage(message)
+Browser → ChatPanel コンポーネント再レンダリング
+Browser → 新メッセージ表示
+
+=============================================================================
+第12章: ストレージとプライバシー
+=============================================================================
+
+12.1 サーバー側ストレージ
+-------------------------
+
+[セッションストア]
+保存場所: メモリ（express-session デフォルト）
+保存期間: 7日間
+保存内容:
+```typescript
+{
+  googleAccessToken: "ya29.a0AfH6...",
+  googleUser: {
+    id: "1234567890",
+    email: "user@example.com",
+    name: "User Name",
+    picture: "https://..."
+  },
+  twitchAccessToken: "abcd1234...",
+  twitchUser: {
+    id: "87654321",
+    login: "username",
+    displayName: "UserName",
+    profileImageUrl: "https://..."
+  }
+}
+```
+
+重要:
+- アクセストークンは永続化しない（サーバー再起動で消失）
+- セッション切れ後は再認証が必要
+
+[Redisキャッシュ]
+保存場所: Redis (ioredis)
+保存期間: 5分（TTL）
+保存内容: API応答キャッシュ
+```
+streams:youtube:default → [ { id, title, channelId, ... }, ... ]
+```
+
+12.2 クライアント側ストレージ
+-----------------------------
+
+[localStorage]
+保存場所: ブラウザ localStorage
+永続性: ブラウザキャッシュクリアまで永続
+保存内容:
+
+```json
+{
+  "fukumado-layout": {
+    "state": {
+      "preset": "twoByTwo",
+      "slots": [
+        {
+          "id": "slot-1",
+          "muted": false,
+          "volume": 70,
+          "quality": "auto",
+          "assignedStream": {
+            "id": "dQw4w9WgXcQ",
+            "platform": "youtube",
+            "title": "【LIVE】...",
+            "channelId": "UC-xxx",
+            "channelName": "Channel Name",
+            "thumbnailUrl": "https://...",
+            "viewerCount": 1000
+          }
+        },
+        ...
+      ],
+      "mutedAll": false,
+      "masterVolume": 100,
+      "activeSlotsCount": 4
+    },
+    "version": 1
+  },
+  "fukumado-user": {
+    "state": {
+      "followedChannels": [
+        {
+          "platform": "youtube",
+          "channelId": "UC-lHJZR3Gqxm24_Vd_AJ5Yw",
+          "label": "PewDiePie"
+        },
+        {
+          "platform": "twitch",
+          "channelId": "12345678",
+          "label": "xQc"
+        }
+      ]
+    },
+    "version": 1
+  },
+  "fukumado-sync": {
+    "state": {
+      "settings": {
+        "enabled": true,
+        "interval": 60000
+      }
+    },
+    "version": 1
+  }
+}
+```
+
+[保存されないデータ]
+- アクセストークン
+- ユーザーの個人情報（メールアドレス等）
+- チャット履歴（セッション限定）
+- 認証状態（セッション限定）
+
+12.3 プライバシー保護
+---------------------
+
+[個人情報の取り扱い]
+✓ OAuth認証情報はサーバーセッションのみ
+✓ アクセストークンは永続化しない
+✓ ユーザーの視聴履歴は記録しない
+✓ 第三者へのデータ提供なし
+
+[ユーザーが削除できるデータ]
+- ブラウザ設定からlocalStorageクリア
+- フォローチャンネルリスト手動削除
+- OAuth連携解除（Google/Twitch アカウント設定から）
+
+[GDPR/個人情報保護法対応]
+- プライバシーポリシー明示（docs/privacy-policy.md）
+- データ収集の最小化
+- ユーザーによるデータ管理権限
+
+=============================================================================
+第13章: APIクォータ管理と最適化
+=============================================================================
+
+13.1 YouTube APIクォータ
+------------------------
+
+[デフォルトクォータ]
+10,000 units/日
+
+[API操作別消費量]
+- search (チャンネル): 100 units
+- search (ライブ配信): 100 units
+- subscriptions.list: 50 units
+
+13.2 クォータ消費シミュレーション
+---------------------------------
+
+[シナリオ1: 一般ユーザー（1日）]
+- チャンネル検索: 5回 × 100 units = 500 units
+- 購読同期: 1回 × 50 units = 50 units
+- フォロー配信チェック: 10チャンネル × 100 units × 10回 = 10,000 units
+合計: 10,550 units
+→ クォータ超過リスク
+
+[シナリオ2: バックグラウンド同期活用]
+- チャンネル検索: 5回 × 100 units = 500 units
+- 購読同期: 1回 × 50 units = 50 units
+- バックグラウンド同期: 4クエリ × 100 units × 288回/日 = 115,200 units
+  (5分ごと = 288回/日)
+→ クォータ大幅超過
+
+[シナリオ3: 最適化後]
+- チャンネル検索: 5回 × 100 units = 500 units
+- 購読同期: 1回 × 50 units = 50 units
+- バックグラウンド同期: 4クエリ × 100 units × 12回/日 = 4,800 units
+  (2時間ごと = 12回/日)
+- フォロー配信チェック: キャッシュから取得、API呼び出しなし
+合計: 5,350 units
+→ クォータ内に収まる
+
+13.3 最適化戦略
+---------------
+
+[1] Redisキャッシュ活用
+- TTL: 5分
+- バックグラウンド同期でプリウォーム
+- フロントエンドはキャッシュから取得
+
+[2] バッチ処理
+- 複数チャンネルのライブ配信を1回のリクエストで取得（不可、YouTube制約）
+- → 代替: バックグラウンド同期で人気配信を取得
+
+[3] ユーザーアクション制限
+- 検索ボタン押下時のみAPI呼び出し（入力中は呼び出さない）
+- デバウンス処理（将来実装）
+
+[4] クォータ申請
+- Google Cloud Console からクォータ増加申請
+- 理由: マルチストリーム視聴ツールの提供
+- 目標: 100,000 units/日
+
+13.4 Twitch APIレート制限
+-------------------------
+
+[制限]
+800 requests/minute
+
+[対策]
+- バッチ処理（100チャンネル/リクエスト）
+- ユーザー操作時のみAPI呼び出し
+- Redisキャッシュ（将来実装）
+
+13.5 エラー時のフォールバック
+-----------------------------
+[403 Quota Exceeded]
+1. Redisキャッシュから返却（可能な場合）
+2. ユーザーに「検索に失敗しました」と表示
+3. 管理者にアラート（将来実装）
+
+[429 Too Many Requests]
+1. リトライ待機（exponential backoff）
+2. ユーザーに「しばらく待ってから再試行してください」と表示
+
+=============================================================================
+第14章: UI/UXコンポーネント構造
+=============================================================================
+
+14.1 コンポーネント階層
+-----------------------
+
+```
+App (web/src/App.tsx)
+└── AppShell
+    ├── Header
+    │   ├── Logo
+    │   ├── SearchBox
+    │   │   └── ChannelSearchDropdown
+    │   └── GlobalControls
+    │       ├── MuteAllButton
+    │       ├── VolumeSlider
+    │       └── FullscreenButton
+    ├── Sidebar
+    │   ├── AccountIntegration
+    │   │   ├── GoogleAuthButton
+    │   │   └── TwitchAuthButton
+    │   ├── FollowingStreams
+    │   │   └── StreamCard (複数)
+    │   │       └── AssignButton
+    │   ├── FollowSettings
+    │   │   ├── FollowedChannelList
+    │   │   └── ManualAddForm
+    │   └── SyncSettings
+    │       ├── SyncIntervalSelector
+    │       └── ManualSyncButton
+    ├── StreamGrid
+    │   └── StreamSlot (1-8個)
+    │       ├── PlayerEmbed (YouTube/Twitch)
+    │       ├── SlotOverlay
+    │       │   ├── StreamInfo
+    │       │   ├── VolumeControl
+    │       │   ├── QualitySelector
+    │       │   └── CloseButton
+    │       └── EmptySlotPlaceholder
+    ├── ChatPanel
+    │   ├── ChatTabs
+    │   │   ├── AllTab
+    │   │   ├── YouTubeTab
+    │   │   ├── TwitchTab
+    │   │   └── NiconicoTab
+    │   ├── ChatMessageList
+    │   │   └── ChatMessage (複数)
+    │   └── ChatFilter
+    └── Footer
+        ├── LegalLinks
+        │   ├── TermsOfService
+        │   └── PrivacyPolicy
+        └── Copyright
+```
+
+14.2 主要コンポーネント責務
+---------------------------
+
+[AppShell]
+- レイアウト全体の骨組み
+- ヘッダー、サイドバー、メインコンテンツの配置
+
+[Header]
+- ロゴ表示
+- チャンネル検索
+- グローバル操作（全体ミュート、音量等）
+
+[Sidebar]
+- OAuth認証ボタン
+- フォロー中配信リスト
+- フォロー設定
+- 同期設定
+
+[StreamGrid]
+- スロットグリッドレイアウト
+- レスポンシブ対応（1, 2, 4, 6, 8スロット）
+- スロット選択管理
+
+[StreamSlot]
+- 配信プレイヤー埋め込み
+- 個別音量・ミュート制御
+- 画質選択
+- ストリーム情報表示
+
+[ChatPanel]
+- プラットフォーム別タブ
+- メッセージリスト（仮想スクロール推奨、未実装）
+- フィルター機能
+
+14.3 スタイリング
+-----------------
+
+[CSS Modules]
+各コンポーネントに対応する .module.css
+- Header.module.css
+- Sidebar.module.css
+- StreamGrid.module.css
+- ...
+
+[clsx]
+条件付きクラス名
+```typescript
+<div className={clsx(
+  styles.slot,
+  isSelected && styles.selected,
+  isEmpty && styles.empty
+)}>
+```
+
+[Heroicons]
+アイコンライブラリ
+```typescript
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+```
+
+14.4 レスポンシブ対応
+---------------------
+
+[ブレークポイント]
+- Mobile: < 640px
+- Tablet: 640px - 1024px
+- Desktop: > 1024px
+
+[スロットレイアウト]
+- 1スロット: 1×1
+- 2スロット: 1×2 (縦並び)
+- 4スロット: 2×2
+- 6スロット: 2×3
+- 8スロット: 2×4
+
+[モバイル対応]
+- サイドバー: ドロワー形式
+- スロット: 縦スクロール
+- チャットパネル: フルスクリーンモーダル
+
+=============================================================================
+第15章: エラーハンドリングとロギング
+=============================================================================
+
+15.1 エラー分類
+---------------
+
+[1] ネットワークエラー]
+- API呼び出し失敗
+- WebSocket切断
+- タイムアウト
+
+[2] 認証エラー]
+- OAuth失敗
+- トークン期限切れ
+- 権限不足
+
+[3] APIエラー]
+- クォータ超過 (403)
+- レート制限 (429)
+- 不正なリクエスト (400)
+
+[4] アプリケーションエラー]
+- 予期しない状態
+- データ不整合
+
+15.2 エラーハンドリング戦略
+---------------------------
+
+[API呼び出し]
+```typescript
+try {
+  const response = await request(url, options);
+  if (response.statusCode >= 400) {
+    const body = await response.body.text();
+    throw new Error(`API error: ${response.statusCode} - ${body}`);
+  }
+  return await response.body.json();
+} catch (error) {
+  console.error('[API Error]', error);
+  // フォールバック処理
+  return [];
+}
+```
+
+[フロントエンド]
+```typescript
+try {
+  const response = await fetch('/api/youtube/channels?q=...');
+  const data = await response.json();
+  setChannelSearchResults(data.items);
+} catch (error) {
+  console.error('[Search Error]', error);
+  setChannelSearchError('検索に失敗しました');
+  // 通知表示
+  notificationStore.addNotification({
+    type: 'error',
+    message: '検索に失敗しました'
+  });
+}
+```
+
+15.3 ロギング
+-------------
+
+[サーバーサイド]
+- console.log: 通常フロー
+- console.error: エラー
+- 統一フォーマット: [Service] Message
+
+[例]
+```
+[YouTube API] Fetching channels for query: "PewDiePie"
+[Twitch Service] Fetching live streams for channels: 100
+[StreamSync] Starting YouTube streams sync...
+[WebSocket] Client connected
+[Redis] Cache hit: streams:youtube:default
+```
+
+[本番環境（将来）]
+- Winston / Pino 等のロガー導入
+- ログレベル: DEBUG, INFO, WARN, ERROR
+- 外部ログサービス連携（Cloud Logging等）
+
+15.4 ユーザー通知
+-----------------
+
+[notificationStore]
+```typescript
+interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  message: string;
+  duration?: number;
+}
+```
+
+[表示例]
+- 成功: 「購読チャンネルを同期しました（新規 5 件）」
+- エラー: 「検索に失敗しました」
+- 情報: 「配信をスロット1に割り当てました」
+
+[自動非表示]
+duration: 3000ms（3秒後に自動消去）
+
+=============================================================================
+第16章: コード構造とファイル参照
+=============================================================================
+
+16.1 ディレクトリ構造
+---------------------
+
+```
+C:\Users\s_kus\開発\
+├── docs/
+│   ├── privacy-policy.md
+│   ├── terms-of-service.md
+│   └── ui-plan.md
+├── server/
+│   ├── src/
+│   │   ├── config/
+│   │   │   └── env.ts               - 環境変数管理
+│   │   ├── routes/
+│   │   │   ├── auth.ts              - OAuth認証エンドポイント
+│   │   │   ├── youtube.ts           - YouTube APIエンドポイント
+│   │   │   └── twitch.ts            - Twitch APIエンドポイント
+│   │   ├── services/
+│   │   │   ├── youtubeService.ts    - YouTube API呼び出し
+│   │   │   ├── twitchService.ts     - Twitch API呼び出し
+│   │   │   ├── twitchChatService.ts - Twitch IRC接続
+│   │   │   ├── cacheService.ts      - Redisキャッシュ管理
+│   │   │   └── streamSyncService.ts - バックグラウンド同期
+│   │   └── index.ts                 - Expressサーバーエントリーポイント
+│   ├── package.json
+│   └── tsconfig.json
+├── web/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── AppShell/
+│   │   │   ├── ChatPanel/
+│   │   │   ├── Footer/
+│   │   │   ├── GlobalControls/
+│   │   │   ├── Header/
+│   │   │   ├── LayoutPresetModal/
+│   │   │   ├── Legal/
+│   │   │   ├── Sidebar/
+│   │   │   ├── SlotSelectionModal/
+│   │   │   ├── StreamGrid/
+│   │   │   └── StreamSelectionModal/
+│   │   ├── hooks/                   - カスタムフック
+│   │   ├── stores/
+│   │   │   ├── authStore.ts
+│   │   │   ├── chatStore.ts
+│   │   │   ├── layoutStore.ts
+│   │   │   ├── notificationStore.ts
+│   │   │   ├── syncStore.ts
+│   │   │   └── userStore.ts
+│   │   ├── styles/                  - グローバルスタイル
+│   │   ├── types/                   - TypeScript型定義
+│   │   ├── utils/                   - ユーティリティ関数
+│   │   ├── App.tsx                  - Reactエントリーポイント
+│   │   └── main.tsx                 - Viteエントリーポイント
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+├── package-lock.json
+├── start-fukumado-dev.bat           - 開発サーバー起動スクリプト
+└── YouTube_API_Implementation_Specification.txt
+```
+
+16.2 主要ファイル詳細
+---------------------
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[サーバーサイド]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+server/src/index.ts (171行)
+- Expressサーバー初期化
+- ミドルウェア設定（session, JSON parser）
+- ルート登録（/auth, /api/youtube, /api/twitch）
+- WebSocketサーバー初期化
+- バックグラウンドサービス起動
+
+server/src/config/env.ts (56行)
+- dotenv設定
+- 環境変数バリデーション
+- 環境変数エクスポート
+  - port, sessionSecret
+  - redis (host, port, password, db)
+  - youtube (apiKey, clientId, clientSecret, redirectUri)
+  - twitch (clientId, clientSecret, redirectUri)
+
+server/src/routes/auth.ts
+- Google OAuth フロー
+  - GET /auth/google
+  - GET /auth/google/callback
+  - GET /auth/google/status
+- Twitch OAuth フロー
+  - GET /auth/twitch
+  - GET /auth/twitch/callback
+  - GET /auth/twitch/status
+
+server/src/routes/youtube.ts (85行)
+- GET /api/youtube/live
+  - クエリパラメータ: channelId (複数可), q, maxResults
+  - キャッシュ対応
+- GET /api/youtube/channels
+  - クエリパラメータ: q, maxResults
+- GET /api/youtube/subscriptions
+  - OAuth認証必須
+
+server/src/routes/twitch.ts (67行)
+- GET /api/twitch/subscriptions
+  - OAuth認証必須
+- GET /api/twitch/live
+  - クエリパラメータ: channelId (複数可)
+- GET /api/twitch/channels
+  - クエリパラメータ: q, maxResults
+
+server/src/services/youtubeService.ts (236行)
+- fetchLiveStreams(options)
+  - channelIds or query でライブ配信取得
+  - Promise.allSettled でバッチ処理
+- searchChannels(query, maxResults)
+  - チャンネル検索
+- fetchUserSubscriptions(accessToken)
+  - 購読チャンネル取得
+
+server/src/services/twitchService.ts (218行)
+- fetchFollowedChannels(accessToken, userId)
+  - ページング対応、全フォローチャンネル取得
+- fetchLiveStreams(accessToken, channelIds)
+  - 100件ずつバッチ処理
+- searchChannels(accessToken, query, maxResults)
+
+server/src/services/twitchChatService.ts (167行)
+- ensureClient(): TMIクライアント初期化
+- joinChannel(channelLogin): チャンネル参加
+- leaveChannel(channelLogin): チャンネル退出
+- onMessage(handler): メッセージハンドラー登録
+
+server/src/services/cacheService.ts (121行)
+- set(key, value, ttlSeconds): キャッシュ保存
+- get<T>(key): キャッシュ取得
+- delete(key): キャッシュ削除
+- deletePattern(pattern): パターン削除
+
+server/src/services/streamSyncService.ts (139行)
+- start(): バックグラウンド同期開始
+- stop(): 停止
+- syncYouTubeStreams(): YouTube配信同期
+- getCachedYouTubeStreams(): キャッシュ取得
+- manualSync(): 手動同期
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[フロントエンド]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+web/src/App.tsx
+- Reactアプリケーションルート
+- AppShellコンポーネント配置
+
+web/src/stores/layoutStore.ts (331行)
+- スロット管理（8スロット）
+- レイアウトプリセット
+- 配信割り当て
+- 音量・ミュート制御
+- 検索結果管理
+- localStorage永続化
+
+web/src/stores/authStore.ts (64行)
+- Google認証状態
+- Twitch認証状態
+- ユーザー情報
+- セッション限定（永続化なし）
+
+web/src/stores/userStore.ts (64行)
+- フォローチャンネル管理
+- 追加・削除・クリア
+- localStorage永続化
+
+web/src/stores/syncStore.ts (66行)
+- 同期設定（有効/無効、間隔）
+- 手動同期トリガー
+- localStorage永続化
+
+web/src/stores/chatStore.ts
+- チャットメッセージ管理
+- プラットフォーム別フィルタ
+- セッション限定（永続化なし）
+
+web/src/stores/notificationStore.ts
+- 通知メッセージ管理
+- 自動非表示タイマー
+- セッション限定（永続化なし）
+
+16.3 型定義ファイル
+-------------------
+
+web/src/types/
+- index.ts: 全型定義エクスポート
+
+[主要型]
+```typescript
+type Platform = 'youtube' | 'twitch' | 'niconico';
+type LayoutPreset = 'twoByTwo' | 'oneByThree' | 'twoByThree' | ...;
+type VideoQuality = 'auto' | '1080p' | '720p' | '480p' | '360p';
+
+interface Streamer {
+  id: string;
+  platform: Platform;
+  title: string;
+  channelId: string;
+  channelName: string;
+  thumbnailUrl: string;
+  viewerCount?: number;
+  startedAt?: string;
+}
+
+interface StreamSlot {
+  id: string;
+  muted: boolean;
+  volume: number;
+  quality: VideoQuality;
+  assignedStream?: Streamer;
+}
+
+interface ChannelSearchResult {
+  id: string;
+  platform: Platform;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  customUrl?: string;
+  isFollowed: boolean;
+}
+```
+
+=============================================================================
+第17章: 環境変数と設定
+=============================================================================
+
+17.1 必須環境変数
+-----------------
+
+[サーバー (.env)]
+```env
+# サーバー設定
+PORT=4000
+SESSION_SECRET=your-secret-key-here-change-in-production
+
+# Redis設定
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=                     # オプション
+REDIS_DB=0
+
+# YouTube API設定
+YOUTUBE_API_KEY=AIzaSy...          # Google Cloud Console で取得
+YOUTUBE_CLIENT_ID=1234567890-xxx.apps.googleusercontent.com
+YOUTUBE_CLIENT_SECRET=GOCSPX-...
+YOUTUBE_REDIRECT_URI=http://localhost:4000/auth/google/callback
+
+# Twitch API設定
+TWITCH_CLIENT_ID=abcdefghijklmnop
+TWITCH_CLIENT_SECRET=1234567890abcdefghij
+TWITCH_REDIRECT_URI=http://localhost:4000/auth/twitch/callback
+```
+
+17.2 環境変数取得手順
+---------------------
+
+[YouTube API]
+1. Google Cloud Console にアクセス
+   https://console.cloud.google.com/
+2. 新しいプロジェクト作成
+3. YouTube Data API v3 を有効化
+4. 認証情報 > API キー作成
+   → YOUTUBE_API_KEY
+5. 認証情報 > OAuth 2.0 クライアントID作成
+   - アプリケーションの種類: ウェブアプリケーション
+   - 承認済みのリダイレクトURI: http://localhost:4000/auth/google/callback
+   → YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET
+
+[Twitch API]
+1. Twitch Developers にアクセス
+   https://dev.twitch.tv/console/apps
+2. 新しいアプリケーション登録
+   - 名前: Fukumado
+   - OAuth リダイレクトURL: http://localhost:4000/auth/twitch/callback
+   - カテゴリ: Website Integration
+3. クライアントID、クライアントシークレット取得
+   → TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET
+
+[SESSION_SECRET]
+ランダムな文字列を生成
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+17.3 開発環境 vs 本番環境
+-------------------------
+
+[開発環境]
+- PORT: 4000
+- REDIS: localhost
+- YOUTUBE_REDIRECT_URI: http://localhost:4000/auth/google/callback
+- TWITCH_REDIRECT_URI: http://localhost:4000/auth/twitch/callback
+- HTTP (非SSL)
+
+[本番環境]
+- PORT: 環境により異なる（Cloud Run等）
+- REDIS: マネージドサービス（Cloud Memorystore等）
+- YOUTUBE_REDIRECT_URI: https://your-domain.com/auth/google/callback
+- TWITCH_REDIRECT_URI: https://your-domain.com/auth/twitch/callback
+- HTTPS (SSL必須)
+
+=============================================================================
+第18章: デプロイメント手順
+=============================================================================
+
+18.1 ローカル開発環境セットアップ
+---------------------------------
+
+[前提条件]
+- Node.js (LTS版推奨)
+- Redis (ローカルインストール or Docker)
+
+[手順]
+1. リポジトリクローン（既に存在）
+   ```
+   C:\Users\s_kus\開発\
+   ```
+
+2. 環境変数設定
+   ```
+   server/.env ファイル作成（第17章参照）
+   ```
+
+3. 依存関係インストール
+   ```bash
+   cd server
+   npm install
+
+   cd ../web
+   npm install
+   ```
+
+4. Redis起動
+   [Windows]
+   ```bash
+   # Redis公式バイナリまたはDockerを使用
+   docker run -d -p 6379:6379 redis:latest
+   ```
+
+5. サーバー起動
+   ```bash
+   cd server
+   npm run dev
+   ```
+   → http://localhost:4000 で起動
+
+6. フロントエンド起動（別ターミナル）
+   ```bash
+   cd web
+   npm run dev
+   ```
+   → http://localhost:3000 で起動
+
+7. ブラウザでアクセス
+   ```
+   http://localhost:3000
+   ```
+
+[起動スクリプト]
+start-fukumado-dev.bat
+```batch
+@echo off
+start cmd /k "cd server && npm run dev"
+start cmd /k "cd web && npm run dev"
+```
+
+18.2 本番デプロイメント（Docker + Cloud Run 想定）
+--------------------------------------------------
+
+[Dockerfile作成]
+```dockerfile
+# Multi-stage build
+
+# Stage 1: Build frontend
+FROM node:18 AS frontend-builder
+WORKDIR /app/web
+COPY web/package*.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
+
+# Stage 2: Build backend
+FROM node:18 AS backend-builder
+WORKDIR /app/server
+COPY server/package*.json ./
+RUN npm ci
+COPY server/ ./
+RUN npm run build
+
+# Stage 3: Production
+FROM node:18-slim
+WORKDIR /app
+
+# Copy backend build
+COPY --from=backend-builder /app/server/dist ./dist
+COPY --from=backend-builder /app/server/package*.json ./
+RUN npm ci --only=production
+
+# Copy frontend build
+COPY --from=frontend-builder /app/web/dist ./public
+
+EXPOSE 8080
+ENV PORT=8080
+CMD ["node", "dist/index.js"]
+```
+
+[Cloud Run デプロイ]
+```bash
+# Google Cloud SDK インストール済み前提
+
+# プロジェクト設定
+gcloud config set project YOUR_PROJECT_ID
+
+# イメージビルド
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/fukumado
+
+# Cloud Run デプロイ
+gcloud run deploy fukumado \
+  --image gcr.io/YOUR_PROJECT_ID/fukumado \
+  --platform managed \
+  --region asia-northeast1 \
+  --allow-unauthenticated \
+  --set-env-vars "SESSION_SECRET=xxx,YOUTUBE_API_KEY=xxx,..."
+```
+
+[環境変数設定（本番）]
+Cloud Run コンソールまたはコマンドで設定
+- SESSION_SECRET
+- REDIS_HOST（Cloud Memorystore のIPアドレス）
+- YOUTUBE_API_KEY, YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET
+- YOUTUBE_REDIRECT_URI (https://your-domain.com/auth/google/callback)
+- TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET
+- TWITCH_REDIRECT_URI (https://your-domain.com/auth/twitch/callback)
+
+18.3 本番環境チェックリスト
+---------------------------
+□ HTTPS有効化
+□ 環境変数設定（本番用）
+□ OAuth リダイレクトURI更新（Google/Twitch）
+□ Redisマネージドサービス接続
+□ セッションシークレット変更
+□ CORS設定（必要に応じて）
+□ エラーログモニタリング設定
+□ ヘルスチェックエンドポイント確認 (/health)
+
+=============================================================================
+第19章: テスト戦略
+=============================================================================
+
+19.1 現状
+---------
+テストコード未実装（MVP開発優先）
+
+19.2 将来的なテスト計画
+-----------------------
+
+[ユニットテスト]
+- フレームワーク: Jest / Vitest
+- 対象:
+  - services/ 配下のロジック
+  - stores/ 配下の状態管理
+  - utils/ 配下のユーティリティ関数
+
+[統合テスト]
+- フレームワーク: Supertest (API) + Playwright (E2E)
+- 対象:
+  - APIエンドポイント
+  - OAuth認証フロー
+  - WebSocket通信
+
+[E2Eテスト]
+- フレームワーク: Playwright / Cypress
+- シナリオ:
+  1. チャンネル検索 → フォロー追加
+  2. 配信検索 → スロット割り当て
+  3. OAuth認証 → 購読同期
+  4. チャット受信 → 表示確認
+
+19.3 テストカバレッジ目標
+-------------------------
+- ユニットテスト: 80%以上
+- 統合テスト: 主要フロー100%
+- E2Eテスト: クリティカルパス100%
+
+=============================================================================
+第20章: 今後の拡張計画
+=============================================================================
+
+20.1 実装予定機能
+-----------------
+
+[高優先度]
+1. ニコニコ動画対応
+   - ニコニコ生放送API統合
+   - コメント表示（ニコニコチャット）
+
+2. YouTube Liveチャット対応
+   - YouTube Live Chat API統合
+   - WebSocketでのリアルタイム表示
+
+3. レイアウトカスタマイズ強化
+   - ドラッグ&ドロップでスロット入れ替え
+   - 自由配置モード
+
+4. 配信通知機能
+   - フォロー中チャンネルの配信開始通知
+   - ブラウザ通知API使用
+
+5. プレイリスト機能
+   - 配信セットの保存・読み込み
+   - シーン切り替え
+
+[中優先度]
+6. テーマ切り替え
+   - ライトモード / ダークモード
+
+7. ショートカットキー
+   - キーボード操作対応
+   - カスタマイズ可能
+
+8. 配信録画（技術的制約あり）
+   - 各プラットフォームのTOS確認必須
+
+9. マルチアングル同期
+   - 複数配信の再生位置同期
+
+10. パフォーマンス最適化
+    - React.memo, useMemo活用
+    - 仮想スクロール（チャット）
+    - Service Worker (PWA)
+
+[低優先度 / 将来構想]
+11. 有料プラン
+    - 無制限スロット（8以上）
+    - 高度なフィルタ機能
+    - 広告非表示
+
+12. ソーシャル機能
+    - ユーザー間での配信セット共有
+    - コミュニティ機能
+
+13. 統計・分析
+    - 視聴時間トラッキング
+    - 人気配信ランキング
+
+14. モバイルアプリ
+    - React Native移植
+    - iOS / Android対応
+
+20.2 技術的負債・改善項目
+-------------------------
+1. TypeScript strict mode 有効化
+2. ESLint ルール強化
+3. エラーハンドリング統一
+4. ログシステム導入（Winston等）
+5. モニタリング（Sentry, Datadog等）
+6. CI/CD パイプライン構築
+7. 自動テスト導入
+8. セキュリティ監査
+9. アクセシビリティ対応（WCAG準拠）
+10. 国際化 (i18n)
+
+=============================================================================
+付録A: APIリファレンス一覧
+=============================================================================
+
+A.1 内部API（サーバー提供）
+---------------------------
+
+[認証関連]
+GET  /auth/google                    - Google OAuth開始
+GET  /auth/google/callback           - Google OAuthコールバック
+GET  /auth/google/status             - Google認証状態確認
+GET  /auth/twitch                    - Twitch OAuth開始
+GET  /auth/twitch/callback           - Twitch OAuthコールバック
+GET  /auth/twitch/status             - Twitch認証状態確認
+
+[YouTube API]
+GET  /api/youtube/channels           - チャンネル検索
+     ?q={query}&maxResults={number}
+GET  /api/youtube/live               - ライブ配信取得
+     ?channelId={id}&q={query}&maxResults={number}
+GET  /api/youtube/subscriptions      - 購読チャンネル取得（OAuth必須）
+
+[Twitch API]
+GET  /api/twitch/channels            - チャンネル検索
+     ?q={query}&maxResults={number}
+GET  /api/twitch/live                - ライブストリーム取得
+     ?channelId={id}&channelId={id}...
+GET  /api/twitch/subscriptions       - フォローチャンネル取得（OAuth必須）
+
+[ヘルスチェック]
+GET  /health                         - サーバー稼働確認
+
+A.2 WebSocket API
+-----------------
+[接続]
+ws://localhost:4000/chat
+
+[クライアント → サーバー]
+{
+  "type": "subscribe",
+  "channels": ["xqc", "shroud"],
+  "channelMapping": { "xqc": "xQc", "shroud": "Shroud" }
+}
+
+[サーバー → クライアント]
+{
+  "id": "msg-xxx",
+  "platform": "twitch",
+  "author": "Viewer123",
+  "message": "Hello!",
+  "timestamp": "10:30",
+  "avatarColor": "#38bdf8",
+  "channelLogin": "xqc",
+  "channelName": "xQc"
+}
+
+A.3 外部API（直接呼び出しなし、サーバー経由）
+---------------------------------------------
+[YouTube Data API v3]
+Base: https://www.googleapis.com/youtube/v3
+- /search                            - チャンネル・動画検索
+- /subscriptions                     - 購読チャンネル
+
+[Twitch Helix API]
+Base: https://api.twitch.tv/helix
+- /search/channels                   - チャンネル検索
+- /streams                           - ライブストリーム
+- /channels/followed                 - フォローチャンネル
+
+[Twitch IRC]
+Server: irc.chat.twitch.tv:6697
+- JOIN #{channel}                    - チャンネル参加
+- PART #{channel}                    - チャンネル退出
+
+=============================================================================
+付録B: 用語集
+=============================================================================
+
+[ふくまど (Fukumado)]
+本プロジェクトの名称。「複数の窓」を意味する。
+
+[スロット (Slot)]
+配信を表示する枠。最大8スロット。
+
+[プラットフォーム (Platform)]
+YouTube, Twitch, ニコニコ動画等の配信サービス。
+
+[OAuth 2.0]
+認証・認可の標準プロトコル。Google/Twitchログインに使用。
+
+[Zustand]
+React状態管理ライブラリ。Redux代替。
+
+[WebSocket]
+リアルタイム双方向通信プロトコル。チャット機能に使用。
+
+[Redis]
+インメモリKVS。APIキャッシュに使用。
+
+[Embed API / IFrame API]
+外部サイトに動画プレイヤーを埋め込むAPI。
+
+[IRC (Internet Relay Chat)]
+テキストチャットプロトコル。Twitchチャットの基盤技術。
+
+[TMI (Twitch Messaging Interface)]
+Twitch IRC のラッパーライブラリ (tmi.js)。
+
+[クォータ (Quota)]
+API使用量の上限。YouTube: 10,000 units/日。
+
+[TTL (Time To Live)]
+キャッシュの有効期限。本システムでは5分。
+
+[MVP (Minimum Viable Product)]
+最小限の機能を持つ製品。本プロジェクトの現状。
+
+[PWA (Progressive Web App)]
+Webアプリをネイティブアプリのように動作させる技術。
+
+[CORS (Cross-Origin Resource Sharing)]
+異なるオリジン間のリソース共有を制御する仕組み。
+
+[localStorage]
+ブラウザのローカルストレージ。永続的なデータ保存。
+
+[sessionStorage]
+ブラウザのセッションストレージ。タブ閉じるまで有効。
+
+[GDPR (General Data Protection Regulation)]
+EU一般データ保護規則。個人情報保護法。
+
+=============================================================================
+ドキュメント終了
+=============================================================================
+
+このドキュメントは「ふくまど！」プロジェクトの包括的技術仕様書です。
+実装の詳細、アーキテクチャ、API統合、データフロー等、
+開発に必要な全情報を網羅しています。
+
+質問・フィードバック:
+プロジェクト管理者までお問い合わせください。
+
+最終更新: 2025-01-20
+バージョン: 2.0

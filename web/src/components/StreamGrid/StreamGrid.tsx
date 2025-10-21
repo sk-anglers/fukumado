@@ -1,31 +1,59 @@
 import clsx from 'clsx';
+import { useEffect, useRef } from 'react';
 import { useLayoutStore } from '../../stores/layoutStore';
 import styles from './StreamGrid.module.css';
 import { StreamSlotCard } from './StreamSlot/StreamSlot';
 
 export const StreamGrid = (): JSX.Element => {
-  const { slots, preset, selectedSlotId, selectSlot, activeSlotsCount, fullscreen, setFullscreen } = useLayoutStore((state) => ({
+  const { slots, preset, selectedSlotId, selectSlot, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen } = useLayoutStore((state) => ({
     slots: state.slots,
     preset: state.preset,
     selectedSlotId: state.selectedSlotId,
     selectSlot: state.selectSlot,
     activeSlotsCount: state.activeSlotsCount,
     fullscreen: state.fullscreen,
-    setFullscreen: state.setFullscreen
+    setFullscreen: state.setFullscreen,
+    clearSelection: state.clearSelection,
+    isModalOpen: state.isModalOpen
   }));
+
+  const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const activeSlots = slots.slice(0, activeSlotsCount);
 
-  const handleEnterFullscreen = async (): Promise<void> => {
-    try {
-      const element = document.querySelector(`.${styles.gridContainer}`);
-      if (!element) return;
-      await element.requestFullscreen();
-      setFullscreen(true);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to enter fullscreen', error);
+  // 選択状態の自動非表示（3秒後）
+  useEffect(() => {
+    if (!selectedSlotId || isModalOpen) return;
+
+    // 既存のタイマーをクリア
+    if (autoHideTimerRef.current) {
+      clearTimeout(autoHideTimerRef.current);
     }
+
+    // 3秒後に選択を解除
+    autoHideTimerRef.current = setTimeout(() => {
+      clearSelection();
+    }, 3000);
+
+    return () => {
+      if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current);
+      }
+    };
+  }, [selectedSlotId, clearSelection, isModalOpen]);
+
+  // マウス移動時にタイマーをリセット
+  const handleMouseMove = (): void => {
+    if (!selectedSlotId || isModalOpen) return;
+
+    // タイマーをリセット
+    if (autoHideTimerRef.current) {
+      clearTimeout(autoHideTimerRef.current);
+    }
+
+    autoHideTimerRef.current = setTimeout(() => {
+      clearSelection();
+    }, 3000);
   };
 
   const handleExitFullscreen = async (): Promise<void> => {
@@ -41,7 +69,7 @@ export const StreamGrid = (): JSX.Element => {
   };
 
   return (
-    <div className={clsx(styles.gridContainer, fullscreen && styles.gridContainerFullscreen)}>
+    <div className={clsx(styles.gridContainer, fullscreen && styles.gridContainerFullscreen)} onMouseMove={handleMouseMove}>
       <div className={clsx(styles.grid, styles[preset], styles[`count${activeSlotsCount}`], fullscreen && styles.gridFullscreen)}>
       {activeSlots.map((slot) => (
         <StreamSlotCard
@@ -52,17 +80,13 @@ export const StreamGrid = (): JSX.Element => {
         />
       ))}
       </div>
-      <div className={styles.fullscreenToggle}>
-        {fullscreen ? (
+      {fullscreen && (
+        <div className={styles.fullscreenToggle}>
           <button type="button" onClick={handleExitFullscreen}>
             全画面を終了
           </button>
-        ) : (
-          <button type="button" onClick={handleEnterFullscreen}>
-            分割レイアウトを全画面表示
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

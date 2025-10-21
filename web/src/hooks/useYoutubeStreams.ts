@@ -1,5 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLayoutStore } from '../stores/layoutStore';
+import { useNotificationStore } from '../stores/notificationStore';
+import { useSyncStore } from '../stores/syncStore';
 import type { Streamer } from '../types';
 
 interface YouTubeApiResponseItem {
@@ -47,9 +49,18 @@ export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: stri
   const setAvailableStreamsForPlatform = useLayoutStore((state) => state.setAvailableStreamsForPlatform);
   const setStreamsLoading = useLayoutStore((state) => state.setStreamsLoading);
   const setStreamsError = useLayoutStore((state) => state.setStreamsError);
+  const addNotification = useNotificationStore((state) => state.addNotification);
+
+  const syncSettings = useSyncStore((state) => state.settings);
+  const setSyncing = useSyncStore((state) => state.setSyncing);
+  const setLastSyncTime = useSyncStore((state) => state.setLastSyncTime);
+  const manualSyncTrigger = useSyncStore((state) => state.manualSyncTrigger);
+
+  const previousStreamIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
+    let intervalId: NodeJS.Timeout | null = null;
 
     const showNoStreams = (): void => {
       setAvailableStreamsForPlatform('youtube', []);
@@ -57,25 +68,68 @@ export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: stri
     };
 
     const applyStreams = (items: YouTubeApiResponseItem[]): void => {
-      const mapped = items.map(mapItemToStreamer);
-      setAvailableStreamsForPlatform('youtube', mapped);
+      const currentStreamIds = new Set(items.map((item) => item.id));
+
+      // 配信リストに変更があるかチェック（新規追加または配信終了）
+      const hasChanges =
+        currentStreamIds.size !== previousStreamIdsRef.current.size ||
+        Array.from(currentStreamIds).some((id) => !previousStreamIdsRef.current.has(id));
+
+      // 変更がある場合のみストアを更新
+      if (hasChanges) {
+        const mapped = items.map(mapItemToStreamer);
+        setAvailableStreamsForPlatform('youtube', mapped);
+        console.log('[YouTube] 配信リストに変更を検出、ストアを更新しました');
+      } else {
+        console.log('[YouTube] 配信リストに変更なし、ストア更新をスキップしました');
+      }
+
+      // 新規配信を検出して通知を追加
+      const newStreams = items.filter((item) => !previousStreamIdsRef.current.has(item.id));
+
+      newStreams.forEach((item) => {
+        addNotification({
+          type: 'stream_started',
+          platform: 'youtube',
+          channelId: item.channelId,
+          channelName: item.channelTitle,
+          streamId: item.id,
+          streamTitle: item.title,
+          thumbnailUrl: item.thumbnailUrl
+        });
+      });
+
+      previousStreamIdsRef.current = currentStreamIds;
     };
 
     const run = async (): Promise<void> => {
+      console.log('[YouTube配信取得] 開始');
+      console.log('[YouTube] フォロー中のチャンネル数:', channelIds.length);
+      console.log('[YouTube] チャンネルID:', channelIds);
+
+      setSyncing(true);
       setStreamsLoading(true);
       setStreamsError(undefined);
 
       const tryChannelFetch = async (): Promise<boolean> => {
-        if (channelIds.length === 0) return false;
+        if (channelIds.length === 0) {
+          console.log('[YouTube] チャンネルが0件のためスキップ');
+          return false;
+        }
         try {
-          const data = await fetchStreamResponse(`/api/youtube/live?${buildChannelQuery(channelIds)}`);
+          const endpoint = `/api/youtube/live?${buildChannelQuery(channelIds)}`;
+          console.log('[YouTube] API呼び出し:', endpoint);
+          const data = await fetchStreamResponse(endpoint);
+          console.log('[YouTube] API レスポンス:', data);
+          console.log('[YouTube] 取得した配信数:', data.items.length);
           if (cancelled) return true;
           if (data.items.length > 0) {
             applyStreams(data.items);
             return true;
           }
           return false;
-        } catch {
+        } catch (error) {
+          console.error('[YouTube] API呼び出しエラー:', error);
           if (!cancelled) {
             setStreamsError(NO_STREAMS_MESSAGE);
           }
@@ -109,19 +163,42 @@ export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: stri
       } finally {
         if (!cancelled) {
           setStreamsLoading(false);
+          setSyncing(false);
+          setLastSyncTime(Date.now());
         }
       }
     };
 
+    // 初回実行
     run().catch(() => {
       if (!cancelled) {
         showNoStreams();
         setStreamsLoading(false);
+        setSyncing(false);
+        setLastSyncTime(Date.now());
       }
     });
 
+    // 自動同期が有効な場合、定期実行を設定
+    if (syncSettings.enabled) {
+      intervalId = setInterval(() => {
+        if (!cancelled) {
+          run().catch(() => {
+            if (!cancelled) {
+              showNoStreams();
+              setStreamsLoading(false);
+              setSyncing(false);
+            }
+          });
+        }
+      }, syncSettings.interval);
+    }
+
     return () => {
       cancelled = true;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
-  }, [channelIds, fallbackQuery, setAvailableStreamsForPlatform, setStreamsError, setStreamsLoading]);
+  }, [channelIds, fallbackQuery, syncSettings.enabled, syncSettings.interval, manualSyncTrigger, setAvailableStreamsForPlatform, setStreamsError, setStreamsLoading, setSyncing, setLastSyncTime, addNotification]);
 };

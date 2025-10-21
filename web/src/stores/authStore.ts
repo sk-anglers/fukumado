@@ -7,7 +7,15 @@ interface AuthUser {
   picture?: string;
 }
 
+interface TwitchUser {
+  id: string;
+  login: string;
+  displayName: string;
+  profileImageUrl?: string;
+}
+
 interface AuthState {
+  // Google (YouTube) authentication
   authenticated: boolean;
   loading: boolean;
   error?: string;
@@ -15,9 +23,18 @@ interface AuthState {
   setStatus: (data: { authenticated: boolean; user?: AuthUser; error?: string }) => void;
   setLoading: (loading: boolean) => void;
   setError: (error?: string) => void;
+  // Twitch authentication
+  twitchAuthenticated: boolean;
+  twitchLoading: boolean;
+  twitchError?: string;
+  twitchUser?: TwitchUser;
+  setTwitchStatus: (data: { authenticated: boolean; user?: TwitchUser; error?: string }) => void;
+  setTwitchLoading: (loading: boolean) => void;
+  setTwitchError: (error?: string) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
+  // Google (YouTube) authentication
   authenticated: false,
   loading: false,
   error: undefined,
@@ -29,5 +46,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       error: error ?? undefined
     }),
   setLoading: (loading) => set({ loading }),
-  setError: (error) => set({ error })
+  setError: (error) => set({ error }),
+  // Twitch authentication
+  twitchAuthenticated: false,
+  twitchLoading: false,
+  twitchError: undefined,
+  twitchUser: undefined,
+  setTwitchStatus: ({ authenticated, user, error }) =>
+    set({
+      twitchAuthenticated: authenticated,
+      twitchUser: user,
+      twitchError: error ?? undefined
+    }),
+  setTwitchLoading: (loading) => set({ twitchLoading: loading }),
+  setTwitchError: (error) => set({ twitchError: error })
 }));

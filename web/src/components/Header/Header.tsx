@@ -1,21 +1,235 @@
+import { useEffect, useRef, useState } from 'react';
 import {
-  BellAlertIcon,
   MagnifyingGlassIcon,
   Squares2X2Icon,
   SpeakerXMarkIcon,
   SpeakerWaveIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  PlusIcon,
+  TrashIcon,
+  StarIcon,
+  BellAlertIcon
 } from '@heroicons/react/24/outline';
-import { useLayoutStore } from '../../stores/layoutStore';
+import clsx from 'clsx';
+import { MAX_ACTIVE_SLOTS, useLayoutStore } from '../../stores/layoutStore';
+import { useUserStore } from '../../stores/userStore';
+import { useNotificationStore } from '../../stores/notificationStore';
+import { apiFetch } from '../../utils/api';
+import type { ChannelSearchResult, LayoutPreset } from '../../types';
+import { AccountMenu } from './AccountMenu';
+import { NotificationMenu } from './NotificationMenu';
 import styles from './Header.module.css';
+
+const presetLabels: Record<LayoutPreset, string> = {
+  twoByTwo: '2×2',
+  oneByTwo: '1×2 + サブ',
+  focus: 'フォーカス'
+};
 
 interface HeaderProps {
   onOpenPresetModal: () => void;
 }
 
+interface YouTubeChannelResult {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  customUrl?: string;
+}
+
+interface TwitchChannelResult {
+  id: string;
+  login: string;
+  displayName: string;
+  description: string;
+  thumbnailUrl: string;
+}
+
 export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
   const mutedAll = useLayoutStore((state) => state.mutedAll);
   const toggleMuteAll = useLayoutStore((state) => state.toggleMuteAll);
+  const masterVolume = useLayoutStore((state) => state.masterVolume);
+  const setMasterVolume = useLayoutStore((state) => state.setMasterVolume);
+  const slots = useLayoutStore((state) => state.slots);
+  const activeSlotsCount = useLayoutStore((state) => state.activeSlotsCount);
+  const setVolume = useLayoutStore((state) => state.setVolume);
+  const toggleSlotMute = useLayoutStore((state) => state.toggleSlotMute);
+  const searchQuery = useLayoutStore((state) => state.searchQuery);
+  const setSearchQuery = useLayoutStore((state) => state.setSearchQuery);
+  const channelSearchResults = useLayoutStore((state) => state.channelSearchResults);
+  const channelSearchLoading = useLayoutStore((state) => state.channelSearchLoading);
+  const channelSearchError = useLayoutStore((state) => state.channelSearchError);
+  const setChannelSearchResults = useLayoutStore((state) => state.setChannelSearchResults);
+  const setChannelSearchLoading = useLayoutStore((state) => state.setChannelSearchLoading);
+  const setChannelSearchError = useLayoutStore((state) => state.setChannelSearchError);
+  const clearChannelSearch = useLayoutStore((state) => state.clearChannelSearch);
+  const setActiveSlotsCount = useLayoutStore((state) => state.setActiveSlotsCount);
+  const preset = useLayoutStore((state) => state.preset);
+  const setPreset = useLayoutStore((state) => state.setPreset);
+  const fullscreen = useLayoutStore((state) => state.fullscreen);
+  const setFullscreen = useLayoutStore((state) => state.setFullscreen);
+
+  const { followedChannels, addFollowedChannel, removeFollowedChannel } = useUserStore((state) => ({
+    followedChannels: state.followedChannels,
+    addFollowedChannel: state.addFollowedChannel,
+    removeFollowedChannel: state.removeFollowedChannel
+  }));
+
+  const unreadCount = useNotificationStore((state) => state.getUnreadCount());
+
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showLayoutMenu, setShowLayoutMenu] = useState(false);
+  const [showFollowListMenu, setShowFollowListMenu] = useState(false);
+  const [showVolumeMenu, setShowVolumeMenu] = useState(false);
+  const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const layoutMenuRef = useRef<HTMLDivElement>(null);
+  const followListMenuRef = useRef<HTMLDivElement>(null);
+  const volumeMenuRef = useRef<HTMLDivElement>(null);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleEnterFullscreen = async (): Promise<void> => {
+    try {
+      const element = document.querySelector('main');
+      if (!element) return;
+      await element.requestFullscreen();
+      setFullscreen(true);
+    } catch (error) {
+      console.error('Failed to enter fullscreen', error);
+    }
+  };
+
+  const handleExitFullscreen = async (): Promise<void> => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+      setFullscreen(false);
+    } catch (error) {
+      console.error('Failed to exit fullscreen', error);
+    }
+  };
+
+  const handleSearch = async (): Promise<void> => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      clearChannelSearch();
+      setShowDropdown(false);
+      return;
+    }
+
+    setShowDropdown(true);
+    setChannelSearchLoading(true);
+    setChannelSearchError(undefined);
+
+    try {
+      console.log('[検索開始] キーワード:', trimmed);
+
+      const [youtubeResponse, twitchResponse] = await Promise.allSettled([
+        apiFetch(`/api/youtube/channels?q=${encodeURIComponent(trimmed)}`),
+        apiFetch(`/api/twitch/channels?q=${encodeURIComponent(trimmed)}`)
+      ]);
+
+      console.log('[YouTube レスポンス]', youtubeResponse);
+      console.log('[Twitch レスポンス]', twitchResponse);
+
+      const allResults: ChannelSearchResult[] = [];
+
+      if (youtubeResponse.status === 'fulfilled' && youtubeResponse.value.ok) {
+        const youtubeData = await youtubeResponse.value.json();
+        console.log('[YouTube データ]', youtubeData);
+        if (Array.isArray(youtubeData.items)) {
+          const youtubeResults = youtubeData.items.map((item: YouTubeChannelResult) => ({
+            id: item.id,
+            platform: 'youtube' as const,
+            title: item.title,
+            description: item.description,
+            thumbnailUrl: item.thumbnailUrl,
+            customUrl: item.customUrl
+          }));
+          console.log('[YouTube 結果数]', youtubeResults.length);
+          allResults.push(...youtubeResults);
+        }
+      } else if (youtubeResponse.status === 'fulfilled') {
+        console.error('[YouTube エラー] ステータスコード:', youtubeResponse.value.status);
+        const errorText = await youtubeResponse.value.text();
+        console.error('[YouTube エラー内容]', errorText);
+      } else if (youtubeResponse.status === 'rejected') {
+        console.error('[YouTube 失敗]', youtubeResponse.reason);
+      }
+
+      if (twitchResponse.status === 'fulfilled' && twitchResponse.value.ok) {
+        const twitchData = await twitchResponse.value.json();
+        console.log('[Twitch データ]', twitchData);
+        if (Array.isArray(twitchData.items)) {
+          const twitchResults = twitchData.items.map((item: TwitchChannelResult) => ({
+            id: item.id,
+            platform: 'twitch' as const,
+            title: item.displayName,
+            description: item.description,
+            thumbnailUrl: item.thumbnailUrl,
+            login: item.login
+          }));
+          console.log('[Twitch 結果数]', twitchResults.length);
+          allResults.push(...twitchResults);
+        }
+      } else if (twitchResponse.status === 'fulfilled') {
+        console.error('[Twitch エラー] ステータスコード:', twitchResponse.value.status);
+        const errorText = await twitchResponse.value.text();
+        console.error('[Twitch エラー内容]', errorText);
+      } else if (twitchResponse.status === 'rejected') {
+        console.error('[Twitch 失敗]', twitchResponse.reason);
+      }
+
+      console.log('[最終結果数]', allResults.length);
+      setChannelSearchResults(allResults);
+      if (allResults.length === 0) {
+        setChannelSearchError('検索結果が見つかりませんでした。');
+      }
+    } catch (err) {
+      console.error('[検索エラー]', err);
+      const message = err instanceof Error ? err.message : '検索に失敗しました';
+      setChannelSearchError(message);
+      setChannelSearchResults([]);
+    } finally {
+      setChannelSearchLoading(false);
+    }
+  };
+
+  // ドロップダウンの外側クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent): void => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setShowAccountMenu(false);
+      }
+      if (layoutMenuRef.current && !layoutMenuRef.current.contains(event.target as Node)) {
+        setShowLayoutMenu(false);
+      }
+      if (followListMenuRef.current && !followListMenuRef.current.contains(event.target as Node)) {
+        setShowFollowListMenu(false);
+      }
+      if (volumeMenuRef.current && !volumeMenuRef.current.contains(event.target as Node)) {
+        setShowVolumeMenu(false);
+      }
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
+        setShowNotificationMenu(false);
+      }
+    };
+
+    if (showDropdown || showAccountMenu || showLayoutMenu || showFollowListMenu || showVolumeMenu || showNotificationMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown, showAccountMenu, showLayoutMenu, showFollowListMenu, showVolumeMenu, showNotificationMenu]);
 
   return (
     <header className={styles.header}>
@@ -27,30 +241,357 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
         </div>
       </div>
       <div className={styles.actions}>
-        <label className={styles.search}>
-          <MagnifyingGlassIcon className={styles.searchIcon} />
-          <input type="search" placeholder="配信者・タイトルを検索" />
-        </label>
-        <button
-          className={styles.controlButton}
-          type="button"
-          onClick={toggleMuteAll}
-          aria-pressed={mutedAll}
-        >
-          {mutedAll ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
-          <span>{mutedAll ? '全体ミュート解除' : '全体ミュート'}</span>
-        </button>
-        <button className={styles.controlButton} type='button' onClick={onOpenPresetModal}>
-          <Squares2X2Icon />
-          <span>レイアウト</span>
-        </button>
-        <button className={styles.iconButton} type="button" title="通知センター">
-          <BellAlertIcon />
-        </button>
-        <button className={styles.accountButton} type="button">
-          <UserCircleIcon />
-          <span>ゲスト</span>
-        </button>
+        <div className={styles.searchGroup} ref={dropdownRef}>
+          <label className={styles.search}>
+            <MagnifyingGlassIcon className={styles.searchIcon} />
+            <input
+              type="search"
+              placeholder="配信者・タイトル・チャンネルを検索"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className={styles.searchButton}
+            onClick={handleSearch}
+            title="検索"
+          >
+            <MagnifyingGlassIcon />
+            <span>検索</span>
+          </button>
+
+          {showDropdown && (
+            <div className={styles.searchDropdown}>
+              {channelSearchLoading ? (
+                <div className={styles.dropdownMessage}>検索中…</div>
+              ) : channelSearchError ? (
+                <div className={styles.dropdownError}>{channelSearchError}</div>
+              ) : channelSearchResults.length > 0 ? (
+                <div className={styles.dropdownResults}>
+                  {channelSearchResults.map((channel) => {
+                    const alreadyFollowed = followedChannels.some((ch) => ch.channelId === channel.id);
+                    return (
+                      <div key={`${channel.platform}-${channel.id}`} className={styles.dropdownItem}>
+                        <div className={styles.dropdownItemContent}>
+                          {channel.thumbnailUrl && (
+                            <img
+                              src={channel.thumbnailUrl}
+                              alt={channel.title}
+                              className={styles.dropdownThumbnail}
+                              loading="lazy"
+                            />
+                          )}
+                          <div className={styles.dropdownInfo}>
+                            <div className={styles.dropdownHeader}>
+                              <p className={styles.dropdownTitle}>{channel.title}</p>
+                              <span
+                                className={styles.dropdownBadge}
+                                style={{ color: channel.platform === 'youtube' ? '#ef4444' : '#a855f7' }}
+                              >
+                                {channel.platform === 'youtube' ? 'YouTube' : 'Twitch'}
+                              </span>
+                            </div>
+                            {(channel.customUrl || channel.login) && (
+                              <p className={styles.dropdownUrl}>
+                                @{channel.customUrl || channel.login}
+                              </p>
+                            )}
+                            {channel.description && (
+                              <p className={styles.dropdownDescription}>{channel.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            addFollowedChannel({
+                              platform: channel.platform,
+                              channelId: channel.id,
+                              label: channel.title
+                            });
+                          }}
+                          disabled={alreadyFollowed}
+                          className={styles.dropdownButton}
+                        >
+                          <PlusIcon />
+                          <span>{alreadyFollowed ? 'フォロー済み' : 'フォロー'}</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+        {!fullscreen && (
+          <button
+            className={styles.fullscreenButton}
+            type="button"
+            onClick={handleEnterFullscreen}
+            title="分割レイアウトを全画面表示"
+          >
+            分割レイアウトを全画面表示
+          </button>
+        )}
+        <div className={styles.menuGroup} ref={volumeMenuRef}>
+          <button
+            className={styles.controlButton}
+            type="button"
+            onClick={() => setShowVolumeMenu(!showVolumeMenu)}
+          >
+            {mutedAll ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
+            <span>音量</span>
+          </button>
+          {showVolumeMenu && (
+            <div className={styles.volumeMenu}>
+              <div className={styles.slotMenuTitle}>音量コントロール</div>
+
+              {/* マスター音量 */}
+              <div className={styles.volumeSection}>
+                <div className={styles.volumeSectionHeader}>
+                  <span className={styles.volumeLabel}>マスター音量</span>
+                  <span className={styles.volumeValue}>{masterVolume}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={masterVolume}
+                  onChange={(e) => setMasterVolume(Number(e.target.value))}
+                  className={styles.volumeSlider}
+                />
+              </div>
+
+              {/* 全体ミュート */}
+              <button
+                type="button"
+                className={styles.volumeMuteAllButton}
+                onClick={toggleMuteAll}
+              >
+                {mutedAll ? <SpeakerWaveIcon /> : <SpeakerXMarkIcon />}
+                <span>{mutedAll ? '全体ミュート解除' : '全体ミュート'}</span>
+              </button>
+
+              <div className={styles.volumeDivider} />
+
+              {/* 各視聴枠の音量 */}
+              <div className={styles.volumeSectionHeader}>
+                <span className={styles.volumeLabel}>視聴枠別</span>
+              </div>
+              <div className={styles.volumeSlotList}>
+                {slots.slice(0, activeSlotsCount).map((slot, index) => (
+                  <div key={slot.id} className={styles.volumeSlotItem}>
+                    <div className={styles.volumeSlotHeader}>
+                      <span className={styles.volumeSlotLabel}>
+                        枠 {index + 1}
+                        {slot.assignedStream && ` - ${slot.assignedStream.displayName}`}
+                      </span>
+                      <button
+                        type="button"
+                        className={clsx(styles.volumeSlotMute, slot.muted && styles.volumeSlotMuteMuted)}
+                        onClick={() => toggleSlotMute(slot.id)}
+                        title={slot.muted ? 'ミュート解除' : 'ミュート'}
+                      >
+                        {slot.muted ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
+                      </button>
+                    </div>
+                    <div className={styles.volumeSlotControl}>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={slot.volume}
+                        onChange={(e) => {
+                          const nextVolume = Number(e.target.value);
+                          setVolume(slot.id, nextVolume);
+                          if (slot.muted && nextVolume > 0) {
+                            toggleSlotMute(slot.id);
+                          }
+                        }}
+                        className={styles.volumeSlider}
+                        disabled={slot.muted}
+                      />
+                      <span className={styles.volumeValue}>{slot.volume}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className={styles.menuGroup} ref={layoutMenuRef}>
+          <button
+            className={styles.controlButton}
+            type="button"
+            onClick={() => setShowLayoutMenu(!showLayoutMenu)}
+          >
+            <Squares2X2Icon />
+            <span>レイアウト ({activeSlotsCount}画面)</span>
+          </button>
+          {showLayoutMenu && (
+            <div className={styles.layoutMenu}>
+              <div className={styles.slotMenuTitle}>視聴枠数</div>
+              <div className={styles.slotMenuButtons}>
+                {Array.from({ length: MAX_ACTIVE_SLOTS }, (_, i) => MAX_ACTIVE_SLOTS - i).map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    className={clsx(
+                      styles.slotMenuButton,
+                      activeSlotsCount === count && styles.slotMenuButtonActive
+                    )}
+                    onClick={() => {
+                      setActiveSlotsCount(count);
+                    }}
+                  >
+                    {count}画面
+                  </button>
+                ))}
+              </div>
+              <div className={styles.layoutMenuDivider} />
+              <div className={styles.slotMenuTitle}>プリセット</div>
+              <div className={styles.layoutMenuButtons}>
+                {(Object.keys(presetLabels) as LayoutPreset[]).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={clsx(
+                      styles.layoutMenuButton,
+                      preset === key && styles.layoutMenuButtonActive
+                    )}
+                    onClick={() => {
+                      // 同じプリセットがクリックされた場合は2×2に戻す、それ以外はそのプリセットに設定
+                      setPreset(preset === key ? 'twoByTwo' : key);
+                    }}
+                  >
+                    {presetLabels[key]}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.layoutMenuDivider} />
+              <button
+                type="button"
+                className={styles.layoutMenuAction}
+                onClick={() => {
+                  setShowLayoutMenu(false);
+                  onOpenPresetModal();
+                }}
+              >
+                プリセットを編集
+              </button>
+            </div>
+          )}
+        </div>
+        <div className={styles.menuGroup} ref={followListMenuRef}>
+          <button
+            className={styles.controlButton}
+            type="button"
+            onClick={() => setShowFollowListMenu(!showFollowListMenu)}
+          >
+            <StarIcon />
+            <span>フォロー ({followedChannels.length})</span>
+          </button>
+          {showFollowListMenu && (
+            <div className={styles.followListMenu}>
+              <div className={styles.slotMenuTitle}>フォロー中のチャンネル</div>
+              {followedChannels.length === 0 ? (
+                <div className={styles.followListEmpty}>
+                  フォロー中のチャンネルはありません
+                </div>
+              ) : (
+                <>
+                  {(() => {
+                    const youtubeChannels = followedChannels.filter((ch) => ch.platform === 'youtube');
+                    const twitchChannels = followedChannels.filter((ch) => ch.platform === 'twitch');
+
+                    return (
+                      <>
+                        {youtubeChannels.length > 0 && (
+                          <div>
+                            <div className={styles.followListPlatform} style={{ color: '#ef4444' }}>
+                              YouTube ({youtubeChannels.length})
+                            </div>
+                            <ul className={styles.followList}>
+                              {youtubeChannels.map((channel) => (
+                                <li key={channel.channelId} className={styles.followListItem}>
+                                  <span className={styles.followListLabel}>
+                                    {channel.label ?? channel.channelId}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className={styles.followListDelete}
+                                    onClick={() => removeFollowedChannel(channel.channelId)}
+                                    title="フォロー削除"
+                                  >
+                                    <TrashIcon />
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {twitchChannels.length > 0 && (
+                          <div style={{ marginTop: youtubeChannels.length > 0 ? '0.75rem' : '0' }}>
+                            <div className={styles.followListPlatform} style={{ color: '#a855f7' }}>
+                              Twitch ({twitchChannels.length})
+                            </div>
+                            <ul className={styles.followList}>
+                              {twitchChannels.map((channel) => (
+                                <li key={channel.channelId} className={styles.followListItem}>
+                                  <span className={styles.followListLabel}>
+                                    {channel.label ?? channel.channelId}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className={styles.followListDelete}
+                                    onClick={() => removeFollowedChannel(channel.channelId)}
+                                    title="フォロー削除"
+                                  >
+                                    <TrashIcon />
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        <div className={styles.menuGroup} ref={notificationMenuRef}>
+          <button
+            className={styles.controlButton}
+            type="button"
+            onClick={() => setShowNotificationMenu(!showNotificationMenu)}
+          >
+            <BellAlertIcon />
+            <span>通知</span>
+            {unreadCount > 0 && <span className={styles.unreadBadge}>{unreadCount}</span>}
+          </button>
+          {showNotificationMenu && <NotificationMenu onClose={() => setShowNotificationMenu(false)} />}
+        </div>
+        <div className={styles.menuGroup} ref={accountMenuRef}>
+          <button
+            className={styles.accountButton}
+            type="button"
+            onClick={() => setShowAccountMenu(!showAccountMenu)}
+          >
+            <UserCircleIcon />
+            <span>アカウント</span>
+          </button>
+          {showAccountMenu && <AccountMenu onClose={() => setShowAccountMenu(false)} />}
+        </div>
       </div>
     </header>
   );

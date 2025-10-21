@@ -12,6 +12,12 @@ const required = (value: string | undefined, name: string): string => {
 export const env = {
   port: Number(process.env.PORT ?? 4000),
   sessionSecret: required(process.env.SESSION_SECRET, 'SESSION_SECRET'),
+  redis: {
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: Number(process.env.REDIS_PORT ?? 6379),
+    password: process.env.REDIS_PASSWORD,
+    db: Number(process.env.REDIS_DB ?? 0)
+  },
   youtube: {
     apiKey: process.env.YOUTUBE_API_KEY,
     clientId: process.env.YOUTUBE_CLIENT_ID,

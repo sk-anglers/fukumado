@@ -1,0 +1,222 @@
+.menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  min-width: 320px;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.section {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.section:first-child {
+  padding-top: 0;
+}
+
+.section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sectionHeader svg {
+  width: 20px;
+  height: 20px;
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.sectionTitle {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+/* 通知設定 */
+.notificationSettings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.settingItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+  cursor: pointer;
+}
+
+.settingItem input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.settingItem input[type="checkbox"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 通知履歴 */
+.notificationHistory {
+  margin-top: 1rem;
+}
+
+.notificationHistoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.notificationActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.notificationActions button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.5);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.9);
+  transition: all 0.2s ease;
+}
+
+.notificationActions button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.notificationActions button:not(:disabled):hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(30, 41, 59, 0.8);
+  color: rgba(191, 219, 254, 0.9);
+}
+
+.notificationActions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.notificationList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.notificationEmpty {
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.6);
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.notificationItem {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(30, 41, 59, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.notificationItem:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.notificationItemUnread {
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(14, 116, 144, 0.15);
+}
+
+.notificationThumbnail {
+  width: 60px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.notificationContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.notificationHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.notificationPlatform {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.notificationTime {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.6);
+  margin-left: auto;
+}
+
+.notificationChannel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.95);
+  margin-bottom: 0.15rem;
+}
+
+.notificationTitle {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.75);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.notificationUnreadBadge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.9);
+}

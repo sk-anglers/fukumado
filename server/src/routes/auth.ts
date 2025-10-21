@@ -149,7 +149,7 @@ authRouter.post('/twitch/logout', (req, res) => {
 });
 
 authRouter.get('/success', (_req, res) => {
-  res.send(
+  res.send(`
     <html>
       <body style="font-family: sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; height: 100vh;">
         <div style="text-align: center;">
@@ -159,7 +159,7 @@ authRouter.get('/success', (_req, res) => {
         </div>
       </body>
     </html>
-  );
+  `);
 });
 
 export const ensureGoogleAccessToken = async (req: Request): Promise<string | null> => {
