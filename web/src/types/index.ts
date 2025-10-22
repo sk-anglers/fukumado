@@ -14,6 +14,7 @@ export interface Streamer {
   title: string;
   displayName: string;
   channelId?: string;
+  channelLogin?: string;
   channelTitle?: string;
   thumbnailUrl?: string;
   liveSince?: string;

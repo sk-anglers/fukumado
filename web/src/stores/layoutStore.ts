@@ -32,6 +32,8 @@ export interface LayoutState {
   preset: LayoutPreset;
   slots: StreamSlot[];
   selectedSlotId: string | null;
+  showSelection: boolean;
+  masterSlotId: string | null;
   mutedAll: boolean;
   masterVolume: number;
   activeSlotsCount: number;
@@ -46,7 +48,12 @@ export interface LayoutState {
   pendingStream: Streamer | null;
   autoQualityEnabled: boolean;
   isModalOpen: boolean;
+  userInteracted: boolean;
   setPreset: (preset: LayoutPreset) => void;
+  setUserInteracted: (value: boolean) => void;
+  setShowSelection: (value: boolean) => void;
+  setMasterSlot: (slotId: string) => void;
+  clearMasterSlot: () => void;
   selectSlot: (slotId: string) => void;
   clearSelection: () => void;
   assignStream: (slotId: string, stream: Streamer) => void;
@@ -97,14 +104,21 @@ export const useLayoutStore = create<LayoutState>()(
       pendingStream: null,
       autoQualityEnabled: true,
       isModalOpen: false,
+      userInteracted: false,
+      showSelection: false,
+      masterSlotId: null,
       setPreset: (preset) => set({ preset }),
+      setUserInteracted: (value) => set({ userInteracted: value }),
+      setShowSelection: (value) => set({ showSelection: value }),
+      setMasterSlot: (slotId) => set({ masterSlotId: slotId }),
+      clearMasterSlot: () => set({ masterSlotId: null }),
       selectSlot: (slotId) =>
         set((state) => {
           const index = state.slots.findIndex((slot) => slot.id === slotId);
           if (index === -1 || index >= state.activeSlotsCount) {
             return state;
           }
-          return { selectedSlotId: slotId };
+          return { selectedSlotId: slotId, showSelection: true };
         }),
       clearSelection: () => set({ selectedSlotId: null }),
       assignStream: (slotId, stream) =>

@@ -1,15 +1,19 @@
 import clsx from 'clsx';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useLayoutStore } from '../../stores/layoutStore';
+import { useChatStore } from '../../stores/chatStore';
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import styles from './StreamGrid.module.css';
 import { StreamSlotCard } from './StreamSlot/StreamSlot';
 
 export const StreamGrid = (): JSX.Element => {
-  const { slots, preset, selectedSlotId, selectSlot, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen } = useLayoutStore((state) => ({
+  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen } = useLayoutStore((state) => ({
     slots: state.slots,
     preset: state.preset,
     selectedSlotId: state.selectedSlotId,
+    showSelection: state.showSelection,
     selectSlot: state.selectSlot,
+    setShowSelection: state.setShowSelection,
     activeSlotsCount: state.activeSlotsCount,
     fullscreen: state.fullscreen,
     setFullscreen: state.setFullscreen,
@@ -18,10 +22,35 @@ export const StreamGrid = (): JSX.Element => {
   }));
 
   const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [messageInput, setMessageInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+
+  const messages = useChatStore((state) => state.messages);
 
   const activeSlots = slots.slice(0, activeSlotsCount);
 
-  // 選択状態の自動非表示（3秒後）
+  // 最新の50件のメッセージのみ表示
+  const displayMessages = useMemo(() => messages.slice(0, 50), [messages]);
+
+  // 視聴中の配信を取得
+  const watchingStreams = useMemo(() => {
+    return slots
+      .filter((slot) => slot.assignedStream)
+      .map((slot) => slot.assignedStream!);
+  }, [slots]);
+
+  // 送信先が未選択または無効な場合、最初の視聴中配信を選択
+  useEffect(() => {
+    if (!selectedChannelId && watchingStreams.length > 0) {
+      setSelectedChannelId(watchingStreams[0].channelId);
+    } else if (selectedChannelId && !watchingStreams.find((s) => s.channelId === selectedChannelId)) {
+      setSelectedChannelId(watchingStreams.length > 0 ? watchingStreams[0].channelId : null);
+    }
+  }, [watchingStreams, selectedChannelId]);
+
+  // ビジュアルオーバーレイの自動非表示（3秒後）
   useEffect(() => {
     if (!selectedSlotId || isModalOpen) return;
 
@@ -30,9 +59,9 @@ export const StreamGrid = (): JSX.Element => {
       clearTimeout(autoHideTimerRef.current);
     }
 
-    // 3秒後に選択を解除
+    // 3秒後にビジュアルオーバーレイを非表示
     autoHideTimerRef.current = setTimeout(() => {
-      clearSelection();
+      setShowSelection(false);
     }, 3000);
 
     return () => {
@@ -40,11 +69,14 @@ export const StreamGrid = (): JSX.Element => {
         clearTimeout(autoHideTimerRef.current);
       }
     };
-  }, [selectedSlotId, clearSelection, isModalOpen]);
+  }, [selectedSlotId, setShowSelection, isModalOpen]);
 
-  // マウス移動時にタイマーをリセット
+  // マウス移動時にオーバーレイを再表示してタイマーをリセット
   const handleMouseMove = (): void => {
     if (!selectedSlotId || isModalOpen) return;
+
+    // オーバーレイを再表示
+    setShowSelection(true);
 
     // タイマーをリセット
     if (autoHideTimerRef.current) {
@@ -52,7 +84,7 @@ export const StreamGrid = (): JSX.Element => {
     }
 
     autoHideTimerRef.current = setTimeout(() => {
-      clearSelection();
+      setShowSelection(false);
     }, 3000);
   };
 
@@ -68,23 +100,147 @@ export const StreamGrid = (): JSX.Element => {
     }
   };
 
+  // チャット送信処理
+  const handleSendMessage = async (): Promise<void> => {
+    if (!messageInput.trim() || !selectedChannelId || isSending) {
+      return;
+    }
+
+    const selectedStream = watchingStreams.find((s) => s.channelId === selectedChannelId);
+    if (!selectedStream) {
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const payload: {
+        channelId: string;
+        channelLogin?: string;
+        message: string;
+      } = {
+        channelId: selectedChannelId,
+        message: messageInput.trim()
+      };
+
+      if (selectedStream.platform === 'twitch') {
+        if (selectedStream.channelLogin) {
+          payload.channelLogin = selectedStream.channelLogin;
+        }
+      }
+
+      const response = await fetch(`/api/${selectedStream.platform}/chat/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'メッセージの送信に失敗しました');
+      }
+
+      setMessageInput('');
+    } catch (error) {
+      console.error('[StreamGrid] メッセージ送信エラー:', error);
+      alert(error instanceof Error ? error.message : 'メッセージの送信に失敗しました');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
-    <div className={clsx(styles.gridContainer, fullscreen && styles.gridContainerFullscreen)} onMouseMove={handleMouseMove}>
-      <div className={clsx(styles.grid, styles[preset], styles[`count${activeSlotsCount}`], fullscreen && styles.gridFullscreen)}>
-      {activeSlots.map((slot) => (
-        <StreamSlotCard
-          key={slot.id}
-          slot={slot}
-          isActive={selectedSlotId === slot.id}
-          onSelect={() => selectSlot(slot.id)}
-        />
-      ))}
+    <div className={clsx(styles.gridContainer, fullscreen && styles.gridContainerFullscreen, fullscreen && showChat && styles.gridContainerWithChat)} onMouseMove={handleMouseMove}>
+      <div className={styles.gridWrapper}>
+        <div className={clsx(styles.grid, styles[preset], styles[`count${activeSlotsCount}`], fullscreen && styles.gridFullscreen)}>
+        {activeSlots.map((slot) => (
+          <StreamSlotCard
+            key={slot.id}
+            slot={slot}
+            isActive={showSelection && selectedSlotId === slot.id}
+            isFocused={preset === 'focus' && selectedSlotId === slot.id}
+            showSelection={showSelection}
+            onSelect={() => selectSlot(slot.id)}
+          />
+        ))}
+        </div>
+        {fullscreen && (
+          <div className={styles.fullscreenToggle}>
+            <button type="button" onClick={() => setShowChat(!showChat)} className={clsx(showChat && styles.chatButtonActive)}>
+              <ChatBubbleLeftRightIcon />
+              <span>{showChat ? 'コメント非表示' : 'コメント表示'}</span>
+            </button>
+            <button type="button" onClick={handleExitFullscreen}>
+              全画面を終了
+            </button>
+          </div>
+        )}
       </div>
-      {fullscreen && (
-        <div className={styles.fullscreenToggle}>
-          <button type="button" onClick={handleExitFullscreen}>
-            全画面を終了
-          </button>
+      {fullscreen && showChat && (
+        <div className={styles.fullscreenChat}>
+          <div className={styles.fullscreenChatHeader}>
+            <h3>チャット</h3>
+          </div>
+          <div className={styles.fullscreenChatMessages}>
+            {displayMessages.map((message) => (
+              <div
+                key={message.id}
+                className={clsx(styles.fullscreenChatMessage, message.highlight && styles.fullscreenChatMessageHighlight)}
+              >
+                <div className={styles.fullscreenChatAvatar} style={{ backgroundColor: message.avatarColor }}>
+                  {message.author.slice(0, 2)}
+                </div>
+                <div className={styles.fullscreenChatBody}>
+                  <div className={styles.fullscreenChatMessageHeader}>
+                    <span className={styles.fullscreenChatAuthor}>{message.author}</span>
+                    {message.channelName && (
+                      <span className={styles.fullscreenChatChannel}>@ {message.channelName}</span>
+                    )}
+                  </div>
+                  <p className={styles.fullscreenChatText}>{message.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className={styles.fullscreenChatFooter}>
+            {watchingStreams.length > 0 && (
+              <select
+                className={styles.fullscreenChatSelect}
+                value={selectedChannelId || ''}
+                onChange={(e) => setSelectedChannelId(e.target.value)}
+              >
+                {watchingStreams.map((stream) => (
+                  <option key={stream.channelId} value={stream.channelId}>
+                    {stream.displayName} ({stream.platform.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            )}
+            <div className={styles.fullscreenChatInputRow}>
+              <input
+                type="text"
+                placeholder={watchingStreams.length === 0 ? '配信を視聴するとチャットを送信できます' : 'チャットを送信'}
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                disabled={watchingStreams.length === 0 || isSending}
+              />
+              <button
+                type="button"
+                className={clsx(styles.fullscreenChatSendButton, messageInput.trim().length > 0 && !isSending && styles.fullscreenChatSendButtonActive)}
+                onClick={handleSendMessage}
+                disabled={watchingStreams.length === 0 || !messageInput.trim() || isSending}
+              >
+                {isSending ? '送信中...' : '送信'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

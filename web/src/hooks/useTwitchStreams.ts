@@ -25,6 +25,7 @@ const mapItemToStreamer = (item: TwitchApiResponseItem): Streamer => ({
   title: item.title,
   displayName: item.displayName,
   channelId: item.userId,
+  channelLogin: item.login,
   channelTitle: item.displayName,
   thumbnailUrl: item.thumbnailUrl,
   liveSince: item.startedAt,

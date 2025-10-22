@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { type Streamer } from "../../types";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { SlotSelectionModal } from "../SlotSelectionModal/SlotSelectionModal";
+import { config } from "../../config";
 import styles from "./Sidebar.module.css";
 
 interface SidebarProps {
@@ -65,12 +66,25 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     console.log('[Sidebar] availableStreams:', availableStreams);
     console.log('[Sidebar] searchQuery:', searchQuery);
 
+    // プラットフォームによるフィルタリング
+    let platformFiltered = availableStreams;
+
+    // YouTube無効時はYouTube配信を除外
+    if (!config.enableYoutube) {
+      platformFiltered = availableStreams.filter((stream) => stream.platform !== 'youtube');
+    }
+
+    // ニコニコ無効時はニコニコ配信を除外
+    if (!config.enableNiconico) {
+      platformFiltered = platformFiltered.filter((stream) => stream.platform !== 'niconico');
+    }
+
     if (!searchQuery.trim()) {
-      console.log('[Sidebar] 検索クエリなし、全配信を返す');
-      return availableStreams;
+      console.log('[Sidebar] 検索クエリなし、プラットフォームフィルタ後の配信を返す');
+      return platformFiltered;
     }
     const lowerQuery = searchQuery.toLowerCase();
-    const filtered = availableStreams.filter((stream) => {
+    const filtered = platformFiltered.filter((stream) => {
       const displayName = stream.displayName?.toLowerCase() || "";
       const title = stream.title?.toLowerCase() || "";
       const channelTitle = stream.channelTitle?.toLowerCase() || "";

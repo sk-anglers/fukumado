@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { AdjustmentsHorizontalIcon, CircleStackIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react';
+import { AdjustmentsHorizontalIcon, CircleStackIcon, ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserStore } from '../../stores/userStore';
 import { useSyncStore, SYNC_INTERVAL_OPTIONS } from '../../stores/syncStore';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { apiFetch, apiUrl } from '../../utils/api';
+import { config } from '../../config';
 import type { VideoQuality, QualityBandwidth } from '../../types';
+import type { TwitchPlayer } from '../../hooks/useTwitchEmbed';
 import styles from './AccountMenu.module.css';
 
 // 画質別の推定帯域幅（Mbps）
@@ -19,6 +21,21 @@ const QUALITY_BANDWIDTH_MAP: QualityBandwidth[] = [
 
 const getBandwidthForQuality = (quality: VideoQuality): number => {
   return QUALITY_BANDWIDTH_MAP.find((q) => q.quality === quality)?.mbps ?? 0;
+};
+
+// 秒をHH:MM:SS形式に変換
+const formatTime = (seconds: number): string => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+interface SyncStatus {
+  slotId: string;
+  displayName: string;
+  currentTime: number;
+  timeDiff: number;
 };
 
 interface AccountMenuProps {
@@ -59,10 +76,13 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   const autoQualityEnabled = useLayoutStore((state) => state.autoQualityEnabled);
   const setSlotQuality = useLayoutStore((state) => state.setSlotQuality);
   const setAutoQualityEnabled = useLayoutStore((state) => state.setAutoQualityEnabled);
+  const masterSlotId = useLayoutStore((state) => state.masterSlotId);
 
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncLoading, setSyncLoading] = useState(false);
+
+  const [syncStatuses, setSyncStatuses] = useState<SyncStatus[]>([]);
 
   const [twitchSyncMessage, setTwitchSyncMessage] = useState<string | null>(null);
   const [twitchSyncError, setTwitchSyncError] = useState<string | null>(null);
@@ -284,8 +304,121 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
     }
   };
 
+  // 同期モニター：1秒ごとに再生位置を取得
+  useEffect(() => {
+    const updateSyncStatuses = () => {
+      const twitchSlots = slots
+        .slice(0, activeSlotsCount)
+        .filter((slot) => slot.assignedStream?.platform === 'twitch');
+
+      if (twitchSlots.length === 0) {
+        setSyncStatuses([]);
+        return;
+      }
+
+      // マスタープレイヤーの時刻を取得
+      let masterTime = 0;
+      if (masterSlotId) {
+        const masterPlayer = (window as any)[`twitchPlayer_${masterSlotId}`] as TwitchPlayer | undefined;
+        if (masterPlayer) {
+          try {
+            masterTime = masterPlayer.getCurrentTime();
+          } catch (error) {
+            console.warn('[SyncMonitor] マスター時刻取得エラー:', error);
+          }
+        }
+      }
+
+      const statuses: SyncStatus[] = [];
+      for (const slot of twitchSlots) {
+        const player = (window as any)[`twitchPlayer_${slot.id}`] as TwitchPlayer | undefined;
+        if (!player || !slot.assignedStream) continue;
+
+        try {
+          const currentTime = player.getCurrentTime();
+          const timeDiff = masterSlotId ? currentTime - masterTime : 0;
+
+          statuses.push({
+            slotId: slot.id,
+            displayName: slot.assignedStream.displayName,
+            currentTime,
+            timeDiff
+          });
+        } catch (error) {
+          console.warn(`[SyncMonitor] ${slot.id} 時刻取得エラー:`, error);
+        }
+      }
+
+      setSyncStatuses(statuses);
+    };
+
+    // 初回実行
+    updateSyncStatuses();
+
+    // 1秒ごとに更新
+    const interval = setInterval(updateSyncStatuses, 1000);
+
+    return () => clearInterval(interval);
+  }, [slots, activeSlotsCount, masterSlotId]);
+
+  const setMasterSlot = useLayoutStore((state) => state.setMasterSlot);
+  const clearMasterSlot = useLayoutStore((state) => state.clearMasterSlot);
+
+  // 同期実行
+  const handleSyncToMaster = (targetSlotId: string) => {
+    if (!masterSlotId) {
+      console.warn('[Sync] マスター配信が設定されていません');
+      return;
+    }
+
+    const masterPlayer = (window as any)[`twitchPlayer_${masterSlotId}`] as TwitchPlayer | undefined;
+    const targetPlayer = (window as any)[`twitchPlayer_${targetSlotId}`] as TwitchPlayer | undefined;
+
+    if (!masterPlayer) {
+      console.error('[Sync] マスタープレイヤーが見つかりません');
+      return;
+    }
+
+    if (!targetPlayer) {
+      console.error('[Sync] ターゲットプレイヤーが見つかりません');
+      return;
+    }
+
+    try {
+      const masterTime = masterPlayer.getCurrentTime();
+      const targetTimeBefore = targetPlayer.getCurrentTime();
+      console.log('[Sync] マスター時刻:', masterTime);
+      console.log('[Sync] ターゲット時刻（変更前）:', targetTimeBefore);
+      console.log('[Sync] 時差:', targetTimeBefore - masterTime, '秒');
+
+      targetPlayer.seek(masterTime);
+
+      try {
+        targetPlayer.play();
+      } catch (playError) {
+        console.log('[Sync] play()がブロックされましたが、seek()は実行されました');
+      }
+
+      // seek()の効果を確認するため少し待つ
+      setTimeout(() => {
+        try {
+          const targetTimeAfter = targetPlayer.getCurrentTime();
+          console.log('[Sync] ターゲット時刻（変更後）:', targetTimeAfter);
+          console.log('[Sync] seek()は成功しましたか?', Math.abs(targetTimeAfter - masterTime) < 5 ? 'はい' : 'いいえ');
+        } catch (err) {
+          console.error('[Sync] 変更後の時刻取得エラー:', err);
+        }
+      }, 500);
+
+      console.log('[Sync] 同期実行:', targetSlotId, 'を', masterTime, '秒に移動');
+    } catch (error) {
+      console.error('[Sync] 同期エラー:', error);
+    }
+  };
+
   return (
     <div className={styles.menu}>
+      {config.enableYoutube && (
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>YouTube連携</h3>
         <div className={styles.authStatus}>
@@ -317,6 +450,7 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
         {syncMessage && <div className={styles.syncMessage}>{syncMessage}</div>}
         {syncError && <div className={styles.syncError}>{syncError}</div>}
       </section>
+      )}
 
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Twitch連携</h3>
@@ -484,6 +618,92 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
             </p>
           </div>
         </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <ClockIcon />
+          <h3 className={styles.sectionTitle}>配信同期モニター</h3>
+        </div>
+        <p className={styles.description}>
+          Twitch配信の再生位置をリアルタイムで監視します。
+        </p>
+
+        {syncStatuses.length === 0 ? (
+          <div className={styles.syncMonitorEmpty}>
+            Twitch配信が視聴中ではありません
+          </div>
+        ) : (
+          <div className={styles.syncMonitorList}>
+            {syncStatuses.map((status) => {
+              const isMaster = status.slotId === masterSlotId;
+              const absDiff = Math.abs(status.timeDiff);
+              let diffColor = styles.syncDiffGreen;
+              let diffIcon = '✅';
+
+              if (absDiff >= 5) {
+                diffColor = styles.syncDiffRed;
+                diffIcon = '🔴';
+              } else if (absDiff >= 2) {
+                diffColor = styles.syncDiffYellow;
+                diffIcon = '🟡';
+              }
+
+              return (
+                <div key={status.slotId} className={styles.syncMonitorItem}>
+                  <div className={styles.syncMonitorHeader}>
+                    {isMaster && <span className={styles.syncMasterBadge}>🎯 マスター</span>}
+                    <span className={styles.syncMonitorName}>{status.displayName}</span>
+                  </div>
+                  <div className={styles.syncMonitorDetails}>
+                    <span className={styles.syncMonitorTime}>{formatTime(status.currentTime)}</span>
+                    {masterSlotId && !isMaster && (
+                      <span className={`${styles.syncMonitorDiff} ${diffColor}`}>
+                        {diffIcon} {status.timeDiff >= 0 ? '+' : ''}{status.timeDiff.toFixed(1)}秒
+                      </span>
+                    )}
+                  </div>
+                  <div className={styles.syncMonitorActions}>
+                    {isMaster ? (
+                      <button
+                        type="button"
+                        className={styles.syncActionButton}
+                        onClick={() => clearMasterSlot()}
+                      >
+                        マスター解除
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className={styles.syncActionButton}
+                          onClick={() => setMasterSlot(status.slotId)}
+                        >
+                          マスターに設定
+                        </button>
+                        {masterSlotId && (
+                          <button
+                            type="button"
+                            className={styles.syncButtonAction}
+                            onClick={() => handleSyncToMaster(status.slotId)}
+                          >
+                            同期
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!masterSlotId && syncStatuses.length > 0 && (
+          <div className={styles.syncMonitorNote}>
+            ※ マスター配信を設定すると時差が表示されます
+          </div>
+        )}
       </section>
     </div>
   );

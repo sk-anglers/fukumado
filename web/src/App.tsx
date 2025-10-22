@@ -9,20 +9,26 @@ import { useAuthStatus } from "./hooks/useAuthStatus";
 import { useTwitchAuthStatus } from "./hooks/useTwitchAuthStatus";
 import { useAuthStore } from "./stores/authStore";
 import { apiFetch } from "./utils/api";
+import { config } from "./config";
 
 function App(): JSX.Element {
   const ensureSelection = useLayoutStore((state) => state.ensureSelection);
   const slots = useLayoutStore((state) => state.slots);
   const followedChannels = useUserStore((state) => state.followedChannels);
-  const followedChannelIds = useUserStore((state) =>
-    state.followedChannels.filter((item) => item.platform === "youtube").map((item) => item.channelId)
-  );
-  const twitchFollowedChannelIds = useUserStore((state) =>
-    state.followedChannels.filter((item) => item.platform === "twitch").map((item) => item.channelId)
-  );
   const addFollowedChannels = useUserStore((state) => state.addFollowedChannels);
   const authenticated = useAuthStore((state) => state.authenticated);
   const twitchAuthenticated = useAuthStore((state) => state.twitchAuthenticated);
+
+  // メモ化してuseEffectの不要な再実行を防ぐ
+  const followedChannelIds = useMemo(
+    () => followedChannels.filter((item) => item.platform === "youtube").map((item) => item.channelId),
+    [followedChannels]
+  );
+
+  const twitchFollowedChannelIds = useMemo(
+    () => followedChannels.filter((item) => item.platform === "twitch").map((item) => item.channelId),
+    [followedChannels]
+  );
 
   console.log('[App] 全フォローチャンネル数:', followedChannels.length);
   console.log('[App] 全フォローチャンネル:', followedChannels);
@@ -52,7 +58,12 @@ function App(): JSX.Element {
 
   useAuthStatus();
   useTwitchAuthStatus();
-  useYoutubeStreams(followedChannelIds);
+
+  // YouTube機能が有効な場合のみ使用
+  if (config.enableYoutube) {
+    useYoutubeStreams(followedChannelIds);
+  }
+
   useTwitchStreams(twitchFollowedChannelIds);
   useTwitchChat(activeTwitchChannels);
 
@@ -63,7 +74,10 @@ function App(): JSX.Element {
   const hasSyncedSubscriptions = useRef(false);
   const hasSyncedTwitchSubscriptions = useRef(false);
 
+  // YouTube機能が有効な場合のみ購読チャンネルを同期
   useEffect(() => {
+    if (!config.enableYoutube) return;
+
     const syncSubscriptions = async (): Promise<void> => {
       if (!authenticated || hasSyncedSubscriptions.current) return;
       try {

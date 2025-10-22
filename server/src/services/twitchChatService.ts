@@ -17,9 +17,26 @@ class TwitchChatService {
   private messageHandlers: Set<MessageHandler> = new Set();
   private joinedChannels: Set<string> = new Set();
   private connectionPromise: Promise<void> | null = null;
+  private accessToken: string | null = null;
+  private username: string | null = null;
 
   constructor() {
     console.log('[Twitch Chat Service] Initializing');
+  }
+
+  public setCredentials(accessToken: string, username: string): void {
+    console.log(`[Twitch Chat Service] Setting credentials for user: ${username}`);
+    this.accessToken = accessToken;
+    this.username = username;
+
+    // 既存のクライアントがあればリセット
+    if (this.client) {
+      console.log('[Twitch Chat Service] Resetting client due to credential change');
+      this.client.disconnect().catch(() => {});
+      this.client = null;
+      this.connectionPromise = null;
+      this.joinedChannels.clear();
+    }
   }
 
   private async ensureClient(): Promise<void> {
@@ -30,14 +47,28 @@ class TwitchChatService {
 
     if (!this.client) {
       console.log('[Twitch Chat Service] Creating TMI client');
-      this.client = new tmi.Client({
+
+      const clientOptions: tmi.Options = {
         options: { debug: true },
         connection: {
           reconnect: true,
           secure: true
         },
         channels: []
-      });
+      };
+
+      // 認証情報があれば設定
+      if (this.accessToken && this.username) {
+        clientOptions.identity = {
+          username: this.username,
+          password: `oauth:${this.accessToken}`
+        };
+        console.log(`[Twitch Chat Service] Client configured with authentication for user: ${this.username}`);
+      } else {
+        console.log('[Twitch Chat Service] Client configured without authentication (read-only)');
+      }
+
+      this.client = new tmi.Client(clientOptions);
 
       this.client.on('message', (channel, tags, message, self) => {
         if (self) return; // 自分のメッセージは無視
@@ -150,6 +181,29 @@ class TwitchChatService {
       '#22d3ee', '#ec4899', '#10b981', '#f59e0b'
     ];
     return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  public async sendMessage(channelLogin: string, message: string): Promise<void> {
+    await this.ensureClient();
+
+    if (!this.client) {
+      throw new Error('Failed to create TMI client');
+    }
+
+    // チャンネルに参加していない場合は参加する
+    if (!this.joinedChannels.has(channelLogin)) {
+      await this.joinChannel(channelLogin);
+    }
+
+    console.log(`[Twitch Chat Service] Sending message to ${channelLogin}: ${message}`);
+
+    try {
+      await this.client.say(channelLogin, message);
+      console.log(`[Twitch Chat Service] Message sent successfully to ${channelLogin}`);
+    } catch (error) {
+      console.error(`[Twitch Chat Service] Failed to send message to ${channelLogin}:`, error);
+      throw error;
+    }
   }
 
   public async disconnect(): Promise<void> {

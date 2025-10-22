@@ -11,6 +11,7 @@ import styles from './AppShell.module.css';
 export const AppShell = (): JSX.Element => {
   const [presetModalOpen, setPresetModalOpen] = useState(false);
   const fullscreen = useLayoutStore((state) => state.fullscreen);
+  const setUserInteracted = useLayoutStore((state) => state.setUserInteracted);
 
   useEffect(() => {
     const handleFullscreenChange = (): void => {
@@ -24,6 +25,27 @@ export const AppShell = (): JSX.Element => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, [fullscreen]);
+
+  // ユーザーインタラクションを検出
+  useEffect(() => {
+    const handleUserInteraction = (): void => {
+      setUserInteracted(true);
+      // 一度検出したらリスナーを削除
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+
+    document.addEventListener('click', handleUserInteraction);
+    document.addEventListener('keydown', handleUserInteraction);
+    document.addEventListener('touchstart', handleUserInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, [setUserInteracted]);
 
   return (
     <div className={styles.appShell}>

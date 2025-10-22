@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   MagnifyingGlassIcon,
   Squares2X2Icon,
@@ -16,6 +16,7 @@ import { useUserStore } from '../../stores/userStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { apiFetch } from '../../utils/api';
 import type { ChannelSearchResult, LayoutPreset } from '../../types';
+import { config } from '../../config';
 import { AccountMenu } from './AccountMenu';
 import { NotificationMenu } from './NotificationMenu';
 import styles from './Header.module.css';
@@ -76,6 +77,15 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
     removeFollowedChannel: state.removeFollowedChannel
   }));
 
+  // 有効なプラットフォームのフォローチャンネル数を計算
+  const activeFollowedChannelsCount = useMemo(() => {
+    return followedChannels.filter((ch) => {
+      if (ch.platform === 'youtube' && !config.enableYoutube) return false;
+      if (ch.platform === 'niconico' && !config.enableNiconico) return false;
+      return true;
+    }).length;
+  }, [followedChannels]);
+
   const unreadCount = useNotificationStore((state) => state.getUnreadCount());
 
   const [showDropdown, setShowDropdown] = useState(false);
@@ -128,17 +138,27 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
     try {
       console.log('[検索開始] キーワード:', trimmed);
 
-      const [youtubeResponse, twitchResponse] = await Promise.allSettled([
-        apiFetch(`/api/youtube/channels?q=${encodeURIComponent(trimmed)}`),
-        apiFetch(`/api/twitch/channels?q=${encodeURIComponent(trimmed)}`)
-      ]);
+      const promises: Promise<Response>[] = [];
+
+      // YouTube APIは有効な場合のみ呼び出す
+      if (config.enableYoutube) {
+        promises.push(apiFetch(`/api/youtube/channels?q=${encodeURIComponent(trimmed)}`));
+      }
+
+      promises.push(apiFetch(`/api/twitch/channels?q=${encodeURIComponent(trimmed)}`));
+
+      const responses = await Promise.allSettled(promises);
+
+      // レスポンスの割り当て（YouTube無効時はTwitchのみ）
+      const youtubeResponse = config.enableYoutube ? responses[0] : null;
+      const twitchResponse = config.enableYoutube ? responses[1] : responses[0];
 
       console.log('[YouTube レスポンス]', youtubeResponse);
       console.log('[Twitch レスポンス]', twitchResponse);
 
       const allResults: ChannelSearchResult[] = [];
 
-      if (youtubeResponse.status === 'fulfilled' && youtubeResponse.value.ok) {
+      if (youtubeResponse && youtubeResponse.status === 'fulfilled' && youtubeResponse.value.ok) {
         const youtubeData = await youtubeResponse.value.json();
         console.log('[YouTube データ]', youtubeData);
         if (Array.isArray(youtubeData.items)) {
@@ -153,11 +173,11 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
           console.log('[YouTube 結果数]', youtubeResults.length);
           allResults.push(...youtubeResults);
         }
-      } else if (youtubeResponse.status === 'fulfilled') {
+      } else if (youtubeResponse && youtubeResponse.status === 'fulfilled') {
         console.error('[YouTube エラー] ステータスコード:', youtubeResponse.value.status);
         const errorText = await youtubeResponse.value.text();
         console.error('[YouTube エラー内容]', errorText);
-      } else if (youtubeResponse.status === 'rejected') {
+      } else if (youtubeResponse && youtubeResponse.status === 'rejected') {
         console.error('[YouTube 失敗]', youtubeResponse.reason);
       }
 
@@ -274,7 +294,14 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                 <div className={styles.dropdownError}>{channelSearchError}</div>
               ) : channelSearchResults.length > 0 ? (
                 <div className={styles.dropdownResults}>
-                  {channelSearchResults.map((channel) => {
+                  {channelSearchResults
+                    .filter((channel) => {
+                      // プラットフォームが無効な場合は除外
+                      if (channel.platform === 'youtube' && !config.enableYoutube) return false;
+                      if (channel.platform === 'niconico' && !config.enableNiconico) return false;
+                      return true;
+                    })
+                    .map((channel) => {
                     const alreadyFollowed = followedChannels.some((ch) => ch.channelId === channel.id);
                     return (
                       <div key={`${channel.platform}-${channel.id}`} className={styles.dropdownItem}>
@@ -496,7 +523,7 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
             onClick={() => setShowFollowListMenu(!showFollowListMenu)}
           >
             <StarIcon />
-            <span>フォロー ({followedChannels.length})</span>
+            <span>フォロー ({activeFollowedChannelsCount})</span>
           </button>
           {showFollowListMenu && (
             <div className={styles.followListMenu}>
@@ -508,12 +535,14 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
               ) : (
                 <>
                   {(() => {
-                    const youtubeChannels = followedChannels.filter((ch) => ch.platform === 'youtube');
+                    const youtubeChannels = config.enableYoutube
+                      ? followedChannels.filter((ch) => ch.platform === 'youtube')
+                      : [];
                     const twitchChannels = followedChannels.filter((ch) => ch.platform === 'twitch');
 
                     return (
                       <>
-                        {youtubeChannels.length > 0 && (
+                        {config.enableYoutube && youtubeChannels.length > 0 && (
                           <div>
                             <div className={styles.followListPlatform} style={{ color: '#ef4444' }}>
                               YouTube ({youtubeChannels.length})

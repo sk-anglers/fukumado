@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLayoutStore } from '../../stores/layoutStore';
 import type { Platform, Streamer } from '../../types';
+import { config } from '../../config';
 import styles from './StreamSelectionModal.module.css';
 
 interface StreamSelectionModalProps {
@@ -71,14 +72,16 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
           >
             すべて
           </button>
-          <button
-            className={selectedPlatform === 'youtube' ? styles.platformButtonActive : styles.platformButton}
-            onClick={() => setSelectedPlatform('youtube')}
-            type="button"
-            style={{ '--platform-color': platformColor.youtube } as React.CSSProperties}
-          >
-            YouTube
-          </button>
+          {config.enableYoutube && (
+            <button
+              className={selectedPlatform === 'youtube' ? styles.platformButtonActive : styles.platformButton}
+              onClick={() => setSelectedPlatform('youtube')}
+              type="button"
+              style={{ '--platform-color': platformColor.youtube } as React.CSSProperties}
+            >
+              YouTube
+            </button>
+          )}
           <button
             className={selectedPlatform === 'twitch' ? styles.platformButtonActive : styles.platformButton}
             onClick={() => setSelectedPlatform('twitch')}
@@ -87,14 +90,16 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
           >
             Twitch
           </button>
-          <button
-            className={selectedPlatform === 'niconico' ? styles.platformButtonActive : styles.platformButton}
-            onClick={() => setSelectedPlatform('niconico')}
-            type="button"
-            style={{ '--platform-color': platformColor.niconico } as React.CSSProperties}
-          >
-            ニコニコ
-          </button>
+          {config.enableNiconico && (
+            <button
+              className={selectedPlatform === 'niconico' ? styles.platformButtonActive : styles.platformButton}
+              onClick={() => setSelectedPlatform('niconico')}
+              type="button"
+              style={{ '--platform-color': platformColor.niconico } as React.CSSProperties}
+            >
+              ニコニコ
+            </button>
+          )}
         </div>
 
         <div className={styles.streamList}>

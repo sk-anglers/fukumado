@@ -29,7 +29,15 @@ app.get('/health', (_, res) => {
 });
 
 app.use('/auth', authRouter);
-app.use('/api/youtube', youtubeRouter);
+
+// YouTube機能が有効な場合のみルーターを登録
+if (env.enableYoutube) {
+  app.use('/api/youtube', youtubeRouter);
+  console.log('[server] YouTube API enabled');
+} else {
+  console.log('[server] YouTube API disabled');
+}
+
 app.use('/api/twitch', twitchRouter);
 
 // HTTPサーバーを作成
@@ -165,6 +173,10 @@ server.listen(env.port, () => {
   // eslint-disable-next-line no-console
   console.log(`[server] listening on http://localhost:${env.port}`);
 
-  // バックグラウンド同期サービスを開始
-  streamSyncService.start();
+  // YouTube機能が有効な場合のみバックグラウンド同期サービスを開始
+  if (env.enableYoutube) {
+    streamSyncService.start();
+  } else {
+    console.log('[server] YouTube sync service disabled');
+  }
 });

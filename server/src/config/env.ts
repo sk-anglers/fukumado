@@ -12,6 +12,8 @@ const required = (value: string | undefined, name: string): string => {
 export const env = {
   port: Number(process.env.PORT ?? 4000),
   sessionSecret: required(process.env.SESSION_SECRET, 'SESSION_SECRET'),
+  enableYoutube: process.env.ENABLE_YOUTUBE === 'true',
+  enableNiconico: process.env.ENABLE_NICONICO === 'true',
   redis: {
     host: process.env.REDIS_HOST ?? 'localhost',
     port: Number(process.env.REDIS_PORT ?? 6379),

@@ -1,5 +1,6 @@
 import { BellAlertIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { config } from '../../config';
 import styles from './NotificationMenu.module.css';
 
 interface NotificationMenuProps {
@@ -32,6 +33,7 @@ export const NotificationMenu = ({ onClose }: NotificationMenuProps): JSX.Elemen
             />
             <span>通知を有効にする</span>
           </label>
+          {config.enableYoutube && (
           <label className={styles.settingItem}>
             <input
               type="checkbox"
@@ -41,6 +43,7 @@ export const NotificationMenu = ({ onClose }: NotificationMenuProps): JSX.Elemen
             />
             <span>YouTube配信開始通知</span>
           </label>
+          )}
           <label className={styles.settingItem}>
             <input
               type="checkbox"
@@ -80,7 +83,14 @@ export const NotificationMenu = ({ onClose }: NotificationMenuProps): JSX.Elemen
             {notifications.length === 0 ? (
               <div className={styles.notificationEmpty}>通知はありません</div>
             ) : (
-              notifications.slice(0, 10).map((notification) => (
+              notifications
+                .filter((notification) => {
+                  // プラットフォームが無効な場合は除外
+                  if (notification.platform === 'youtube' && !config.enableYoutube) return false;
+                  if (notification.platform === 'niconico' && !config.enableNiconico) return false;
+                  return true;
+                })
+                .slice(0, 10).map((notification) => (
                 <div
                   key={notification.id}
                   className={`${styles.notificationItem} ${!notification.read ? styles.notificationItemUnread : ''}`}

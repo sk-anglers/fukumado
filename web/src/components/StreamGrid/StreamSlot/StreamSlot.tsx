@@ -58,6 +58,8 @@ const getBestTwitchQuality = (quality: VideoQuality, availableQualities: TwitchQ
 interface StreamSlotCardProps {
   slot: StreamSlot;
   isActive: boolean;
+  isFocused?: boolean;
+  showSelection: boolean;
   onSelect: () => void;
 }
 
@@ -76,8 +78,8 @@ const platformLabel = {
 const formatViewerLabel = (viewerCount?: number): string =>
   viewerCount != null ? `${viewerCount.toLocaleString()} 人視聴中` : '視聴者数 -';
 
-export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps): JSX.Element => {
-  const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen } = useLayoutStore((state) => ({
+export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelection, onSelect }: StreamSlotCardProps): JSX.Element => {
+  const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen, userInteracted, masterSlotId } = useLayoutStore((state) => ({
     setVolume: state.setVolume,
     toggleSlotMute: state.toggleSlotMute,
     preset: state.preset,
@@ -86,7 +88,9 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
     fullscreen: state.fullscreen,
     masterVolume: state.masterVolume,
     swapSlots: state.swapSlots,
-    setModalOpen: state.setModalOpen
+    setModalOpen: state.setModalOpen,
+    userInteracted: state.userInteracted,
+    masterSlotId: state.masterSlotId
   }));
 
   const assignedStream = slot.assignedStream;
@@ -98,6 +102,8 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
   const [isDragging, setIsDragging] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
+
+  const isMaster = masterSlotId === slot.id;
 
   const accentColor = useMemo(() => {
     if (!assignedStream) {
@@ -165,24 +171,18 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
             height: '100%',
             parent: [window.location.hostname],
             autoplay: false,
-            muted: slot.muted
+            muted: true
           });
 
-          // Twitchプレイヤーは即座に初期化されるので、少し待ってからreadyに
+          // グローバルに登録（同期機能のため）
+          (window as any)[`twitchPlayer_${slot.id}`] = playerInstanceRef.current;
+
+          // Twitchプレイヤーは即座に初期化されるので、少し待ってから準備完了を設定
           setTimeout(() => {
             if (isMounted && playerInstanceRef.current) {
               console.log('[Twitch] プレイヤー準備完了');
               setPlayerReady(true);
               const twitchPlayer = playerInstanceRef.current as TwitchPlayer;
-
-              // 音量設定
-              if (slot.muted) {
-                twitchPlayer.setMuted(true);
-              } else {
-                twitchPlayer.setMuted(false);
-                const combinedVolume = (slot.volume * (masterVolume / 100)) / 100; // 0.0-1.0に変換
-                twitchPlayer.setVolume(combinedVolume);
-              }
 
               // 画質設定（少し遅延させて確実に適用）
               setTimeout(() => {
@@ -226,6 +226,7 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
               rel: 0,
               modestbranding: 1,
               playsinline: 1,
+              mute: 1,
               vq: slot.quality !== 'auto' ? youtubeQuality : undefined
             },
             events: {
@@ -238,15 +239,6 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
                 if (slot.quality !== 'auto') {
                   console.log('[YouTube] 画質を設定:', youtubeQuality);
                   event.target.setPlaybackQuality(youtubeQuality);
-                }
-
-                // 音量設定
-                if (slot.muted) {
-                  event.target.mute();
-                } else {
-                  event.target.unMute();
-                  const combinedVolume = Math.round(slot.volume * (masterVolume / 100));
-                  event.target.setVolume(combinedVolume);
                 }
               }
             }
@@ -269,8 +261,41 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
       }
       playerInstanceRef.current?.destroy();
       playerInstanceRef.current = null;
+      // グローバルから削除
+      delete (window as any)[`twitchPlayer_${slot.id}`];
     };
   }, [assignedStream?.id, assignedStream?.platform, slot.quality]);
+
+  // ユーザーインタラクション後の初回音声設定
+  useEffect(() => {
+    const player = playerInstanceRef.current;
+    if (!userInteracted || !playerReady || !player || !assignedStream) return;
+
+    console.log('[StreamSlot] ユーザーインタラクション検出、音声設定を適用');
+
+    // YouTubeプレイヤーの場合
+    if (assignedStream.platform === 'youtube' && 'isMuted' in player) {
+      const ytPlayer = player as YT.Player;
+      if (slot.muted) {
+        ytPlayer.mute();
+      } else {
+        ytPlayer.unMute();
+        const combinedVolume = Math.round(slot.volume * (masterVolume / 100));
+        ytPlayer.setVolume(combinedVolume);
+      }
+    }
+    // Twitchプレイヤーの場合
+    else if (assignedStream.platform === 'twitch' && 'setMuted' in player) {
+      const twitchPlayer = player as TwitchPlayer;
+      if (slot.muted) {
+        twitchPlayer.setMuted(true);
+      } else {
+        twitchPlayer.setMuted(false);
+        const combinedVolume = (slot.volume * (masterVolume / 100)) / 100; // 0.0-1.0に変換
+        twitchPlayer.setVolume(combinedVolume);
+      }
+    }
+  }, [userInteracted, playerReady, assignedStream?.platform, slot.muted, slot.volume, masterVolume]);
 
   useEffect(() => {
     const player = playerInstanceRef.current;
@@ -405,9 +430,14 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
         !assignedStream && styles.empty,
         fullscreen && styles.fullscreenMode,
         isDragging && styles.dragging,
-        isDragOver && styles.dragOver
+        isDragOver && styles.dragOver,
+        isFocused && styles.focused
       )}
-      style={{ borderColor: isActive ? accentColor : 'transparent', cursor: 'pointer' }}
+      style={{
+        borderColor: isActive ? accentColor : 'transparent',
+        cursor: 'pointer',
+        order: isFocused ? -1 : 0
+      }}
       draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -455,11 +485,16 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
           </div>
         )}
 
-        <div className={styles.overlayTop}>
+        <div className={styles.overlayTop} style={{ opacity: !showSelection ? 0 : 1 }}>
           {assignedStream ? (
             <>
-              <div className={styles.platformBadge} style={{ color: accentColor }}>
-                {platformLabel[assignedStream.platform]}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className={styles.platformBadge} style={{ color: accentColor }}>
+                  {platformLabel[assignedStream.platform]}
+                </div>
+                {isMaster && assignedStream.platform === 'twitch' && (
+                  <div className={styles.masterBadge}>🎯 マスター</div>
+                )}
               </div>
               <div className={styles.topButtons}>
                 <button
@@ -495,7 +530,7 @@ export const StreamSlotCard = ({ slot, isActive, onSelect }: StreamSlotCardProps
           )}
         </div>
 
-        <div className={styles.overlayBottom}>
+        <div className={styles.overlayBottom} style={{ opacity: !showSelection ? 0 : 1 }}>
           {assignedStream ? (
             <>
               <div className={styles.streamInfo}>

@@ -5,7 +5,7 @@ const TWITCH_AUTH_BASE = 'https://id.twitch.tv/oauth2/authorize';
 const TWITCH_TOKEN_ENDPOINT = 'https://id.twitch.tv/oauth2/token';
 const TWITCH_USER_ENDPOINT = 'https://api.twitch.tv/helix/users';
 
-const scopes = ['user:read:follows'];
+const scopes = ['user:read:follows', 'chat:read', 'chat:edit'];
 
 export interface TwitchTokenResponse {
   access_token: string;
