@@ -14,6 +14,7 @@ export const env = {
   sessionSecret: required(process.env.SESSION_SECRET, 'SESSION_SECRET'),
   enableYoutube: process.env.ENABLE_YOUTUBE === 'true',
   enableNiconico: process.env.ENABLE_NICONICO === 'true',
+  enableEventSub: process.env.ENABLE_EVENTSUB === 'true',
   redis: {
     host: process.env.REDIS_HOST ?? 'localhost',
     port: Number(process.env.REDIS_PORT ?? 6379),
@@ -29,7 +30,9 @@ export const env = {
   twitch: {
     clientId: process.env.TWITCH_CLIENT_ID,
     clientSecret: process.env.TWITCH_CLIENT_SECRET,
-    redirectUri: process.env.TWITCH_REDIRECT_URI
+    redirectUri: process.env.TWITCH_REDIRECT_URI,
+    webhookUrl: process.env.TWITCH_WEBHOOK_URL,
+    webhookSecret: process.env.TWITCH_WEBHOOK_SECRET
   }
 };
 

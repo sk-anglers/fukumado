@@ -15,7 +15,8 @@ export const apiUrl = (path: string): string => {
 };
 
 export const apiFetch = (input: string, init?: RequestInit): Promise<Response> => {
-  return fetch(input, {
+  const url = apiUrl(input);
+  return fetch(url, {
     credentials: 'include',
     ...init
   });

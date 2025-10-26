@@ -1,28 +1,48 @@
 import express from 'express';
 import session from 'express-session';
+import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
+import { randomUUID } from 'crypto';
 import { env } from './config/env';
 import { authRouter } from './routes/auth';
 import { youtubeRouter } from './routes/youtube';
 import { twitchRouter } from './routes/twitch';
+import { streamsRouter } from './routes/streams';
 import { twitchChatService } from './services/twitchChatService';
-import { streamSyncService } from './services/streamSyncService';
+import { streamSyncService, tokenStorage } from './services/streamSyncService';
+import { twitchEventSubService } from './services/twitchEventSubService';
 
 const app = express();
 
-app.use(express.json());
+// CORS設定（モバイル対応）
 app.use(
-  session({
-    secret: env.sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-    }
+  cors({
+    origin: [
+      'http://localhost:5173',
+      'http://192.168.11.18:5173',
+      'http://127.0.0.1:5173'
+    ],
+    credentials: true
   })
 );
+
+app.use(express.json());
+
+// セッションミドルウェア（WebSocketでも使用するためexport）
+const sessionMiddleware = session({
+  secret: env.sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: false, // ngrok使用時はfalseに設定
+    sameSite: 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+  }
+});
+
+app.use(sessionMiddleware);
 
 app.get('/health', (_, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -39,6 +59,7 @@ if (env.enableYoutube) {
 }
 
 app.use('/api/twitch', twitchRouter);
+app.use('/api/streams', streamsRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);
@@ -50,21 +71,88 @@ console.log('[WebSocket] WebSocket server initialized on path /chat');
 
 // クライアントごとの購読チャンネル管理
 interface ClientData {
-  channels: Set<string>;
+  userId: string; // ユニークなクライアントID
+  channels: Set<string>; // Twitchチャットチャンネル
   channelMapping: Record<string, string>;
+  youtubeChannels: string[]; // YouTubeフォローチャンネル
+  twitchChannels: string[]; // Twitchフォローチャンネル
+  youtubeAccessToken?: string; // YouTubeアクセストークン
+  twitchAccessToken?: string; // Twitchアクセストークン
   cleanup?: () => void;
 }
 
 const clients = new Map<WebSocket, ClientData>();
 
-wss.on('connection', (ws) => {
+// EventSubイベントハンドラー（全クライアントに通知）
+twitchEventSubService.onStreamEvent((event) => {
+  console.log('[EventSub] Stream event received:', event);
+
+  // 全クライアントに通知
+  const payload = JSON.stringify({
+    type: 'eventsub_stream_event',
+    event
+  });
+
+  clients.forEach((_, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+    }
+  });
+});
+
+// StreamSyncServiceのイベントハンドラー（配信リスト更新を全クライアントに通知）
+streamSyncService.onStreamUpdate((event) => {
+  console.log('[StreamSync] Stream update event:', {
+    platform: event.platform,
+    streamCount: event.streams.length,
+    added: event.changes.added.length,
+    removed: event.changes.removed.length
+  });
+
+  // 全クライアントに配信リスト更新を通知
+  const payload = JSON.stringify({
+    type: 'stream_list_updated',
+    platform: event.platform,
+    streams: event.streams,
+    changes: event.changes
+  });
+
+  clients.forEach((_, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+      console.log(`[StreamSync] Sent update to client (${event.platform})`);
+    }
+  });
+});
+
+wss.on('connection', (ws, request) => {
   console.log('[WebSocket] Client connected');
 
-  const clientData: ClientData = {
-    channels: new Set(),
-    channelMapping: {}
-  };
-  clients.set(ws, clientData);
+  // セッション情報を取得するためにミドルウェアを手動で適用
+  const mockResponse = {
+    getHeader: () => {},
+    setHeader: () => {},
+    end: () => {}
+  } as any;
+
+  sessionMiddleware(request as any, mockResponse, () => {
+    const req = request as any;
+    const session = req.session;
+    const sessionId = req.sessionID || 'default';
+
+    const clientData: ClientData = {
+      userId: sessionId, // セッションIDを使用
+      channels: new Set(),
+      channelMapping: {},
+      youtubeChannels: [],
+      twitchChannels: [],
+      youtubeAccessToken: session?.streamSyncTokens?.youtube,
+      twitchAccessToken: session?.streamSyncTokens?.twitch
+    };
+
+    clients.set(ws, clientData);
+    console.log(`[WebSocket] Client connected with session ID: ${clientData.userId}`);
+    console.log(`[WebSocket] Session tokens - YouTube: ${!!clientData.youtubeAccessToken}, Twitch: ${!!clientData.twitchAccessToken}`);
 
   // Twitchチャットメッセージハンドラー
   const messageHandler = (message: any) => {
@@ -98,8 +186,8 @@ wss.on('connection', (ws) => {
       console.log('[WebSocket] Received message:', payload);
 
       if (payload.type === 'subscribe') {
-        // チャンネル購読
-        const { channels, channelMapping } = payload;
+        // Twitchチャットチャンネル購読
+        const { channels, channelMapping, channelIdMapping } = payload;
         if (Array.isArray(channels)) {
           // 新しいチャンネルセット
           const newChannels = new Set(channels);
@@ -121,14 +209,61 @@ wss.on('connection', (ws) => {
           // 新しいチャンネルに参加
           for (const newChannel of newChannels) {
             if (!clientData.channels.has(newChannel)) {
-              await twitchChatService.joinChannel(newChannel);
-              console.log(`[WebSocket] Subscribed to channel: ${newChannel}`);
+              // channelIdMappingからchannelIdを取得
+              const channelId = channelIdMapping?.[newChannel];
+              await twitchChatService.joinChannel(newChannel, channelId);
+              console.log(`[WebSocket] Subscribed to channel: ${newChannel} (ID: ${channelId || 'unknown'})`);
             }
           }
 
           clientData.channels = newChannels;
           console.log('[WebSocket] Client channels updated:', Array.from(clientData.channels));
         }
+      } else if (payload.type === 'subscribe_streams') {
+        // 配信リスト同期のためのフォローチャンネル登録
+        const { youtubeChannels, twitchChannels, sessionId } = payload;
+
+        if (Array.isArray(youtubeChannels)) {
+          clientData.youtubeChannels = youtubeChannels;
+        }
+        if (Array.isArray(twitchChannels)) {
+          clientData.twitchChannels = twitchChannels;
+        }
+
+        // TokenStorageからトークンを取得
+        const tokens = sessionId ? tokenStorage.getTokens(sessionId) : {};
+        clientData.youtubeAccessToken = tokens.youtube;
+        clientData.twitchAccessToken = tokens.twitch;
+
+        console.log(`[WebSocket] Retrieved tokens for session: ${sessionId || 'none'}`);
+        console.log(`[WebSocket] Tokens available - YouTube: ${!!clientData.youtubeAccessToken}, Twitch: ${!!clientData.twitchAccessToken}`);
+
+        // StreamSyncServiceにユーザーを登録（トークンも含める）
+        streamSyncService.registerUser(
+          clientData.userId,
+          {
+            youtube: clientData.youtubeChannels,
+            twitch: clientData.twitchChannels
+          },
+          {
+            youtube: clientData.youtubeAccessToken,
+            twitch: clientData.twitchAccessToken
+          }
+        );
+
+        console.log(`[WebSocket] Registered user ${clientData.userId} with YouTube: ${youtubeChannels?.length || 0}, Twitch: ${twitchChannels?.length || 0}`);
+
+        // 初回登録時にStreamSyncServiceを起動（まだ起動していない場合）
+        const stats = streamSyncService.getStats();
+        if (!stats.isRunning && (youtubeChannels?.length > 0 || twitchChannels?.length > 0)) {
+          console.log('[WebSocket] Starting StreamSyncService...');
+          streamSyncService.start();
+        }
+
+        // 即座に同期を実行
+        streamSyncService.manualSync().catch(err => {
+          console.error('[WebSocket] Manual sync failed:', err);
+        });
       }
     } catch (error) {
       console.error('[WebSocket] Error handling message:', error);
@@ -160,6 +295,10 @@ wss.on('connection', (ws) => {
       }
     }
 
+    // StreamSyncServiceからユーザーを削除
+    streamSyncService.unregisterUser(clientData.userId);
+    console.log(`[WebSocket] Unregistered user ${clientData.userId} from StreamSyncService`);
+
     clients.delete(ws);
     console.log(`[WebSocket] Total clients: ${clients.size}`);
   });
@@ -167,16 +306,11 @@ wss.on('connection', (ws) => {
   ws.on('error', (error) => {
     console.error('[WebSocket] Client error:', error);
   });
+  }); // sessionMiddlewareコールバックの終了
 });
 
 server.listen(env.port, () => {
   // eslint-disable-next-line no-console
   console.log(`[server] listening on http://localhost:${env.port}`);
-
-  // YouTube機能が有効な場合のみバックグラウンド同期サービスを開始
-  if (env.enableYoutube) {
-    streamSyncService.start();
-  } else {
-    console.log('[server] YouTube sync service disabled');
-  }
+  console.log('[server] StreamSyncService will start automatically when clients connect');
 });

@@ -1,4 +1,16 @@
 import tmi from 'tmi.js';
+import { badgeService } from './badgeService';
+
+export interface TwitchEmote {
+  id: string;
+  positions: Array<{ start: number; end: number }>;
+}
+
+export interface TwitchBadge {
+  setId: string;
+  version: string;
+  imageUrl?: string;
+}
 
 export interface TwitchChatMessage {
   id: string;
@@ -8,6 +20,12 @@ export interface TwitchChatMessage {
   timestamp: string;
   avatarColor: string;
   channelLogin: string;
+  emotes?: TwitchEmote[];
+  badges?: TwitchBadge[];
+  bits?: number;
+  isSubscriber?: boolean;
+  isModerator?: boolean;
+  isVip?: boolean;
 }
 
 type MessageHandler = (message: TwitchChatMessage) => void;
@@ -16,6 +34,7 @@ class TwitchChatService {
   private client: tmi.Client | null = null;
   private messageHandlers: Set<MessageHandler> = new Set();
   private joinedChannels: Set<string> = new Set();
+  private channelIdMap: Map<string, string> = new Map(); // channelLogin -> channelId
   private connectionPromise: Promise<void> | null = null;
   private accessToken: string | null = null;
   private username: string | null = null;
@@ -26,16 +45,27 @@ class TwitchChatService {
 
   public setCredentials(accessToken: string, username: string): void {
     console.log(`[Twitch Chat Service] Setting credentials for user: ${username}`);
+
+    // ユーザーが変更された場合のみクライアントをリセット
+    const userChanged = this.username !== null && this.username !== username;
+
     this.accessToken = accessToken;
     this.username = username;
 
-    // 既存のクライアントがあればリセット
-    if (this.client) {
-      console.log('[Twitch Chat Service] Resetting client due to credential change');
+    // バッジサービスにアクセストークンを設定し、グローバルバッジを取得
+    badgeService.setAccessToken(accessToken);
+    badgeService.fetchGlobalBadges().catch((err) => {
+      console.error('[Twitch Chat Service] Failed to fetch global badges:', err);
+    });
+
+    // ユーザーが変更された場合のみクライアントをリセット
+    if (userChanged && this.client) {
+      console.log('[Twitch Chat Service] Resetting client due to user change');
       this.client.disconnect().catch(() => {});
       this.client = null;
       this.connectionPromise = null;
       this.joinedChannels.clear();
+      this.channelIdMap.clear();
     }
   }
 
@@ -71,11 +101,48 @@ class TwitchChatService {
       this.client = new tmi.Client(clientOptions);
 
       this.client.on('message', (channel, tags, message, self) => {
-        if (self) return; // 自分のメッセージは無視
-
         const channelLogin = channel.replace('#', '');
 
-        console.log(`[Twitch Chat] Message from ${tags.username} in ${channelLogin}: ${message}`);
+        console.log(`[Twitch Chat] Message from ${tags.username} in ${channelLogin}: ${message}${self ? ' (self)' : ''}`);
+
+        // エモート情報をパース
+        const emotes: TwitchEmote[] = [];
+        if (tags.emotes) {
+          console.log('[Twitch Chat] Raw emotes:', tags.emotes);
+          Object.entries(tags.emotes).forEach(([emoteId, positions]) => {
+            const parsedPositions = positions.map((pos) => {
+              const [start, end] = pos.split('-').map(Number);
+              return { start, end };
+            });
+            emotes.push({ id: emoteId, positions: parsedPositions });
+            console.log('[Twitch Chat] Parsed emote:', { id: emoteId, positions: parsedPositions });
+          });
+        }
+
+        // バッジ情報をパース
+        const badges: TwitchBadge[] = [];
+        const channelId = this.channelIdMap.get(channelLogin);
+        console.log('[Twitch Chat] Raw badges:', tags.badges, 'channelId:', channelId);
+        if (tags.badges) {
+          Object.entries(tags.badges).forEach(([setId, version]) => {
+            const imageUrl = badgeService.getBadgeUrl(setId, version || '1', channelId);
+            console.log(`[Twitch Chat] Badge lookup: ${setId}/${version} -> ${imageUrl || 'NOT FOUND'}`);
+            badges.push({
+              setId,
+              version: version || '1',
+              imageUrl: imageUrl || undefined
+            });
+          });
+          console.log('[Twitch Chat] Parsed badges:', badges);
+        }
+
+        // Bits情報を抽出
+        const bits = tags.bits ? parseInt(tags.bits, 10) : undefined;
+
+        // 特別なロール情報
+        const isSubscriber = tags.subscriber || false;
+        const isModerator = tags.mod || false;
+        const isVip = tags.badges?.vip !== undefined;
 
         const chatMessage: TwitchChatMessage = {
           id: tags.id || `${Date.now()}-${Math.random()}`,
@@ -87,7 +154,13 @@ class TwitchChatService {
             minute: '2-digit'
           }),
           avatarColor: tags.color || this.getRandomColor(),
-          channelLogin: channelLogin
+          channelLogin: channelLogin,
+          emotes: emotes.length > 0 ? emotes : undefined,
+          badges: badges.length > 0 ? badges : undefined,
+          bits,
+          isSubscriber,
+          isModerator,
+          isVip
         };
 
         // すべてのハンドラーに通知
@@ -114,7 +187,7 @@ class TwitchChatService {
     return this.connectionPromise!;
   }
 
-  public async joinChannel(channelLogin: string): Promise<void> {
+  public async joinChannel(channelLogin: string, channelId?: string): Promise<void> {
     if (this.joinedChannels.has(channelLogin)) {
       console.log(`[Twitch Chat Service] Already joined channel: ${channelLogin}`);
       return;
@@ -131,6 +204,15 @@ class TwitchChatService {
     try {
       await this.client.join(channelLogin);
       this.joinedChannels.add(channelLogin);
+
+      // チャンネルIDがあればマッピングを保存し、チャンネルバッジを取得
+      if (channelId) {
+        this.channelIdMap.set(channelLogin, channelId);
+        badgeService.fetchChannelBadges(channelId).catch((err) => {
+          console.error(`[Twitch Chat Service] Failed to fetch channel badges for ${channelLogin}:`, err);
+        });
+      }
+
       console.log(`[Twitch Chat Service] Successfully joined: ${channelLogin}`);
     } catch (error) {
       console.error(`[Twitch Chat Service] Failed to join ${channelLogin}:`, error);

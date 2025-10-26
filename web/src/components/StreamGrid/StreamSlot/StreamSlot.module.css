@@ -3,7 +3,7 @@
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.16);
   background: rgba(15, 23, 42, 0.65);
-  overflow: hidden;
+  overflow: visible;
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   display: flex;
 }
@@ -14,17 +14,12 @@
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.4);
 }
 
-.active {
-  border-color: rgba(168, 85, 247, 0.6) !important;
-  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
-}
-
 .surface {
   position: relative;
   flex: 1;
   display: flex;
   border-radius: inherit;
-  overflow: hidden;
+  overflow: visible;
   min-height: 0;
 }
 
@@ -42,19 +37,15 @@
   width: 100%;
   height: 100%;
   pointer-events: auto;
-  z-index: 2;
+  z-index: 1;
 }
 
 .selectableOverlay {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   pointer-events: none;
   cursor: pointer;
-}
-
-.slot:not(.active) .selectableOverlay {
-  pointer-events: auto;
 }
 
 .preview {
@@ -289,6 +280,20 @@
   pointer-events: auto;
 }
 
+/* モバイル用: ボタンの高さとパディングを拡大 */
+@media (max-width: 768px) {
+  .fullscreenButton,
+  .focusButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    min-height: 44px;
+  }
+
+  .topButtons {
+    gap: 0.5rem;
+  }
+}
+
 .fullscreenButton svg {
   width: 16px;
   height: 16px;
@@ -345,6 +350,60 @@
   pointer-events: auto;
 }
 
+/* モバイル用: スロットにアスペクト比を設定してスクロール可能に */
+@media (max-width: 768px) {
+  .slot {
+    aspect-ratio: 16 / 9;
+    min-height: 200px;
+    overflow: visible;
+  }
+
+  .surface {
+    overflow: visible;
+  }
+
+  /* モバイルではオーバーレイを非表示 */
+  .overlayTop,
+  .overlayBottom {
+    display: none !important;
+  }
+
+  .controlButton {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* モバイル用の小さな×ボタン */
+.mobileCloseButton {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.8);
+  color: rgba(226, 232, 240, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+
+.mobileCloseButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mobileCloseButton:active {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: rgba(248, 113, 113, 0.6);
+  transform: scale(0.95);
+}
+
 .controlButton svg {
   width: 18px;
   height: 18px;
@@ -366,6 +425,14 @@
   accent-color: rgba(168, 85, 247, 0.8);
   cursor: pointer;
   pointer-events: auto;
+}
+
+/* モバイル用: 音量スライダーを拡大 */
+@media (max-width: 768px) {
+  .volumeControl input {
+    width: 140px;
+    height: 8px;
+  }
 }
 
 .emptyHint {
@@ -391,20 +458,40 @@
   opacity: 1;
 }
 
-/* ドラッグ&ドロップスタイル */
-.dragging {
-  opacity: 0.5;
-  cursor: grabbing !important;
-}
-
-.dragOver {
-  border-color: rgba(56, 189, 248, 0.8) !important;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
-  transform: scale(1.02);
-}
-
 /* フォーカスモード時の大きい表示 */
 .focused {
   grid-column: span 2 !important;
   grid-row: span 2 !important;
+}
+
+/* モバイル用: オーバーレイのフォントサイズとレイアウト調整 */
+@media (max-width: 768px) {
+  .streamInfo h3 {
+    font-size: 1rem;
+  }
+
+  .streamMeta {
+    font-size: 0.8rem;
+  }
+
+  .overlayTop,
+  .overlayBottom {
+    padding: 1rem;
+  }
+
+  .platformBadge,
+  .masterBadge {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .emptyHint {
+    font-size: 0.9rem;
+  }
+
+  .placeholder p {
+    font-size: 0.9rem;
+    padding: 0 1rem;
+    text-align: center;
+  }
 }

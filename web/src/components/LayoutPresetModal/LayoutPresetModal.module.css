@@ -107,16 +107,68 @@
   line-height: 1.4;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .backdrop {
+    padding: 1rem;
+  }
+
   .modal {
     padding: 1.5rem;
+    gap: 1.25rem;
   }
 
   .header {
     flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .header h2 {
+    font-size: 1.5rem;
+  }
+
+  .header p {
+    font-size: 0.95rem;
   }
 
   .closeButton {
     align-self: stretch;
+    min-height: 44px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+    gap: 1rem;
+    cursor: pointer;
+  }
+
+  .card:active {
+    transform: scale(0.98);
+  }
+
+  .cardPreview {
+    padding: 1rem;
+  }
+
+  .previewCell {
+    height: 64px;
+  }
+
+  .cardBody h3 {
+    font-size: 1.1rem;
+  }
+
+  .cardBody p {
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
 }

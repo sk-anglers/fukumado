@@ -1,0 +1,100 @@
+.toastContainer {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 320px;
+  max-width: 400px;
+  padding: 0.875rem 1rem;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(168, 85, 247, 0.2);
+  pointer-events: auto;
+  animation: slideIn 0.3s ease-out;
+  backdrop-filter: blur(12px);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.thumbnail {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.message {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.95);
+  font-weight: 500;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.closeButton {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.closeButton:hover {
+  background: rgba(148, 163, 184, 0.15);
+  color: rgba(226, 232, 240, 0.95);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 480px) {
+  .toastContainer {
+    left: 0.5rem;
+    right: 0.5rem;
+  }
+
+  .toast {
+    min-width: auto;
+    width: 100%;
+  }
+}

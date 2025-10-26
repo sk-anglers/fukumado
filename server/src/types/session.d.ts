@@ -30,5 +30,11 @@ declare module 'express-session' {
       displayName: string;
       profileImageUrl?: string;
     };
+    // StreamSyncService用
+    streamSyncUserId?: string;
+    streamSyncTokens?: {
+      youtube?: string;
+      twitch?: string;
+    };
   }
 }

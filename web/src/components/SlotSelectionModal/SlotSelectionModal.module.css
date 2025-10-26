@@ -249,3 +249,28 @@
   font-size: 0.85rem;
   color: rgba(148, 163, 184, 0.6);
 }
+
+/* モバイル: 常に1列に配置 */
+@media (max-width: 768px) {
+  .backdrop {
+    padding: 1rem;
+  }
+
+  .modal {
+    padding: 1.5rem;
+  }
+
+  .slotGrid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto !important;
+  }
+
+  .slotGrid.focus > :first-child {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+
+  .slotButton {
+    min-height: 100px;
+  }
+}

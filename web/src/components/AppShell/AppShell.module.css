@@ -60,6 +60,64 @@
   }
 }
 
+/* サイドバー: デスクトップ用通常表示 */
+.sidebarNormal {
+  /* グリッドの一部として表示 */
+}
+
+/* サイドバー: モバイル用オーバーレイ */
+.sidebarOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  z-index: 200;
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+}
+
+/* バックドロップ（背景の暗幕） */
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 199;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* チャット: モバイル用オーバーレイ */
+.chatOverlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 360px;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.95);
+  border-left: 1px solid rgba(148, 163, 184, 0.1);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+}
+
 @media (max-width: 1200px) {
   .body {
     grid-template-columns: 220px minmax(0, 1fr);
@@ -67,5 +125,26 @@
 
   .chatArea {
     display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* モバイルでサイドバーとチャットを非表示（オーバーレイ時のみ表示） */
+  .sidebarNormal {
+    display: none;
+  }
+
+  .chatArea {
+    display: none;
+  }
+
+  .main {
+    flex: 1;
+    padding: 1rem;
   }
 }

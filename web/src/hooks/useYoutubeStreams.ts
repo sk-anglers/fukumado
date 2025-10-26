@@ -57,6 +57,7 @@ export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: stri
   const manualSyncTrigger = useSyncStore((state) => state.manualSyncTrigger);
 
   const previousStreamIdsRef = useRef<Set<string>>(new Set());
+  const isFirstLoadRef = useRef<boolean>(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,20 +85,26 @@ export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: stri
         console.log('[YouTube] 配信リストに変更なし、ストア更新をスキップしました');
       }
 
-      // 新規配信を検出して通知を追加
-      const newStreams = items.filter((item) => !previousStreamIdsRef.current.has(item.id));
+      // 初回ロード以降のみ新規配信通知を生成
+      if (!isFirstLoadRef.current) {
+        const newStreams = items.filter((item) => !previousStreamIdsRef.current.has(item.id));
 
-      newStreams.forEach((item) => {
-        addNotification({
-          type: 'stream_started',
-          platform: 'youtube',
-          channelId: item.channelId,
-          channelName: item.channelTitle,
-          streamId: item.id,
-          streamTitle: item.title,
-          thumbnailUrl: item.thumbnailUrl
+        newStreams.forEach((item) => {
+          console.log('[YouTube] 新規配信を検出、通知を生成:', item.channelTitle, item.title);
+          addNotification({
+            type: 'stream_started',
+            platform: 'youtube',
+            channelId: item.channelId,
+            channelName: item.channelTitle,
+            streamId: item.id,
+            streamTitle: item.title,
+            thumbnailUrl: item.thumbnailUrl
+          });
         });
-      });
+      } else {
+        console.log('[YouTube] 初回ロードのため通知をスキップ');
+        isFirstLoadRef.current = false;
+      }
 
       previousStreamIdsRef.current = currentStreamIds;
     };

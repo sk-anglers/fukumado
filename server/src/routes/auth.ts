@@ -84,24 +84,34 @@ authRouter.post('/logout', (req, res) => {
 
 // Twitch OAuth
 authRouter.get('/twitch', (req, res) => {
+  console.log('[Twitch Login] Starting OAuth flow');
+  console.log('[Twitch Login] Session ID:', req.sessionID);
   const state = createState();
   req.session.twitchOauthState = state;
   const url = buildTwitchAuthUrl(state);
+  console.log('[Twitch Login] Redirecting to:', url);
   res.redirect(url);
 });
 
 authRouter.get('/twitch/callback', async (req, res) => {
+  console.log('[Twitch Callback] Received callback');
+  console.log('[Twitch Callback] Session ID:', req.sessionID);
+
   const { code, state, error } = req.query;
   if (error) {
+    console.error('[Twitch Callback] Error:', error);
     return res.status(400).json({ error: String(error) });
   }
   if (!code || typeof code !== 'string') {
+    console.error('[Twitch Callback] Missing code');
     return res.status(400).json({ error: 'Missing code' });
   }
   if (!state || typeof state !== 'string') {
+    console.error('[Twitch Callback] Missing state');
     return res.status(400).json({ error: 'Missing state' });
   }
   if (!req.session.twitchOauthState || req.session.twitchOauthState !== state) {
+    console.error('[Twitch Callback] Invalid state. Expected:', req.session.twitchOauthState, 'Got:', state);
     return res.status(400).json({ error: 'Invalid state' });
   }
 
@@ -124,17 +134,39 @@ authRouter.get('/twitch/callback', async (req, res) => {
       profileImageUrl: userInfo.profile_image_url
     };
 
-    res.redirect('/auth/success');
+    console.log('[Twitch Callback] User authenticated:', userInfo.login);
+    console.log('[Twitch Callback] Session data set:', {
+      hasTokens: !!req.session.twitchTokens,
+      hasUser: !!req.session.twitchUser
+    });
+
+    // セッションを保存してからリダイレクト
+    req.session.save((err) => {
+      if (err) {
+        console.error('[Twitch Callback] Session save error:', err);
+      } else {
+        console.log('[Twitch Callback] Session saved successfully');
+      }
+      res.redirect('/auth/success');
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[Twitch Callback] Error:', message);
     res.status(500).json({ error: message });
   }
 });
 
 authRouter.get('/twitch/status', (req, res) => {
+  console.log('[Twitch Status] Session ID:', req.sessionID);
+  console.log('[Twitch Status] Has tokens:', !!req.session.twitchTokens);
+  console.log('[Twitch Status] Has user:', !!req.session.twitchUser);
+
   if (!req.session.twitchTokens || !req.session.twitchUser) {
+    console.log('[Twitch Status] Not authenticated');
     return res.json({ authenticated: false });
   }
+
+  console.log('[Twitch Status] Authenticated as:', req.session.twitchUser.login);
   res.json({
     authenticated: true,
     user: req.session.twitchUser,
@@ -148,15 +180,38 @@ authRouter.post('/twitch/logout', (req, res) => {
   res.json({ success: true });
 });
 
+authRouter.get('/twitch/logout', (req, res) => {
+  req.session.twitchTokens = undefined;
+  req.session.twitchUser = undefined;
+  res.redirect('/');
+});
+
 authRouter.get('/success', (_req, res) => {
   res.send(`
+    <!DOCTYPE html>
     <html>
-      <body style="font-family: sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; height: 100vh;">
-        <div style="text-align: center;">
-          <h2>認証が完了しました</h2>
-          <p>このウィンドウを閉じてアプリに戻ってください。</p>
-          <button onclick="window.close()" style="padding: 0.5rem 1rem; border-radius: 8px; border: none; background: #38bdf8; color: #0f172a;">閉じる</button>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8">
+        <title>認証完了</title>
+      </head>
+      <body style="font-family: sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 1rem;">
+        <div style="text-align: center; max-width: 500px; padding: 2rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+          <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">認証が完了しました</h2>
+          <p style="font-size: 1.1rem; margin-bottom: 2rem; line-height: 1.6;">
+            3秒後に自動的にアプリに戻ります...<br>
+            戻らない場合は下のボタンを押してください。
+          </p>
+          <a href="http://localhost:5173/" style="display: inline-block; padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; text-decoration: none; font-size: 1.1rem; font-weight: 600; min-height: 44px; line-height: 1.5;">
+            アプリに戻る
+          </a>
         </div>
+        <script>
+          setTimeout(function() {
+            window.location.href = 'http://localhost:5173/';
+          }, 3000);
+        </script>
       </body>
     </html>
   `);

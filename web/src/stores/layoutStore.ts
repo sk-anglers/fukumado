@@ -23,8 +23,8 @@ const hydrateSlots = (slots: StreamSlot[]): StreamSlot[] =>
       id: source?.id ?? `slot-${index + 1}`,
       muted: source?.muted ?? false,
       volume: source?.volume ?? DEFAULT_VOLUME,
-      quality: source?.quality ?? ('auto' as VideoQuality),
-      assignedStream: source?.assignedStream
+      quality: source?.quality ?? ('auto' as VideoQuality)
+      // assignedStreamは起動時に常にクリア（配信情報は永続化しない）
     };
   });
 
@@ -32,10 +32,12 @@ export interface LayoutState {
   preset: LayoutPreset;
   slots: StreamSlot[];
   selectedSlotId: string | null;
+  selectionTimestamp: number;
   showSelection: boolean;
   masterSlotId: string | null;
   mutedAll: boolean;
   masterVolume: number;
+  slotsVolumeBeforeZero: number[];
   activeSlotsCount: number;
   availableStreams: Streamer[];
   streamsLoading: boolean;
@@ -89,8 +91,10 @@ export const useLayoutStore = create<LayoutState>()(
       preset: 'twoByTwo',
       slots: initialSlots,
       selectedSlotId: initialSlots[0]?.id ?? null,
+      selectionTimestamp: Date.now(),
       mutedAll: false,
       masterVolume: 100,
+      slotsVolumeBeforeZero: [],
       activeSlotsCount: DEFAULT_ACTIVE_SLOTS,
       availableStreams: [],
       streamsLoading: false,
@@ -118,7 +122,8 @@ export const useLayoutStore = create<LayoutState>()(
           if (index === -1 || index >= state.activeSlotsCount) {
             return state;
           }
-          return { selectedSlotId: slotId, showSelection: true };
+          // 同じスロットでもタイムスタンプを更新して、選択が更新されたことを通知
+          return { selectedSlotId: slotId, showSelection: true, selectionTimestamp: Date.now() };
         }),
       clearSelection: () => set({ selectedSlotId: null }),
       assignStream: (slotId, stream) =>
@@ -131,16 +136,14 @@ export const useLayoutStore = create<LayoutState>()(
           // ストリームオブジェクトをコピーして、同期処理の影響を受けないようにする
           const independentStream = { ...stream };
 
-          return {
-            slots: state.slots.map((slot, slotIndex) =>
-              slotIndex === index
-                ? {
-                    ...slot,
-                    assignedStream: independentStream
-                  }
-                : slot
-            )
+          // 配列をコピーして、変更されたスロットのみ新しいオブジェクトを作成
+          const nextSlots = state.slots.slice();
+          nextSlots[index] = {
+            ...nextSlots[index],
+            assignedStream: independentStream
           };
+
+          return { slots: nextSlots };
         }),
       clearSlot: (slotId) =>
         set((state) => {
@@ -149,16 +152,14 @@ export const useLayoutStore = create<LayoutState>()(
             return state;
           }
 
-          return {
-            slots: state.slots.map((slot, slotIndex) =>
-              slotIndex === index
-                ? {
-                    ...slot,
-                    assignedStream: undefined
-                  }
-                : slot
-            )
+          // 配列をコピーして、変更されたスロットのみ新しいオブジェクトを作成
+          const nextSlots = state.slots.slice();
+          nextSlots[index] = {
+            ...nextSlots[index],
+            assignedStream: undefined
           };
+
+          return { slots: nextSlots };
         }),
       toggleMuteAll: () =>
         set((state) => {
@@ -178,9 +179,12 @@ export const useLayoutStore = create<LayoutState>()(
             return state;
           }
 
-          const nextSlots = state.slots.map((slot, slotIndex) =>
-            slotIndex === index ? { ...slot, muted: !slot.muted } : slot
-          );
+          // 配列をコピーして、変更されたスロットのみ新しいオブジェクトを作成
+          const nextSlots = state.slots.slice();
+          nextSlots[index] = {
+            ...nextSlots[index],
+            muted: !nextSlots[index].muted
+          };
 
           return {
             slots: nextSlots,
@@ -193,16 +197,15 @@ export const useLayoutStore = create<LayoutState>()(
           if (index === -1 || index >= state.activeSlotsCount) {
             return state;
           }
-          return {
-            slots: state.slots.map((slot, slotIndex) =>
-              slotIndex === index
-                ? {
-                    ...slot,
-                    volume
-                  }
-                : slot
-            )
+
+          // 配列をコピーして、変更されたスロットのみ新しいオブジェクトを作成
+          const nextSlots = state.slots.slice();
+          nextSlots[index] = {
+            ...nextSlots[index],
+            volume
           };
+
+          return { slots: nextSlots };
         }),
       setMasterVolume: (volume) => set({ masterVolume: volume }),
       setSlotQuality: (slotId, quality) =>
@@ -211,16 +214,15 @@ export const useLayoutStore = create<LayoutState>()(
           if (index === -1 || index >= state.activeSlotsCount) {
             return state;
           }
-          return {
-            slots: state.slots.map((slot, slotIndex) =>
-              slotIndex === index
-                ? {
-                    ...slot,
-                    quality
-                  }
-                : slot
-            )
+
+          // 配列をコピーして、変更されたスロットのみ新しいオブジェクトを作成
+          const nextSlots = state.slots.slice();
+          nextSlots[index] = {
+            ...nextSlots[index],
+            quality
           };
+
+          return { slots: nextSlots };
         }),
       setAutoQualityEnabled: (enabled) => {
         set({ autoQualityEnabled: enabled });
@@ -286,15 +288,38 @@ export const useLayoutStore = create<LayoutState>()(
             return state;
           }
 
+          // スロット数を減らす場合、配信が割り当てられているスロットを前方に詰める
+          let nextSlots = state.slots;
+          if (nextCount < state.activeSlotsCount) {
+            // 配信があるスロットと空のスロットに分ける
+            const slotsWithStream: StreamSlot[] = [];
+            const emptySlots: StreamSlot[] = [];
+
+            state.slots.forEach((slot) => {
+              if (slot.assignedStream) {
+                slotsWithStream.push(slot);
+              } else {
+                emptySlots.push(slot);
+              }
+            });
+
+            // 配信があるスロットを前方、空のスロットを後方に配置
+            nextSlots = [...slotsWithStream, ...emptySlots];
+
+            console.log('[Layout] スロット数を削減:', state.activeSlotsCount, '->', nextCount);
+            console.log('[Layout] 配信あり:', slotsWithStream.length, '空き:', emptySlots.length);
+          }
+
           let nextSelectedId = state.selectedSlotId;
           if (nextSelectedId) {
-            const selectedIndex = state.slots.findIndex((slot) => slot.id === nextSelectedId);
+            const selectedIndex = nextSlots.findIndex((slot) => slot.id === nextSelectedId);
             if (selectedIndex >= nextCount) {
-              nextSelectedId = state.slots[nextCount - 1]?.id ?? null;
+              nextSelectedId = nextSlots[nextCount - 1]?.id ?? null;
             }
           }
 
           return {
+            slots: nextSlots,
             activeSlotsCount: nextCount,
             selectedSlotId: nextSelectedId
           };
@@ -321,7 +346,7 @@ export const useLayoutStore = create<LayoutState>()(
     }),
     {
       name: 'fukumado-layout',
-      version: 1,
+      version: 3,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.slots = hydrateSlots(state.slots.length ? state.slots : createInitialSlots());
@@ -329,15 +354,23 @@ export const useLayoutStore = create<LayoutState>()(
           Math.max(state.activeSlotsCount ?? DEFAULT_ACTIVE_SLOTS, 1),
           TOTAL_SLOT_CAPACITY
         );
+        // slotsVolumeBeforeZeroはセッション固有なのでリロード時にクリア
+        state.slotsVolumeBeforeZero = [];
       },
       partialize: (state) => ({
         preset: state.preset,
-        slots: state.slots,
+        slots: state.slots.map(slot => ({
+          id: slot.id,
+          muted: slot.muted,
+          volume: slot.volume,
+          quality: slot.quality
+        })),
         selectedSlotId: state.selectedSlotId,
         mutedAll: state.mutedAll,
         masterVolume: state.masterVolume,
         activeSlotsCount: state.activeSlotsCount,
         autoQualityEnabled: state.autoQualityEnabled
+        // slotsVolumeBeforeZeroは永続化しない（セッション固有の状態）
       })
     }
   )

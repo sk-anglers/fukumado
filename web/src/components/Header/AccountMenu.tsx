@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useUserStore } from '../../stores/userStore';
 import { useSyncStore, SYNC_INTERVAL_OPTIONS } from '../../stores/syncStore';
 import { useLayoutStore } from '../../stores/layoutStore';
+import { useDataUsageStore } from '../../stores/dataUsageStore';
 import { apiFetch, apiUrl } from '../../utils/api';
 import { config } from '../../config';
 import type { VideoQuality, QualityBandwidth } from '../../types';
@@ -29,6 +30,24 @@ const formatTime = (seconds: number): string => {
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+// データ使用量を読みやすい形式に変換
+const formatDataUsage = (mb: number, gb: number): string => {
+  if (gb >= 1) {
+    return `${gb.toFixed(2)} GB`;
+  }
+  return `${mb.toFixed(2)} MB`;
+};
+
+// セッション時間を読みやすい形式に変換
+const formatSessionDuration = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours}時間${minutes}分`;
+  }
+  return `${minutes}分`;
 };
 
 interface SyncStatus {
@@ -64,12 +83,19 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   const setTwitchError = useAuthStore((state) => state.setTwitchError);
 
   const addFollowedChannels = useUserStore((state) => state.addFollowedChannels);
+  const setCurrentTwitchUser = useUserStore((state) => state.setCurrentTwitchUser);
+  const setCurrentYoutubeUser = useUserStore((state) => state.setCurrentYoutubeUser);
 
   const syncSettings = useSyncStore((state) => state.settings);
   const syncing = useSyncStore((state) => state.syncing);
   const lastSyncTime = useSyncStore((state) => state.lastSyncTime);
   const updateSettings = useSyncStore((state) => state.updateSettings);
   const triggerManualSync = useSyncStore((state) => state.triggerManualSync);
+  const canManualSync = useSyncStore((state) => state.canManualSync);
+  const getRemainingCooldown = useSyncStore((state) => state.getRemainingCooldown);
+  const recordFollowChannelSync = useSyncStore((state) => state.recordFollowChannelSync);
+  const canFollowChannelSync = useSyncStore((state) => state.canFollowChannelSync);
+  const getFollowChannelRemainingCooldown = useSyncStore((state) => state.getFollowChannelRemainingCooldown);
 
   const slots = useLayoutStore((state) => state.slots);
   const activeSlotsCount = useLayoutStore((state) => state.activeSlotsCount);
@@ -77,6 +103,15 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   const setSlotQuality = useLayoutStore((state) => state.setSlotQuality);
   const setAutoQualityEnabled = useLayoutStore((state) => state.setAutoQualityEnabled);
   const masterSlotId = useLayoutStore((state) => state.masterSlotId);
+
+  const totalBytes = useDataUsageStore((state) => state.totalBytes);
+  const sessionStartTime = useDataUsageStore((state) => state.sessionStartTime);
+  const resetDataUsage = useDataUsageStore((state) => state.reset);
+
+  // データ使用量を計算
+  const getTotalMB = () => totalBytes / (1024 * 1024);
+  const getTotalGB = () => totalBytes / (1024 * 1024 * 1024);
+  const getSessionDuration = () => Math.floor((Date.now() - sessionStartTime) / 1000);
 
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -87,6 +122,50 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   const [twitchSyncMessage, setTwitchSyncMessage] = useState<string | null>(null);
   const [twitchSyncError, setTwitchSyncError] = useState<string | null>(null);
   const [twitchSyncLoading, setTwitchSyncLoading] = useState(false);
+
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [followChannelCooldownRemaining, setFollowChannelCooldownRemaining] = useState(0);
+
+  // データ使用量とセッション時間の表示を1秒ごとに更新
+  const [, setUpdateTrigger] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setUpdateTrigger((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // クールダウンカウントダウンの更新
+  useEffect(() => {
+    const updateCooldown = () => {
+      const remaining = getRemainingCooldown();
+      setCooldownRemaining(remaining);
+    };
+
+    // 初回実行
+    updateCooldown();
+
+    // 1秒ごとに更新
+    const interval = setInterval(updateCooldown, 1000);
+
+    return () => clearInterval(interval);
+  }, [getRemainingCooldown]);
+
+  // フォローチャンネル同期のクールダウンカウントダウンの更新
+  useEffect(() => {
+    const updateCooldown = () => {
+      const remaining = getFollowChannelRemainingCooldown();
+      setFollowChannelCooldownRemaining(remaining);
+    };
+
+    // 初回実行
+    updateCooldown();
+
+    // 1秒ごとに更新
+    const interval = setInterval(updateCooldown, 1000);
+
+    return () => clearInterval(interval);
+  }, [getFollowChannelRemainingCooldown]);
 
   // 最終同期時刻を相対表示に変換
   const getLastSyncText = (): string => {
@@ -173,6 +252,11 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   };
 
   const handleSubscriptionsSync = async (): Promise<void> => {
+    // クールダウンチェック
+    if (!recordFollowChannelSync()) {
+      return;
+    }
+
     setSyncLoading(true);
     setSyncMessage(null);
     setSyncError(null);
@@ -270,6 +354,11 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   };
 
   const handleTwitchFollowedChannelsSync = async (): Promise<void> => {
+    // クールダウンチェック
+    if (!recordFollowChannelSync()) {
+      return;
+    }
+
     setTwitchSyncLoading(true);
     setTwitchSyncMessage(null);
     setTwitchSyncError(null);
@@ -284,6 +373,11 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       }
       const data = await response.json();
       if (Array.isArray(data.items)) {
+        // フォロー情報を追加する前に、現在のユーザーIDを設定
+        if (twitchUser?.id) {
+          setCurrentTwitchUser(twitchUser.id);
+        }
+
         const channels = data.items.map((item: { id: string; displayName: string }) => ({
           platform: 'twitch' as const,
           channelId: item.id,
@@ -443,8 +537,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
               ログアウト
             </button>
           )}
-          <button type="button" onClick={handleSubscriptionsSync} disabled={!authenticated || syncLoading}>
-            購読チャンネルを同期
+          <button type="button" onClick={handleSubscriptionsSync} disabled={!authenticated || syncLoading || !canFollowChannelSync()}>
+            {followChannelCooldownRemaining > 0 ? `あと${followChannelCooldownRemaining}秒` : '購読チャンネルを同期'}
           </button>
         </div>
         {syncMessage && <div className={styles.syncMessage}>{syncMessage}</div>}
@@ -479,145 +573,13 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
           <button
             type="button"
             onClick={handleTwitchFollowedChannelsSync}
-            disabled={!twitchAuthenticated || twitchSyncLoading}
+            disabled={!twitchAuthenticated || twitchSyncLoading || !canFollowChannelSync()}
           >
-            フォローチャンネルを同期
+            {followChannelCooldownRemaining > 0 ? `あと${followChannelCooldownRemaining}秒` : 'フォローチャンネルを同期'}
           </button>
         </div>
         {twitchSyncMessage && <div className={styles.syncMessage}>{twitchSyncMessage}</div>}
         {twitchSyncError && <div className={styles.syncError}>{twitchSyncError}</div>}
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <AdjustmentsHorizontalIcon />
-          <h3 className={styles.sectionTitle}>同期コントロール</h3>
-        </div>
-        <p className={styles.description}>
-          配信情報の自動更新間隔を設定できます。
-        </p>
-
-        {/* 同期設定 */}
-        <div className={styles.syncSettings}>
-          <label className={styles.settingItem}>
-            <input
-              type="checkbox"
-              checked={syncSettings.enabled}
-              onChange={(e) => updateSettings({ enabled: e.target.checked })}
-            />
-            <span>自動同期を有効にする</span>
-          </label>
-
-          <div className={styles.syncIntervalControl}>
-            <label className={styles.syncIntervalLabel}>同期間隔</label>
-            <select
-              className={styles.syncIntervalSelect}
-              value={syncSettings.interval}
-              onChange={(e) => updateSettings({ interval: Number(e.target.value) as any })}
-              disabled={!syncSettings.enabled}
-            >
-              {SYNC_INTERVAL_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.syncStatus}>
-            <span className={styles.syncStatusLabel}>
-              最終更新: {getLastSyncText()}
-            </span>
-            {syncing && <span className={styles.syncingIndicator}>同期中...</span>}
-          </div>
-
-          <button
-            type="button"
-            className={styles.syncManualButton}
-            onClick={triggerManualSync}
-            disabled={syncing}
-          >
-            <ArrowPathIcon />
-            <span>今すぐ更新</span>
-          </button>
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <CircleStackIcon />
-          <h3 className={styles.sectionTitle}>データ使用量</h3>
-        </div>
-        <p className={styles.description}>
-          各視聴枠の画質設定と推定帯域使用量を管理できます。
-        </p>
-
-        {/* 自動画質調整 */}
-        <div className={styles.dataUsageSettings}>
-          <label className={styles.settingItem}>
-            <input
-              type="checkbox"
-              checked={autoQualityEnabled}
-              onChange={(e) => setAutoQualityEnabled(e.target.checked)}
-            />
-            <span>自動画質調整を有効にする</span>
-          </label>
-
-          {/* 合計帯域幅 */}
-          <div className={styles.totalBandwidth}>
-            <span className={styles.totalBandwidthLabel}>合計推定帯域:</span>
-            <span className={styles.totalBandwidthValue}>
-              {autoQualityEnabled ? '自動調整中' : `約 ${getTotalBandwidth().toFixed(1)} Mbps`}
-            </span>
-          </div>
-
-          {/* 各視聴枠の画質設定 */}
-          <div className={styles.slotQualityList}>
-            {slots.slice(0, activeSlotsCount).map((slot, index) => (
-              <div key={slot.id} className={styles.slotQualityItem}>
-                <div className={styles.slotQualityHeader}>
-                  <span className={styles.slotQualityLabel}>
-                    枠 {index + 1}
-                    {slot.assignedStream && ` - ${slot.assignedStream.displayName}`}
-                  </span>
-                  {!autoQualityEnabled && slot.quality !== 'auto' && (
-                    <span className={styles.slotBandwidth}>
-                      約 {getBandwidthForQuality(slot.quality).toFixed(1)} Mbps
-                    </span>
-                  )}
-                </div>
-                <select
-                  className={styles.qualitySelect}
-                  value={slot.quality}
-                  onChange={(e) => setSlotQuality(slot.id, e.target.value as VideoQuality)}
-                  disabled={autoQualityEnabled}
-                >
-                  {QUALITY_BANDWIDTH_MAP.map((q) => (
-                    <option key={q.quality} value={q.quality}>
-                      {q.label}
-                      {q.quality !== 'auto' ? ` (${q.mbps} Mbps)` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-
-          {/* 画質別の説明 */}
-          <div className={styles.qualityInfo}>
-            <p className={styles.qualityInfoTitle}>画質別の推定帯域:</p>
-            <ul className={styles.qualityInfoList}>
-              {QUALITY_BANDWIDTH_MAP.filter((q) => q.quality !== 'auto').map((q) => (
-                <li key={q.quality}>
-                  {q.label}: 約 {q.mbps} Mbps
-                </li>
-              ))}
-            </ul>
-            <p className={styles.qualityInfoNote}>
-              ※ 実際の帯域使用量は配信内容や視聴環境により変動します。
-            </p>
-          </div>
-        </div>
       </section>
 
       <section className={styles.section}>
@@ -704,6 +666,166 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
             ※ マスター配信を設定すると時差が表示されます
           </div>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <AdjustmentsHorizontalIcon />
+          <h3 className={styles.sectionTitle}>アカウント同期設定</h3>
+        </div>
+        <p className={styles.description}>
+          配信情報の自動更新間隔を設定できます。
+        </p>
+
+        {/* 同期設定 */}
+        <div className={styles.syncSettings}>
+          <label className={styles.settingItem}>
+            <input
+              type="checkbox"
+              checked={syncSettings.enabled}
+              onChange={(e) => updateSettings({ enabled: e.target.checked })}
+            />
+            <span>自動同期を有効にする</span>
+          </label>
+
+          <div className={styles.syncIntervalControl}>
+            <label className={styles.syncIntervalLabel}>同期間隔</label>
+            <select
+              className={styles.syncIntervalSelect}
+              value={syncSettings.interval}
+              onChange={(e) => updateSettings({ interval: Number(e.target.value) as any })}
+              disabled={!syncSettings.enabled}
+            >
+              {SYNC_INTERVAL_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.syncStatus}>
+            <span className={styles.syncStatusLabel}>
+              最終更新: {getLastSyncText()}
+            </span>
+            {syncing && <span className={styles.syncingIndicator}>同期中...</span>}
+          </div>
+
+          <button
+            type="button"
+            className={styles.syncManualButton}
+            onClick={triggerManualSync}
+            disabled={syncing || !canManualSync()}
+          >
+            <ArrowPathIcon />
+            <span>
+              {cooldownRemaining > 0 ? `あと${cooldownRemaining}秒` : '今すぐ更新'}
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <CircleStackIcon />
+          <h3 className={styles.sectionTitle}>データ使用量</h3>
+        </div>
+        <p className={styles.description}>
+          各視聴枠の画質設定と推定帯域使用量を管理できます。
+        </p>
+
+        {/* 自動画質調整 */}
+        <div className={styles.dataUsageSettings}>
+          <label className={styles.settingItem}>
+            <input
+              type="checkbox"
+              checked={autoQualityEnabled}
+              onChange={(e) => setAutoQualityEnabled(e.target.checked)}
+            />
+            <span>自動画質調整を有効にする</span>
+          </label>
+
+          {/* 実際のデータ使用量 */}
+          <div className={styles.actualDataUsage}>
+            <div className={styles.actualDataUsageHeader}>
+              <span className={styles.actualDataUsageLabel}>セッション使用量:</span>
+              <span className={styles.actualDataUsageValue}>
+                {formatDataUsage(getTotalMB(), getTotalGB())}
+              </span>
+            </div>
+            <div className={styles.actualDataUsageInfo}>
+              <span className={styles.sessionDuration}>
+                セッション時間: {formatSessionDuration(getSessionDuration())}
+              </span>
+              <button
+                type="button"
+                className={styles.resetDataUsageButton}
+                onClick={resetDataUsage}
+                title="データ使用量をリセット"
+              >
+                リセット
+              </button>
+            </div>
+            <p className={styles.dataUsageNote}>
+              ※ ブラウザが読み込んだリソースのサイズを測定しています。配信ストリーミングの一部は含まれません。
+            </p>
+          </div>
+
+          {/* 合計帯域幅 */}
+          <div className={styles.totalBandwidth}>
+            <span className={styles.totalBandwidthLabel}>合計推定帯域:</span>
+            <span className={styles.totalBandwidthValue}>
+              {autoQualityEnabled ? '自動調整中' : `約 ${getTotalBandwidth().toFixed(1)} Mbps`}
+            </span>
+          </div>
+
+          {/* 各視聴枠の画質設定 */}
+          <div className={styles.slotQualityList}>
+            {slots.slice(0, activeSlotsCount).map((slot, index) => (
+              <div key={slot.id} className={styles.slotQualityItem}>
+                <div className={styles.slotQualityHeader}>
+                  <span className={styles.slotQualityLabel}>
+                    枠 {index + 1}
+                    {slot.assignedStream && ` - ${slot.assignedStream.displayName}`}
+                  </span>
+                  {!autoQualityEnabled && slot.quality !== 'auto' && (
+                    <span className={styles.slotBandwidth}>
+                      約 {getBandwidthForQuality(slot.quality).toFixed(1)} Mbps
+                    </span>
+                  )}
+                </div>
+                <select
+                  className={styles.qualitySelect}
+                  value={slot.quality}
+                  onChange={(e) => setSlotQuality(slot.id, e.target.value as VideoQuality)}
+                  disabled={autoQualityEnabled}
+                >
+                  {QUALITY_BANDWIDTH_MAP.map((q) => (
+                    <option key={q.quality} value={q.quality}>
+                      {q.label}
+                      {q.quality !== 'auto' ? ` (${q.mbps} Mbps)` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+
+          {/* 画質別の説明 */}
+          <div className={styles.qualityInfo}>
+            <p className={styles.qualityInfoTitle}>画質別の推定帯域:</p>
+            <ul className={styles.qualityInfoList}>
+              {QUALITY_BANDWIDTH_MAP.filter((q) => q.quality !== 'auto').map((q) => (
+                <li key={q.quality}>
+                  {q.label}: 約 {q.mbps} Mbps
+                </li>
+              ))}
+            </ul>
+            <p className={styles.qualityInfoNote}>
+              ※ 実際の帯域使用量は配信内容や視聴環境により変動します。
+            </p>
+          </div>
+        </div>
       </section>
     </div>
   );

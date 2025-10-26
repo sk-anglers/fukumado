@@ -7,6 +7,7 @@ const WS_URL = 'ws://localhost:4000/chat';
 interface TwitchChannel {
   login: string;
   displayName: string;
+  channelId?: string;
 }
 
 export const useTwitchChat = (channels: TwitchChannel[]): void => {
@@ -18,27 +19,22 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
   const channelsKey = JSON.stringify(channels.map(ch => ch.login).sort());
 
   useEffect(() => {
-    console.log('[useTwitchChat] Effect triggered');
-    console.log('[useTwitchChat] Current channels:', channels);
-    console.log('[useTwitchChat] Previous channels key:', previousChannelsRef.current);
-    console.log('[useTwitchChat] Current channels key:', channelsKey);
-
     // WebSocket接続を確立（初回のみ）
     if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
-      console.log('[useTwitchChat] Creating new WebSocket connection');
       const ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
-        console.log('[useTwitchChat] WebSocket connected');
         wsRef.current = ws;
 
         // チャンネル購読を送信
         if (channels.length > 0) {
-          console.log('[useTwitchChat] Subscribing to channels:', channels);
           ws.send(JSON.stringify({
             type: 'subscribe',
             channels: channels.map(ch => ch.login),
-            channelMapping: Object.fromEntries(channels.map(ch => [ch.login, ch.displayName]))
+            channelMapping: Object.fromEntries(channels.map(ch => [ch.login, ch.displayName])),
+            channelIdMapping: Object.fromEntries(
+              channels.filter(ch => ch.channelId).map(ch => [ch.login, ch.channelId!])
+            )
           }));
           previousChannelsRef.current = channelsKey;
         }
@@ -47,7 +43,6 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          console.log('[useTwitchChat] Received message:', message);
 
           // ChatMessage型に変換してストアに追加
           const chatMessage: ChatMessage = {
@@ -57,7 +52,14 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
             message: message.message,
             timestamp: message.timestamp,
             avatarColor: message.avatarColor,
-            channelName: message.channelName
+            channelName: message.channelName,
+            // Twitch固有の情報も含める
+            emotes: message.emotes,
+            badges: message.badges,
+            bits: message.bits,
+            isSubscriber: message.isSubscriber,
+            isModerator: message.isModerator,
+            isVip: message.isVip
           };
 
           addMessage(chatMessage);
@@ -71,18 +73,19 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
       };
 
       ws.onclose = () => {
-        console.log('[useTwitchChat] WebSocket closed');
         wsRef.current = null;
       };
 
       wsRef.current = ws;
     } else if (wsRef.current.readyState === WebSocket.OPEN && previousChannelsRef.current !== channelsKey) {
       // 既に接続済みで、チャンネルリストが実際に変更された場合のみ購読を更新
-      console.log('[useTwitchChat] Updating subscribed channels:', channels);
       wsRef.current.send(JSON.stringify({
         type: 'subscribe',
         channels: channels.map(ch => ch.login),
-        channelMapping: Object.fromEntries(channels.map(ch => [ch.login, ch.displayName]))
+        channelMapping: Object.fromEntries(channels.map(ch => [ch.login, ch.displayName])),
+        channelIdMapping: Object.fromEntries(
+          channels.filter(ch => ch.channelId).map(ch => [ch.login, ch.channelId!])
+        )
       }));
       previousChannelsRef.current = channelsKey;
     }
@@ -97,7 +100,6 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
   useEffect(() => {
     return () => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        console.log('[useTwitchChat] Component unmounting, closing WebSocket');
         wsRef.current.close();
         wsRef.current = null;
       }

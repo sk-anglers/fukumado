@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useLayoutStore } from '../stores/layoutStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useSyncStore } from '../stores/syncStore';
@@ -58,34 +58,25 @@ export const useTwitchStreams = (channelIds: string[] = []): void => {
   const manualSyncTrigger = useSyncStore((state) => state.manualSyncTrigger);
 
   const previousStreamIdsRef = useRef<Set<string>>(new Set());
+  const isFirstLoadRef = useRef<boolean>(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    let intervalId: NodeJS.Timeout | null = null;
+  // applyStreams関数をuseCallbackでメモ化（複数のuseEffectから参照するため）
+  const applyStreamsCallback = useCallback((items: TwitchApiResponseItem[]): void => {
+    const currentStreamIds = new Set(items.map((item) => item.id));
 
-    const showNoStreams = (): void => {
-      setAvailableStreamsForPlatform('twitch', []);
-      setStreamsError(NO_STREAMS_MESSAGE);
-    };
+    // 配信リストに変更があるかチェック（新規追加または配信終了）
+    const hasChanges =
+      currentStreamIds.size !== previousStreamIdsRef.current.size ||
+      Array.from(currentStreamIds).some((id) => !previousStreamIdsRef.current.has(id));
 
-    const applyStreams = (items: TwitchApiResponseItem[]): void => {
-      const currentStreamIds = new Set(items.map((item) => item.id));
+    // 変更がある場合のみストアを更新
+    if (hasChanges) {
+      const mapped = items.map(mapItemToStreamer);
+      setAvailableStreamsForPlatform('twitch', mapped);
+    }
 
-      // 配信リストに変更があるかチェック（新規追加または配信終了）
-      const hasChanges =
-        currentStreamIds.size !== previousStreamIdsRef.current.size ||
-        Array.from(currentStreamIds).some((id) => !previousStreamIdsRef.current.has(id));
-
-      // 変更がある場合のみストアを更新
-      if (hasChanges) {
-        const mapped = items.map(mapItemToStreamer);
-        setAvailableStreamsForPlatform('twitch', mapped);
-        console.log('[Twitch] 配信リストに変更を検出、ストアを更新しました');
-      } else {
-        console.log('[Twitch] 配信リストに変更なし、ストア更新をスキップしました');
-      }
-
-      // 新規配信を検出して通知を追加
+    // 初回ロード以降のみ新規配信通知を生成
+    if (!isFirstLoadRef.current) {
       const newStreams = items.filter((item) => !previousStreamIdsRef.current.has(item.id));
 
       newStreams.forEach((item) => {
@@ -99,17 +90,23 @@ export const useTwitchStreams = (channelIds: string[] = []): void => {
           thumbnailUrl: item.thumbnailUrl
         });
       });
+    } else {
+      isFirstLoadRef.current = false;
+    }
 
-      previousStreamIdsRef.current = currentStreamIds;
+    previousStreamIdsRef.current = currentStreamIds;
+  }, [setAvailableStreamsForPlatform, addNotification]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const showNoStreams = (): void => {
+      setAvailableStreamsForPlatform('twitch', []);
+      setStreamsError(NO_STREAMS_MESSAGE);
     };
 
     const run = async (): Promise<void> => {
-      console.log('[Twitch配信取得] 開始');
-      console.log('[Twitch] フォロー中のチャンネル数:', channelIds.length);
-      console.log('[Twitch] チャンネルID:', channelIds);
-
       if (channelIds.length === 0) {
-        console.log('[Twitch] チャンネルが0件のため空配列を設定');
         setAvailableStreamsForPlatform('twitch', []);
         setLastSyncTime(Date.now());
         return;
@@ -121,13 +118,10 @@ export const useTwitchStreams = (channelIds: string[] = []): void => {
 
       try {
         const endpoint = `/api/twitch/live?${buildChannelQuery(channelIds)}`;
-        console.log('[Twitch] API呼び出し:', endpoint);
         const data = await fetchStreamResponse(endpoint);
-        console.log('[Twitch] API レスポンス:', data);
-        console.log('[Twitch] 取得した配信数:', data.items.length);
         if (cancelled) return;
         if (data.items.length > 0) {
-          applyStreams(data.items);
+          applyStreamsCallback(data.items);
         } else {
           showNoStreams();
         }
@@ -145,7 +139,7 @@ export const useTwitchStreams = (channelIds: string[] = []): void => {
       }
     };
 
-    // 初回実行
+    // 初回実行のみ
     run().catch(() => {
       if (!cancelled) {
         showNoStreams();
@@ -155,26 +149,8 @@ export const useTwitchStreams = (channelIds: string[] = []): void => {
       }
     });
 
-    // 自動同期が有効な場合、定期実行を設定
-    if (syncSettings.enabled) {
-      intervalId = setInterval(() => {
-        if (!cancelled) {
-          run().catch(() => {
-            if (!cancelled) {
-              showNoStreams();
-              setStreamsLoading(false);
-              setSyncing(false);
-            }
-          });
-        }
-      }, syncSettings.interval);
-    }
-
     return () => {
       cancelled = true;
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
     };
-  }, [channelIds, syncSettings.enabled, syncSettings.interval, manualSyncTrigger, setAvailableStreamsForPlatform, setStreamsError, setStreamsLoading, setSyncing, setLastSyncTime, addNotification]);
+  }, [channelIds, manualSyncTrigger, applyStreamsCallback, setAvailableStreamsForPlatform, setStreamsError, setStreamsLoading, setSyncing, setLastSyncTime]);
 };

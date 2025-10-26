@@ -62,6 +62,31 @@ export interface TwitchSearchChannelInfo {
   thumbnailUrl: string;
 }
 
+type TwitchEmote = {
+  id: string;
+  name: string;
+  images: {
+    url_1x: string;
+    url_2x: string;
+    url_4x: string;
+  };
+  emote_type?: string;
+  emote_set_id?: string;
+  owner_id?: string;
+  format: string[];
+  scale: string[];
+  theme_mode: string[];
+};
+
+export interface TwitchEmoteInfo {
+  id: string;
+  name: string;
+  imageUrl: string;
+  emoteType?: string;
+  emoteSetId?: string;
+  ownerId?: string;
+}
+
 const buildHeaders = (accessToken: string): Record<string, string> => {
   const { clientId } = ensureTwitchOAuthConfig();
   return {
@@ -103,6 +128,20 @@ export const fetchFollowedChannels = async (
 
     if (response.statusCode >= 400) {
       const text = await response.body.text();
+
+      // 429 Rate Limitエラーの特別処理
+      if (response.statusCode === 429) {
+        const retryAfter = response.headers['retry-after'] || response.headers['ratelimit-reset'];
+        console.error('[Twitch Service] ⚠️ Rate limit exceeded!');
+        console.error(`[Twitch Service] Retry-After: ${retryAfter || '不明'}`);
+        console.error('[Twitch Service] APIリクエストの頻度が高すぎます。しばらく待ってから再試行してください。');
+
+        const retryMessage = retryAfter
+          ? `${retryAfter}秒後に再試行してください`
+          : 'しばらく待ってから再試行してください';
+        throw new Error(`Twitch APIのレート制限に達しました。${retryMessage}`);
+      }
+
       console.error('[Twitch Service] Error response:', text);
       throw new Error(`Failed to fetch followed channels: ${response.statusCode} - ${text}`);
     }
@@ -160,6 +199,20 @@ export const fetchLiveStreams = async (
 
     if (response.statusCode >= 400) {
       const text = await response.body.text();
+
+      // 429 Rate Limitエラーの特別処理
+      if (response.statusCode === 429) {
+        const retryAfter = response.headers['retry-after'] || response.headers['ratelimit-reset'];
+        console.error('[Twitch Service] ⚠️ Rate limit exceeded!');
+        console.error(`[Twitch Service] Retry-After: ${retryAfter || '不明'}`);
+        console.error('[Twitch Service] APIリクエストの頻度が高すぎます。しばらく待ってから再試行してください。');
+
+        const retryMessage = retryAfter
+          ? `${retryAfter}秒後に再試行してください`
+          : 'しばらく待ってから再試行してください';
+        throw new Error(`Twitch APIのレート制限に達しました。${retryMessage}`);
+      }
+
       console.error(`[Twitch Service] Batch ${batchIndex + 1} error:`, text);
       throw new Error(`Failed to fetch Twitch streams: ${response.statusCode} - ${text}`);
     }
@@ -213,5 +266,69 @@ export const searchChannels = async (
     displayName: item.display_name,
     description: item.game_name || '',
     thumbnailUrl: item.thumbnail_url
+  }));
+};
+
+export const fetchGlobalEmotes = async (
+  accessToken: string
+): Promise<TwitchEmoteInfo[]> => {
+  console.log('[Twitch Service] Fetching global emotes');
+  const headers = buildHeaders(accessToken);
+
+  const response = await request(`${TWITCH_BASE}/chat/emotes/global`, {
+    method: 'GET',
+    headers
+  });
+
+  if (response.statusCode >= 400) {
+    const text = await response.body.text();
+    console.error('[Twitch Service] Error fetching global emotes:', text);
+    throw new Error(`Failed to fetch global emotes: ${response.statusCode} - ${text}`);
+  }
+
+  const data = (await response.body.json()) as TwitchApiResponse<TwitchEmote>;
+  console.log(`[Twitch Service] Fetched ${data.data.length} global emotes`);
+
+  return data.data.map((item) => ({
+    id: item.id,
+    name: item.name,
+    imageUrl: item.images.url_1x,
+    emoteType: item.emote_type,
+    emoteSetId: item.emote_set_id,
+    ownerId: item.owner_id
+  }));
+};
+
+export const fetchChannelEmotes = async (
+  accessToken: string,
+  broadcasterId: string
+): Promise<TwitchEmoteInfo[]> => {
+  console.log('[Twitch Service] Fetching channel emotes for broadcaster:', broadcasterId);
+  const headers = buildHeaders(accessToken);
+  const params = new URLSearchParams({
+    broadcaster_id: broadcasterId
+  });
+
+  const response = await request(`${TWITCH_BASE}/chat/emotes?${params.toString()}`, {
+    method: 'GET',
+    headers
+  });
+
+  if (response.statusCode >= 400) {
+    const text = await response.body.text();
+    console.error('[Twitch Service] Error fetching channel emotes:', text);
+    throw new Error(`Failed to fetch channel emotes: ${response.statusCode} - ${text}`);
+  }
+
+  const data = (await response.body.json()) as TwitchApiResponse<TwitchEmote>;
+  console.log(`[Twitch Service] Fetched ${data.data.length} channel emotes`);
+
+  return data.data.map((item) => ({
+    id: item.id,
+    name: item.name,
+    imageUrl: item.images.url_1x,
+    emoteType: item.emote_type,
+    emoteSetId: item.emote_set_id,
+    ownerId: item.owner_id
   }));
 };

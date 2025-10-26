@@ -21,9 +21,40 @@
   letter-spacing: 0.05em;
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .highlightBadge {
   font-size: 0.75rem;
   color: rgba(148, 163, 184, 0.8);
+}
+
+.closeButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.7);
+  color: rgba(226, 232, 240, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.closeButton svg {
+  width: 20px;
+  height: 20px;
+}
+
+.closeButton:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(127, 29, 29, 0.3);
+  color: rgba(239, 68, 68, 0.9);
 }
 
 .tabs {
@@ -82,6 +113,11 @@
   background: rgba(161, 98, 7, 0.2);
 }
 
+.messageBits {
+  border-color: rgba(168, 85, 247, 0.6);
+  background: rgba(124, 58, 237, 0.15);
+}
+
 .avatar {
   width: 40px;
   height: 40px;
@@ -107,9 +143,22 @@
 
 .messageHeader {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.badge {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
 }
 
 .author {
@@ -122,9 +171,25 @@
   font-weight: 500;
 }
 
+.bitsAmount {
+  color: rgba(168, 85, 247, 0.9);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+  background: rgba(168, 85, 247, 0.2);
+  border-radius: 6px;
+}
+
 .timestamp {
   color: rgba(148, 163, 184, 0.7);
   font-size: 0.72rem;
+  margin-left: auto;
+}
+
+.emote {
+  height: 28px;
+  vertical-align: middle;
+  margin: 0 2px;
 }
 
 .footer {
@@ -133,6 +198,19 @@
   gap: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.sendTargetSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sendTargetLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.9);
+  letter-spacing: 0.02em;
 }
 
 .inputRow {
@@ -144,16 +222,40 @@
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(15, 23, 42, 0.75);
-  padding: 0.6rem 0.8rem;
+  padding: 0.6rem 2.5rem 0.6rem 0.8rem;
   color: rgba(226, 232, 240, 0.85);
   font-size: 0.85rem;
+  font-weight: 500;
   min-width: 180px;
   cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6L8 10L12 6' stroke='rgba(226, 232, 240, 0.85)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  transition: all 0.2s ease;
 }
 
 .channelSelect:hover {
-  border-color: rgba(168, 85, 247, 0.4);
-  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(168, 85, 247, 0.5);
+  background-color: rgba(30, 41, 59, 0.85);
+}
+
+.channelSelect:focus {
+  outline: none;
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+}
+
+.channelSelect option {
+  background: rgba(15, 23, 42, 0.98);
+  color: rgba(226, 232, 240, 0.95);
+  padding: 0.5rem;
+  font-weight: 500;
+}
+
+.channelSelect option:hover,
+.channelSelect option:checked {
+  background: rgba(168, 85, 247, 0.3);
 }
 
 .footer input {
@@ -198,4 +300,107 @@
 .sendButtonActive:hover {
   border-color: rgba(34, 197, 94, 0.7) !important;
   background: rgba(34, 197, 94, 0.4) !important;
+}
+
+.emotePickerRow {
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* モバイル用最適化 */
+@media (max-width: 768px) {
+  .chatPanel {
+    padding: 1.25rem;
+  }
+
+  .header h2 {
+    font-size: 1.1rem;
+  }
+
+  .highlightBadge {
+    font-size: 0.8rem;
+  }
+
+  .closeButton {
+    width: 40px;
+    height: 40px;
+  }
+
+  .closeButton svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .tabButton {
+    min-height: 44px;
+    padding: 0.6rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .message {
+    padding: 1rem;
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .badge {
+    width: 20px;
+    height: 20px;
+  }
+
+  .messageBody p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .messageHeader {
+    font-size: 0.8rem;
+  }
+
+  .author {
+    font-size: 0.85rem;
+  }
+
+  .channelName {
+    font-size: 0.75rem;
+  }
+
+  .bitsAmount {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .timestamp {
+    font-size: 0.75rem;
+  }
+
+  .emote {
+    height: 32px;
+  }
+
+  .sendTargetLabel {
+    font-size: 0.95rem;
+  }
+
+  .channelSelect {
+    min-height: 44px;
+    padding: 0.7rem 2.5rem 0.7rem 1rem;
+    font-size: 0.9rem;
+    min-width: 140px;
+  }
+
+  .footer input {
+    min-height: 44px;
+    padding: 0.7rem 1rem;
+    font-size: 1rem;
+  }
+
+  .footer button {
+    min-height: 44px;
+    padding: 0.7rem 1.4rem;
+    font-size: 0.9rem;
+  }
 }

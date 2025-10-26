@@ -1,9 +1,7 @@
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLayoutStore } from '../../stores/layoutStore';
 import type { Platform, Streamer } from '../../types';
-import { config } from '../../config';
 import styles from './StreamSelectionModal.module.css';
 
 interface StreamSelectionModalProps {
@@ -28,15 +26,6 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
     availableStreams: state.availableStreams,
     assignStream: state.assignStream
   }));
-
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'all'>('all');
-
-  const filteredStreams = useMemo(() => {
-    if (selectedPlatform === 'all') {
-      return availableStreams;
-    }
-    return availableStreams.filter((stream) => stream.platform === selectedPlatform);
-  }, [availableStreams, selectedPlatform]);
 
   const handleSelectStream = (stream: Streamer): void => {
     assignStream(slotId, stream);
@@ -64,51 +53,13 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
           </button>
         </div>
 
-        <div className={styles.platformFilter}>
-          <button
-            className={selectedPlatform === 'all' ? styles.platformButtonActive : styles.platformButton}
-            onClick={() => setSelectedPlatform('all')}
-            type="button"
-          >
-            すべて
-          </button>
-          {config.enableYoutube && (
-            <button
-              className={selectedPlatform === 'youtube' ? styles.platformButtonActive : styles.platformButton}
-              onClick={() => setSelectedPlatform('youtube')}
-              type="button"
-              style={{ '--platform-color': platformColor.youtube } as React.CSSProperties}
-            >
-              YouTube
-            </button>
-          )}
-          <button
-            className={selectedPlatform === 'twitch' ? styles.platformButtonActive : styles.platformButton}
-            onClick={() => setSelectedPlatform('twitch')}
-            type="button"
-            style={{ '--platform-color': platformColor.twitch } as React.CSSProperties}
-          >
-            Twitch
-          </button>
-          {config.enableNiconico && (
-            <button
-              className={selectedPlatform === 'niconico' ? styles.platformButtonActive : styles.platformButton}
-              onClick={() => setSelectedPlatform('niconico')}
-              type="button"
-              style={{ '--platform-color': platformColor.niconico } as React.CSSProperties}
-            >
-              ニコニコ
-            </button>
-          )}
-        </div>
-
         <div className={styles.streamList}>
-          {filteredStreams.length === 0 ? (
+          {availableStreams.length === 0 ? (
             <div className={styles.emptyState}>
               <p>現在配信中のチャンネルはありません</p>
             </div>
           ) : (
-            filteredStreams.map((stream) => (
+            availableStreams.map((stream) => (
               <button
                 key={`${stream.platform}-${stream.id}`}
                 className={styles.streamCard}
@@ -117,7 +68,11 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
               >
                 <div className={styles.streamThumbnail}>
                   {stream.thumbnailUrl ? (
-                    <img src={stream.thumbnailUrl} alt={stream.title} />
+                    <img
+                      src={stream.thumbnailUrl.replace('{width}', '640').replace('{height}', '360')}
+                      alt={stream.title}
+                      loading="lazy"
+                    />
                   ) : (
                     <div className={styles.thumbnailPlaceholder}>
                       {stream.displayName.charAt(0).toUpperCase()}
@@ -126,6 +81,30 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
                   <div
                     className={styles.platformBadge}
                     style={{ backgroundColor: platformColor[stream.platform] }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = stream.platform === 'twitch'
+                        ? `https://www.twitch.tv/${stream.channelLogin || stream.id}`
+                        : stream.platform === 'youtube'
+                        ? `https://www.youtube.com/watch?v=${stream.id}`
+                        : stream.embedUrl;
+                      if (url) window.open(url, '_blank');
+                    }}
+                    title={`${platformLabel[stream.platform]}で開く`}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const url = stream.platform === 'twitch'
+                          ? `https://www.twitch.tv/${stream.channelLogin || stream.id}`
+                          : stream.platform === 'youtube'
+                          ? `https://www.youtube.com/watch?v=${stream.id}`
+                          : stream.embedUrl;
+                        if (url) window.open(url, '_blank');
+                      }
+                    }}
                   >
                     {platformLabel[stream.platform]}
                   </div>

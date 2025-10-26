@@ -138,3 +138,34 @@
     align-items: stretch;
   }
 }
+
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  .header {
+    font-size: 1rem;
+  }
+
+  .header svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .presetButton,
+  .countButton,
+  .primaryAction {
+    min-height: 44px;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  .displayButtons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

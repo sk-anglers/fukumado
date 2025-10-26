@@ -32,6 +32,17 @@ export interface StreamSlot {
   quality: VideoQuality;
 }
 
+export interface TwitchEmote {
+  id: string;
+  positions: Array<{ start: number; end: number }>;
+}
+
+export interface TwitchBadge {
+  setId: string;
+  version: string;
+  imageUrl?: string;
+}
+
 export interface ChatMessage {
   id: string;
   platform: Platform | 'system';
@@ -41,6 +52,13 @@ export interface ChatMessage {
   avatarColor: string;
   highlight?: boolean;
   channelName?: string;
+  // Twitch固有の情報
+  emotes?: TwitchEmote[];
+  badges?: TwitchBadge[];
+  bits?: number;
+  isSubscriber?: boolean;
+  isModerator?: boolean;
+  isVip?: boolean;
 }
 
 export type LayoutPreset = 'twoByTwo' | 'oneByTwo' | 'focus';

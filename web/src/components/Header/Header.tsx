@@ -8,12 +8,16 @@ import {
   PlusIcon,
   TrashIcon,
   StarIcon,
-  BellAlertIcon
+  BellAlertIcon,
+  Bars3Icon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { MAX_ACTIVE_SLOTS, useLayoutStore } from '../../stores/layoutStore';
 import { useUserStore } from '../../stores/userStore';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { useMobileMenuStore } from '../../stores/mobileMenuStore';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 import { apiFetch } from '../../utils/api';
 import type { ChannelSearchResult, LayoutPreset } from '../../types';
 import { config } from '../../config';
@@ -77,6 +81,16 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
     removeFollowedChannel: state.removeFollowedChannel
   }));
 
+  const availableStreams = useLayoutStore((state) => state.availableStreams);
+
+  const isMobile = useIsMobile();
+  const { sidebarOpen, chatOpen, toggleSidebar, toggleChat } = useMobileMenuStore();
+
+  // 配信中のチャンネルIDのSetを作成
+  const liveChannelIds = useMemo(() => {
+    return new Set(availableStreams.map(stream => stream.channelId));
+  }, [availableStreams]);
+
   // 有効なプラットフォームのフォローチャンネル数を計算
   const activeFollowedChannelsCount = useMemo(() => {
     return followedChannels.filter((ch) => {
@@ -88,12 +102,35 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
 
   const unreadCount = useNotificationStore((state) => state.getUnreadCount());
 
+  // 音量レベルに応じた色を計算
+  const getAudioLevelColor = (level: number): string => {
+    if (level <= 60) {
+      return 'rgba(34, 197, 94, 0.9)'; // 緑
+    } else if (level <= 80) {
+      return 'rgba(251, 191, 36, 0.9)'; // 黄
+    } else {
+      return 'rgba(239, 68, 68, 0.9)'; // 赤
+    }
+  };
+
+  // はみ出し部分の色を計算（スライダー位置を100%とした割合ベース）
+  const getOverflowColor = (ratio: number): string => {
+    if (ratio <= 160) {
+      return 'rgba(34, 197, 94, 0.9)'; // 緑（100-160%）
+    } else if (ratio <= 180) {
+      return 'rgba(251, 191, 36, 0.9)'; // 黄（160-180%）
+    } else {
+      return 'rgba(239, 68, 68, 0.9)'; // 赤（180%以上）
+    }
+  };
+
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showLayoutMenu, setShowLayoutMenu] = useState(false);
   const [showFollowListMenu, setShowFollowListMenu] = useState(false);
   const [showVolumeMenu, setShowVolumeMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+  const [audioLevels, setAudioLevels] = useState<Record<string, number>>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const layoutMenuRef = useRef<HTMLDivElement>(null);
@@ -219,6 +256,37 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
     }
   };
 
+  // 音量レベルのアニメーション（疑似的な音量メーター）
+  useEffect(() => {
+    if (!showVolumeMenu) return;
+
+    const updateAudioLevels = () => {
+      const newLevels: Record<string, number> = {};
+
+      slots.slice(0, activeSlotsCount).forEach((slot) => {
+        if (slot.assignedStream && !slot.muted) {
+          // 疑似的な音量レベルを生成（20-85%の範囲でランダムに変動）
+          const baseLevel = audioLevels[slot.id] || 50;
+          const variation = (Math.random() - 0.5) * 30;
+          const newLevel = Math.max(20, Math.min(85, baseLevel + variation));
+          newLevels[slot.id] = newLevel;
+        } else {
+          newLevels[slot.id] = 0;
+        }
+      });
+
+      setAudioLevels(newLevels);
+    };
+
+    // 初回実行
+    updateAudioLevels();
+
+    // 100msごとに更新して滑らかなアニメーションを実現
+    const interval = setInterval(updateAudioLevels, 100);
+
+    return () => clearInterval(interval);
+  }, [showVolumeMenu, slots, activeSlotsCount]);
+
   // ドロップダウンの外側クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent): void => {
@@ -253,6 +321,26 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
 
   return (
     <header className={styles.header}>
+      {isMobile && (
+        <div className={styles.mobileMenuButtons}>
+          <button
+            type="button"
+            className={clsx(styles.mobileMenuButton, sidebarOpen && styles.mobileMenuButtonActive)}
+            onClick={toggleSidebar}
+            title="サイドバー"
+          >
+            <Bars3Icon />
+          </button>
+          <button
+            type="button"
+            className={clsx(styles.mobileMenuButton, chatOpen && styles.mobileMenuButtonActive)}
+            onClick={toggleChat}
+            title="チャット"
+          >
+            <ChatBubbleLeftRightIcon />
+          </button>
+        </div>
+      )}
       <div className={styles.brand}>
         <div className={styles.logo}>ふ</div>
         <div className={styles.meta}>
@@ -430,21 +518,64 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                       </button>
                     </div>
                     <div className={styles.volumeSlotControl}>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={slot.volume}
-                        onChange={(e) => {
-                          const nextVolume = Number(e.target.value);
-                          setVolume(slot.id, nextVolume);
-                          if (slot.muted && nextVolume > 0) {
-                            toggleSlotMute(slot.id);
+                      <div className={styles.volumeSliderWrapper}>
+                        {!slot.muted && (() => {
+                          const actualLevel = audioLevels[slot.id] || 0;
+                          const sliderPos = slot.volume;
+                          const ratio = sliderPos > 0 ? (actualLevel / sliderPos) * 100 : 0;
+
+                          // バーの幅（実際の音量レベル、100%超えも許可）
+                          const barWidth = actualLevel;
+
+                          // グラデーションの色位置を計算（スライダー位置を基準とした割合）
+                          let gradient = '';
+                          let boxShadowColor = '';
+
+                          if (ratio <= 60) {
+                            // 0-60%: 緑のみ
+                            gradient = 'rgba(34, 197, 94, 0.9)';
+                            boxShadowColor = 'rgba(34, 197, 94, 0.9)';
+                          } else if (ratio <= 80) {
+                            // 60-80%: 緑から黄へグラデーション
+                            const greenEnd = (60 / ratio) * 100;
+                            gradient = `linear-gradient(to right, rgba(34, 197, 94, 0.9) 0%, rgba(34, 197, 94, 0.9) ${greenEnd}%, rgba(251, 191, 36, 0.9) 100%)`;
+                            boxShadowColor = 'rgba(251, 191, 36, 0.9)';
+                          } else {
+                            // 80%以上: 緑→黄→赤へグラデーション
+                            const greenEnd = (60 / ratio) * 100;
+                            const yellowEnd = (80 / ratio) * 100;
+                            gradient = `linear-gradient(to right, rgba(34, 197, 94, 0.9) 0%, rgba(34, 197, 94, 0.9) ${greenEnd}%, rgba(251, 191, 36, 0.9) ${greenEnd}%, rgba(251, 191, 36, 0.9) ${yellowEnd}%, rgba(239, 68, 68, 0.9) 100%)`;
+                            boxShadowColor = 'rgba(239, 68, 68, 0.9)';
                           }
-                        }}
-                        className={styles.volumeSlider}
-                        disabled={slot.muted}
-                      />
+
+                          return (
+                            <div
+                              className={styles.volumeLevelBar}
+                              style={{
+                                width: `${Math.min(barWidth, 100)}%`,
+                                background: gradient,
+                                boxShadow: `0 0 8px ${boxShadowColor}`
+                              }}
+                            />
+                          );
+                        })()}
+
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={slot.volume}
+                          onChange={(e) => {
+                            const nextVolume = Number(e.target.value);
+                            setVolume(slot.id, nextVolume);
+                            if (slot.muted && nextVolume > 0) {
+                              toggleSlotMute(slot.id);
+                            }
+                          }}
+                          className={styles.volumeSlider}
+                          disabled={slot.muted}
+                        />
+                      </div>
                       <span className={styles.volumeValue}>{slot.volume}%</span>
                     </div>
                   </div>
@@ -552,6 +683,9 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                                 <li key={channel.channelId} className={styles.followListItem}>
                                   <span className={styles.followListLabel}>
                                     {channel.label ?? channel.channelId}
+                                    {liveChannelIds.has(channel.channelId) && (
+                                      <span className={styles.liveBadge}>配信中</span>
+                                    )}
                                   </span>
                                   <button
                                     type="button"
@@ -576,6 +710,9 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                                 <li key={channel.channelId} className={styles.followListItem}>
                                   <span className={styles.followListLabel}>
                                     {channel.label ?? channel.channelId}
+                                    {liveChannelIds.has(channel.channelId) && (
+                                      <span className={styles.liveBadge}>配信中</span>
+                                    )}
                                   </span>
                                   <button
                                     type="button"

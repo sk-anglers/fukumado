@@ -1,7 +1,10 @@
 ﻿import { useMemo } from "react";
 import clsx from "clsx";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import { type Streamer } from "../../types";
 import { useLayoutStore } from "../../stores/layoutStore";
+import { useMobileMenuStore } from "../../stores/mobileMenuStore";
+import { useIsMobile } from "../../hooks/useMediaQuery";
 import { SlotSelectionModal } from "../SlotSelectionModal/SlotSelectionModal";
 import { config } from "../../config";
 import styles from "./Sidebar.module.css";
@@ -48,25 +51,21 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     availableStreams,
     streamsLoading,
     streamsError,
-    searchQuery,
     pendingStream,
     setPendingStream
   } = useLayoutStore((state) => ({
     availableStreams: state.availableStreams,
     streamsLoading: state.streamsLoading,
     streamsError: state.streamsError,
-    searchQuery: state.searchQuery,
     pendingStream: state.pendingStream,
     setPendingStream: state.setPendingStream
   }));
 
+  const isMobile = useIsMobile();
+  const setSidebarOpen = useMobileMenuStore((state) => state.setSidebarOpen);
 
   const filteredStreams = useMemo(() => {
-    console.log('[Sidebar] availableStreams数:', availableStreams.length);
-    console.log('[Sidebar] availableStreams:', availableStreams);
-    console.log('[Sidebar] searchQuery:', searchQuery);
-
-    // プラットフォームによるフィルタリング
+    // プラットフォームによるフィルタリングのみ適用
     let platformFiltered = availableStreams;
 
     // YouTube無効時はYouTube配信を除外
@@ -79,20 +78,8 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
       platformFiltered = platformFiltered.filter((stream) => stream.platform !== 'niconico');
     }
 
-    if (!searchQuery.trim()) {
-      console.log('[Sidebar] 検索クエリなし、プラットフォームフィルタ後の配信を返す');
-      return platformFiltered;
-    }
-    const lowerQuery = searchQuery.toLowerCase();
-    const filtered = platformFiltered.filter((stream) => {
-      const displayName = stream.displayName?.toLowerCase() || "";
-      const title = stream.title?.toLowerCase() || "";
-      const channelTitle = stream.channelTitle?.toLowerCase() || "";
-      return displayName.includes(lowerQuery) || title.includes(lowerQuery) || channelTitle.includes(lowerQuery);
-    });
-    console.log('[Sidebar] フィルタ後の配信数:', filtered.length);
-    return filtered;
-  }, [availableStreams, searchQuery]);
+    return platformFiltered;
+  }, [availableStreams]);
 
   return (
     <>
@@ -106,14 +93,18 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2>フォロー中の配信</h2>
+          {isMobile && (
+            <button
+              type="button"
+              className={styles.closeButton}
+              onClick={() => setSidebarOpen(false)}
+              aria-label="サイドバーを閉じる"
+            >
+              <XMarkIcon />
+            </button>
+          )}
         </div>
         <div className={styles.streamList}>
-          {(() => {
-            console.log('[Sidebar レンダリング] streamsLoading:', streamsLoading);
-            console.log('[Sidebar レンダリング] streamsError:', streamsError);
-            console.log('[Sidebar レンダリング] filteredStreams.length:', filteredStreams.length);
-            return null;
-          })()}
           {streamsLoading ? (
             <div className={styles.streamListMessage}>配信情報を取得しています…</div>
           ) : filteredStreams.length === 0 ? (
@@ -123,20 +114,40 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
               </div>
             ) : (
               <div className={styles.streamListMessage}>
-                {searchQuery ? "検索結果が見つかりません。" : "現在表示できる配信が見つかりません。"}
+                現在表示できる配信が見つかりません。
               </div>
             )
           ) : (
             filteredStreams.map((stream) => (
               <div key={stream.id} className={styles.streamListItem}>
-                <div className={styles.streamHeader}>
-                  <span className={styles.streamerLabel}>{stream.displayName}</span>
-                  <span
-                    className={styles.platformTag}
-                    style={{ color: platformAccent[stream.platform] }}
+                <div className={styles.streamThumbnail}>
+                  {stream.thumbnailUrl ? (
+                    <img src={stream.thumbnailUrl} alt={stream.title} />
+                  ) : (
+                    <div className={styles.thumbnailPlaceholder}>
+                      {stream.displayName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className={styles.platformBadge}
+                    style={{ backgroundColor: platformAccent[stream.platform] }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = stream.platform === 'twitch'
+                        ? `https://www.twitch.tv/${stream.channelLogin || stream.id}`
+                        : stream.platform === 'youtube'
+                        ? `https://www.youtube.com/watch?v=${stream.id}`
+                        : stream.embedUrl;
+                      if (url) window.open(url, '_blank');
+                    }}
+                    title={`${platformLabel[stream.platform]}で開く`}
                   >
                     {platformLabel[stream.platform]}
-                  </span>
+                  </button>
+                </div>
+                <div className={styles.streamHeader}>
+                  <span className={styles.streamerLabel}>{stream.displayName}</span>
                 </div>
                 <p className={styles.streamTitle}>{stream.title}</p>
                 <div className={styles.streamMeta}>

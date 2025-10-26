@@ -1,16 +1,72 @@
 import clsx from 'clsx';
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/shallow';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useChatStore } from '../../stores/chatStore';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import type { ChatMessage } from '../../types';
 import styles from './StreamGrid.module.css';
 import { StreamSlotCard } from './StreamSlot/StreamSlot';
 
+// メッセージテキストをエモート画像付きでレンダリング
+const renderMessageWithEmotes = (message: ChatMessage) => {
+  if (!message.emotes || message.emotes.length === 0) {
+    return <span>{message.message}</span>;
+  }
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  // エモートの位置でソート
+  const sortedEmotes = message.emotes.flatMap((emote) =>
+    emote.positions.map((pos) => ({
+      ...pos,
+      id: emote.id
+    }))
+  ).sort((a, b) => a.start - b.start);
+
+  sortedEmotes.forEach((emote, idx) => {
+    // エモートの前のテキスト
+    if (emote.start > lastIndex) {
+      parts.push(
+        <span key={`text-${idx}`}>
+          {message.message.substring(lastIndex, emote.start)}
+        </span>
+      );
+    }
+
+    // エモート画像
+    const emoteUrl = `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/1.0`;
+    parts.push(
+      <img
+        key={`emote-${idx}`}
+        src={emoteUrl}
+        alt="emote"
+        className={styles.emote}
+        loading="lazy"
+      />
+    );
+
+    lastIndex = emote.end + 1;
+  });
+
+  // 残りのテキスト
+  if (lastIndex < message.message.length) {
+    parts.push(
+      <span key="text-end">{message.message.substring(lastIndex)}</span>
+    );
+  }
+
+  return <>{parts}</>;
+};
+
 export const StreamGrid = (): JSX.Element => {
-  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen } = useLayoutStore((state) => ({
+  const { slots, preset, selectedSlotId, selectionTimestamp, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     slots: state.slots,
     preset: state.preset,
     selectedSlotId: state.selectedSlotId,
+    selectionTimestamp: state.selectionTimestamp,
     showSelection: state.showSelection,
     selectSlot: state.selectSlot,
     setShowSelection: state.setShowSelection,
@@ -19,7 +75,7 @@ export const StreamGrid = (): JSX.Element => {
     setFullscreen: state.setFullscreen,
     clearSelection: state.clearSelection,
     isModalOpen: state.isModalOpen
-  }));
+  }), shallow);
 
   const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [showChat, setShowChat] = useState(false);
@@ -29,7 +85,8 @@ export const StreamGrid = (): JSX.Element => {
 
   const messages = useChatStore((state) => state.messages);
 
-  const activeSlots = slots.slice(0, activeSlotsCount);
+  // activeSlotsをメモ化（slots配列またはactiveSlotsCountが変わったときのみ再計算）
+  const activeSlots = useMemo(() => slots.slice(0, activeSlotsCount), [slots, activeSlotsCount]);
 
   // 最新の50件のメッセージのみ表示
   const displayMessages = useMemo(() => messages.slice(0, 50), [messages]);
@@ -69,10 +126,10 @@ export const StreamGrid = (): JSX.Element => {
         clearTimeout(autoHideTimerRef.current);
       }
     };
-  }, [selectedSlotId, setShowSelection, isModalOpen]);
+  }, [selectedSlotId, selectionTimestamp, setShowSelection, isModalOpen]);
 
-  // マウス移動時にオーバーレイを再表示してタイマーをリセット
-  const handleMouseMove = (): void => {
+  // オーバーレイを再表示してタイマーをリセット（マウス・タッチ共通処理）
+  const showOverlayWithTimer = (): void => {
     if (!selectedSlotId || isModalOpen) return;
 
     // オーバーレイを再表示
@@ -86,6 +143,16 @@ export const StreamGrid = (): JSX.Element => {
     autoHideTimerRef.current = setTimeout(() => {
       setShowSelection(false);
     }, 3000);
+  };
+
+  // マウス移動時にオーバーレイを再表示してタイマーをリセット
+  const handleMouseMove = (): void => {
+    showOverlayWithTimer();
+  };
+
+  // タッチ開始時にオーバーレイを再表示してタイマーをリセット
+  const handleTouchStart = (): void => {
+    showOverlayWithTimer();
   };
 
   const handleExitFullscreen = async (): Promise<void> => {
@@ -151,17 +218,25 @@ export const StreamGrid = (): JSX.Element => {
   };
 
   return (
-    <div className={clsx(styles.gridContainer, fullscreen && styles.gridContainerFullscreen, fullscreen && showChat && styles.gridContainerWithChat)} onMouseMove={handleMouseMove}>
+    <div
+      className={clsx(styles.gridContainer, fullscreen && styles.gridContainerFullscreen, fullscreen && showChat && styles.gridContainerWithChat)}
+      onMouseMove={handleMouseMove}
+      onTouchStart={handleTouchStart}
+    >
       <div className={styles.gridWrapper}>
-        <div className={clsx(styles.grid, styles[preset], styles[`count${activeSlotsCount}`], fullscreen && styles.gridFullscreen)}>
+        <div className={clsx(
+          styles.grid,
+          styles[preset],
+          preset === 'twoByTwo' && styles[`count${activeSlotsCount}`],
+          fullscreen && styles.gridFullscreen
+        )}>
         {activeSlots.map((slot) => (
           <StreamSlotCard
             key={slot.id}
             slot={slot}
-            isActive={showSelection && selectedSlotId === slot.id}
-            isFocused={preset === 'focus' && selectedSlotId === slot.id}
+            selectedSlotId={selectedSlotId}
+            preset={preset}
             showSelection={showSelection}
-            onSelect={() => selectSlot(slot.id)}
           />
         ))}
         </div>
@@ -186,19 +261,40 @@ export const StreamGrid = (): JSX.Element => {
             {displayMessages.map((message) => (
               <div
                 key={message.id}
-                className={clsx(styles.fullscreenChatMessage, message.highlight && styles.fullscreenChatMessageHighlight)}
+                className={clsx(
+                  styles.fullscreenChatMessage,
+                  message.highlight && styles.fullscreenChatMessageHighlight,
+                  message.bits && styles.fullscreenChatMessageBits
+                )}
               >
                 <div className={styles.fullscreenChatAvatar} style={{ backgroundColor: message.avatarColor }}>
-                  {message.author.slice(0, 2)}
+                  {message.author?.slice(0, 2) || '??'}
                 </div>
                 <div className={styles.fullscreenChatBody}>
                   <div className={styles.fullscreenChatMessageHeader}>
-                    <span className={styles.fullscreenChatAuthor}>{message.author}</span>
+                    {message.badges && message.badges.length > 0 && (
+                      <div className={styles.fullscreenChatBadges}>
+                        {message.badges.filter(badge => badge.imageUrl).map((badge) => (
+                          <img
+                            key={`${badge.setId}-${badge.version}`}
+                            src={badge.imageUrl!}
+                            alt={badge.setId}
+                            className={styles.fullscreenChatBadge}
+                            title={badge.setId}
+                            loading="lazy"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <span className={styles.fullscreenChatAuthor}>{message.author || 'Unknown'}</span>
                     {message.channelName && (
                       <span className={styles.fullscreenChatChannel}>@ {message.channelName}</span>
                     )}
+                    {message.bits && (
+                      <span className={styles.fullscreenChatBitsAmount}>{message.bits} Bits</span>
+                    )}
                   </div>
-                  <p className={styles.fullscreenChatText}>{message.message}</p>
+                  <p className={styles.fullscreenChatText}>{renderMessageWithEmotes(message)}</p>
                 </div>
               </div>
             ))}

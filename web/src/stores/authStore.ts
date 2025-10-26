@@ -31,6 +31,9 @@ interface AuthState {
   setTwitchStatus: (data: { authenticated: boolean; user?: TwitchUser; error?: string }) => void;
   setTwitchLoading: (loading: boolean) => void;
   setTwitchError: (error?: string) => void;
+  // Session ID for token storage
+  sessionId?: string;
+  setSessionId: (sessionId: string) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -59,5 +62,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       twitchError: error ?? undefined
     }),
   setTwitchLoading: (loading) => set({ twitchLoading: loading }),
-  setTwitchError: (error) => set({ twitchError: error })
+  setTwitchError: (error) => set({ twitchError: error }),
+  // Session ID for token storage
+  sessionId: undefined,
+  setSessionId: (sessionId) => set({ sessionId })
 }));

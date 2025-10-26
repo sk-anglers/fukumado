@@ -1,10 +1,66 @@
 import clsx from 'clsx';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useChatStore } from '../../stores/chatStore';
 import { useLayoutStore } from '../../stores/layoutStore';
+import { useMobileMenuStore } from '../../stores/mobileMenuStore';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 import { config } from '../../config';
-import type { Platform } from '../../types';
+import type { Platform, ChatMessage, TwitchEmote } from '../../types';
+import { EmotePicker } from '../EmotePicker/EmotePicker';
 import styles from './ChatPanel.module.css';
+
+// メッセージテキストをエモート画像付きでレンダリング
+const renderMessageWithEmotes = (message: ChatMessage) => {
+  if (!message.emotes || message.emotes.length === 0) {
+    return <span>{message.message}</span>;
+  }
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  // エモートの位置でソート
+  const sortedEmotes = message.emotes.flatMap((emote) =>
+    emote.positions.map((pos) => ({
+      ...pos,
+      id: emote.id
+    }))
+  ).sort((a, b) => a.start - b.start);
+
+  sortedEmotes.forEach((emote, idx) => {
+    // エモートの前のテキスト
+    if (emote.start > lastIndex) {
+      parts.push(
+        <span key={`text-${idx}`}>
+          {message.message.substring(lastIndex, emote.start)}
+        </span>
+      );
+    }
+
+    // エモート画像
+    const emoteUrl = `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/1.0`;
+    parts.push(
+      <img
+        key={`emote-${idx}`}
+        src={emoteUrl}
+        alt="emote"
+        className={styles.emote}
+        loading="lazy"
+      />
+    );
+
+    lastIndex = emote.end + 1;
+  });
+
+  // 残りのテキスト
+  if (lastIndex < message.message.length) {
+    parts.push(
+      <span key="text-end">{message.message.substring(lastIndex)}</span>
+    );
+  }
+
+  return <>{parts}</>;
+};
 
 type ChatFilter = 'all' | Platform;
 
@@ -26,8 +82,11 @@ export const ChatPanel = (): JSX.Element => {
   }));
 
   const slots = useLayoutStore((state) => state.slots);
+  const isMobile = useIsMobile();
+  const setChatOpen = useMobileMenuStore((state) => state.setChatOpen);
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
 
   const filteredMessages = useMemo(
     () => (filter === 'all' ? messages : messages.filter((message) => message.platform === filter)),
@@ -112,11 +171,39 @@ export const ChatPanel = (): JSX.Element => {
     }
   };
 
+  // 新しいメッセージが追加されたら自動的に最下部にスクロール
+  useEffect(() => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    }
+  }, [filteredMessages]);
+
+  // エモート選択時の処理
+  const handleSelectEmote = (emoteName: string) => {
+    setMessageInput((prev) => {
+      // カーソル位置にエモート名を挿入（前後にスペースを追加）
+      const spaceBefore = prev.length > 0 && !prev.endsWith(' ') ? ' ' : '';
+      return `${prev}${spaceBefore}${emoteName} `;
+    });
+  };
+
   return (
     <div className={styles.chatPanel}>
       <header className={styles.header}>
         <h2>チャット</h2>
-        <span className={styles.highlightBadge}>ハイライト {highlightedCount}</span>
+        <div className={styles.headerRight}>
+          <span className={styles.highlightBadge}>ハイライト {highlightedCount}</span>
+          {isMobile && (
+            <button
+              type="button"
+              className={styles.closeButton}
+              onClick={() => setChatOpen(false)}
+              aria-label="チャットを閉じる"
+            >
+              <XMarkIcon />
+            </button>
+          )}
+        </div>
       </header>
       {/* 有効なプラットフォームが2つ以上ある場合のみタブを表示 */}
       {availableFilters.length > 2 && (
@@ -133,41 +220,68 @@ export const ChatPanel = (): JSX.Element => {
         ))}
       </div>
       )}
-      <div className={styles.messageList}>
-        {filteredMessages.map((message) => (
+      <div className={styles.messageList} ref={messageListRef}>
+        {filteredMessages.slice().reverse().map((message) => (
           <article
             key={message.id}
-            className={clsx(styles.message, message.highlight && styles.messageHighlight)}
+            className={clsx(
+              styles.message,
+              message.highlight && styles.messageHighlight,
+              message.bits && styles.messageBits
+            )}
           >
             <div className={styles.avatar} style={{ backgroundColor: message.avatarColor }}>
-              {message.author.slice(0, 2)}
+              {message.author?.slice(0, 2) || '??'}
             </div>
             <div className={styles.messageBody}>
               <div className={styles.messageHeader}>
-                <span className={styles.author}>{message.author}</span>
+                {message.badges && message.badges.length > 0 && (
+                  <div className={styles.badges}>
+                    {message.badges.filter(badge => badge.imageUrl).map((badge) => (
+                      <img
+                        key={`${badge.setId}-${badge.version}`}
+                        src={badge.imageUrl!}
+                        alt={badge.setId}
+                        className={styles.badge}
+                        title={badge.setId}
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                )}
+                <span className={styles.author}>{message.author || 'Unknown'}</span>
                 {message.channelName && (
                   <span className={styles.channelName}>@ {message.channelName}</span>
                 )}
+                {message.bits && (
+                  <span className={styles.bitsAmount}>{message.bits} Bits</span>
+                )}
                 <span className={styles.timestamp}>{message.timestamp}</span>
               </div>
-              <p>{message.message}</p>
+              <p>{renderMessageWithEmotes(message)}</p>
             </div>
           </article>
         ))}
       </div>
       <footer className={styles.footer}>
         {watchingStreams.length > 0 && (
-          <select
-            className={styles.channelSelect}
-            value={selectedChannelId || ''}
-            onChange={(e) => setSelectedChannelId(e.target.value)}
-          >
-            {watchingStreams.map((stream) => (
-              <option key={stream.channelId} value={stream.channelId}>
-                {stream.displayName} ({stream.platform.toUpperCase()})
-              </option>
-            ))}
-          </select>
+          <div className={styles.sendTargetSection}>
+            <label htmlFor="channel-select" className={styles.sendTargetLabel}>
+              チャット送信先
+            </label>
+            <select
+              id="channel-select"
+              className={styles.channelSelect}
+              value={selectedChannelId || ''}
+              onChange={(e) => setSelectedChannelId(e.target.value)}
+            >
+              {watchingStreams.map((stream) => (
+                <option key={stream.channelId} value={stream.channelId}>
+                  {stream.displayName}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
         <div className={styles.inputRow}>
           <input
@@ -191,6 +305,9 @@ export const ChatPanel = (): JSX.Element => {
           >
             {isSending ? '送信中...' : '送信'}
           </button>
+        </div>
+        <div className={styles.emotePickerRow}>
+          <EmotePicker onSelectEmote={handleSelectEmote} />
         </div>
       </footer>
     </div>

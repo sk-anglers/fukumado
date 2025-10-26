@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Notification, NotificationSettings } from '../types';
 
 const MAX_NOTIFICATIONS = 50;
+const MAX_TOASTS = 3;
 
 const defaultSettings: NotificationSettings = {
   enabled: true,
@@ -11,15 +12,23 @@ const defaultSettings: NotificationSettings = {
   sound: false
 };
 
+export interface ToastData {
+  id: string;
+  message: string;
+  thumbnailUrl?: string;
+}
+
 interface NotificationState {
   notifications: Notification[];
   settings: NotificationSettings;
+  toasts: ToastData[];
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearAll: () => void;
   updateSettings: (settings: Partial<NotificationSettings>) => void;
   getUnreadCount: () => number;
+  removeToast: (id: string) => void;
 }
 
 export const useNotificationStore = create<NotificationState>()(
@@ -27,9 +36,10 @@ export const useNotificationStore = create<NotificationState>()(
     (set, get) => ({
       notifications: [],
       settings: defaultSettings,
+      toasts: [],
 
       addNotification: (notification) => {
-        const { settings } = get();
+        const { settings, notifications } = get();
 
         // 通知が無効な場合は追加しない
         if (!settings.enabled) return;
@@ -37,6 +47,17 @@ export const useNotificationStore = create<NotificationState>()(
         // プラットフォーム別の設定をチェック
         if (notification.platform === 'youtube' && !settings.youtube) return;
         if (notification.platform === 'twitch' && !settings.twitch) return;
+
+        // 重複チェック: 同じstreamIdの通知が既に存在する場合は追加しない
+        if (notification.streamId) {
+          const isDuplicate = notifications.some(
+            (n) => n.streamId === notification.streamId && n.type === notification.type
+          );
+          if (isDuplicate) {
+            console.log('[Notification] 重複通知をスキップ:', notification.streamId);
+            return;
+          }
+        }
 
         const newNotification: Notification = {
           ...notification,
@@ -64,6 +85,30 @@ export const useNotificationStore = create<NotificationState>()(
             // 音声再生エラーは無視
           });
         }
+
+        // Toast通知を表示（配信開始通知の場合）
+        if (notification.type === 'stream_started' && notification.channelName) {
+          const toastMessage = `${notification.channelName}が配信を始めました！`;
+          const toastId = newNotification.id;
+
+          set((state) => {
+            const nextToasts = [
+              {
+                id: toastId,
+                message: toastMessage,
+                thumbnailUrl: notification.thumbnailUrl
+              },
+              ...state.toasts
+            ];
+
+            // 最大表示数を超えたら古いtoastを削除
+            if (nextToasts.length > MAX_TOASTS) {
+              nextToasts.splice(MAX_TOASTS);
+            }
+
+            return { toasts: nextToasts };
+          });
+        }
       },
 
       markAsRead: (id) =>
@@ -88,13 +133,18 @@ export const useNotificationStore = create<NotificationState>()(
       getUnreadCount: () => {
         const { notifications } = get();
         return notifications.filter((n) => !n.read).length;
-      }
+      },
+
+      removeToast: (id) =>
+        set((state) => ({
+          toasts: state.toasts.filter((t) => t.id !== id)
+        }))
     }),
     {
       name: 'fukumado-notifications',
       version: 1,
       partialize: (state) => ({
-        notifications: state.notifications,
+        // 通知は永続化せず、設定のみ永続化（起動時は常に空の状態から開始）
         settings: state.settings
       })
     }

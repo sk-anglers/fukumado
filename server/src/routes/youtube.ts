@@ -1,9 +1,18 @@
 import { Router } from 'express';
 import { ensureGoogleAccessToken } from './auth';
 import { fetchLiveStreams, fetchUserSubscriptions, searchChannels } from '../services/youtubeService';
-import { streamSyncService } from '../services/streamSyncService';
+import { streamSyncService, tokenStorage } from '../services/streamSyncService';
 
 export const youtubeRouter = Router();
+
+// チャンネル検索キャッシュ（5分TTL）
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+}
+
+const channelSearchCache = new Map<string, CacheEntry>();
+const SEARCH_CACHE_TTL_MS = 300000; // 5分
 
 youtubeRouter.get('/live', async (req, res) => {
   try {
@@ -60,9 +69,38 @@ youtubeRouter.get('/channels', async (req, res) => {
       return res.status(400).json({ error: '"q" query parameter is required' });
     }
 
+    // キャッシュキーを生成（クエリ文字列を小文字化して正規化）
+    const cacheKey = query.toLowerCase().trim();
+    const now = Date.now();
+
+    // キャッシュチェック
+    const cached = channelSearchCache.get(cacheKey);
+    if (cached && now - cached.timestamp < SEARCH_CACHE_TTL_MS) {
+      const remainingTtl = Math.ceil((SEARCH_CACHE_TTL_MS - (now - cached.timestamp)) / 1000);
+      console.log(`[YouTube Channel Search Cache] キャッシュヒット: "${query}" (TTL残り: ${remainingTtl}秒)`);
+      return res.json(cached.data);
+    }
+
+    // キャッシュミス - APIから取得
+    console.log(`[YouTube Channel Search Cache] キャッシュミス: "${query}" - APIから取得します`);
     const maxResults = maxResultsParam ? Number(maxResultsParam) : undefined;
     const channels = await searchChannels(query, maxResults);
-    res.json({ items: channels });
+    const responseData = { items: channels };
+
+    // キャッシュに保存
+    channelSearchCache.set(cacheKey, {
+      data: responseData,
+      timestamp: now
+    });
+
+    // 古いキャッシュエントリを削除（メモリリーク対策）
+    for (const [key, entry] of channelSearchCache.entries()) {
+      if (now - entry.timestamp >= SEARCH_CACHE_TTL_MS) {
+        channelSearchCache.delete(key);
+      }
+    }
+
+    res.json(responseData);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ error: message });
@@ -75,8 +113,16 @@ youtubeRouter.get('/subscriptions', async (req, res) => {
     if (!accessToken) {
       return res.status(401).json({ error: 'Authentication required' });
     }
+
     const channels = await fetchUserSubscriptions(accessToken);
-    res.json({ items: channels });
+
+    // TokenStorageにアクセストークンを保存
+    const sessionId = req.sessionID || 'default';
+    tokenStorage.setToken(sessionId, 'youtube', accessToken);
+
+    console.log(`[YouTube Subscriptions] Saved token for session: ${sessionId}`);
+
+    res.json({ items: channels, sessionId });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ error: message });

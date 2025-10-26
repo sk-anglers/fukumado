@@ -30,6 +30,7 @@
   gap: 1rem;
   min-height: 0;
   grid-auto-rows: minmax(0, 1fr);
+  overflow-y: auto;
 }
 
 .gridFullscreen {
@@ -82,6 +83,106 @@
 @media (max-width: 768px) {
   .grid {
     grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-rows: auto !important;
+    gap: 0.75rem;
+    overflow-y: visible;
+  }
+
+  .gridFullscreen {
+    padding: 0.75rem;
+  }
+
+  .fullscreenToggle {
+    padding-top: 0.5rem;
+  }
+
+  .fullscreenToggle button {
+    min-height: 44px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .fullscreenToggle button svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .fullscreenChat {
+    width: 100%;
+  }
+
+  .fullscreenChatHeader {
+    padding: 1.25rem;
+  }
+
+  .fullscreenChatHeader h3 {
+    font-size: 1.1rem;
+  }
+
+  .fullscreenChatMessages {
+    padding: 1.25rem;
+  }
+
+  .fullscreenChatMessage {
+    padding: 1rem;
+  }
+
+  .fullscreenChatAvatar {
+    width: 44px;
+    height: 44px;
+    font-size: 0.95rem;
+  }
+
+  .fullscreenChatBadge {
+    width: 20px;
+    height: 20px;
+  }
+
+  .fullscreenChatMessageHeader {
+    font-size: 0.85rem;
+  }
+
+  .fullscreenChatAuthor {
+    font-size: 0.9rem;
+  }
+
+  .fullscreenChatChannel {
+    font-size: 0.8rem;
+  }
+
+  .fullscreenChatBitsAmount {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .fullscreenChatText {
+    font-size: 0.95rem;
+  }
+
+  .emote {
+    height: 32px;
+  }
+
+  .fullscreenChatFooter {
+    padding: 1.25rem;
+  }
+
+  .fullscreenChatSelect {
+    min-height: 44px;
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .fullscreenChatInputRow input {
+    min-height: 44px;
+    padding: 0.7rem 1rem;
+    font-size: 1rem;
+  }
+
+  .fullscreenChatSendButton {
+    min-height: 44px;
+    padding: 0.7rem 1.2rem;
+    font-size: 0.9rem;
   }
 }
 
@@ -172,6 +273,11 @@
   border-color: rgba(168, 85, 247, 0.4);
 }
 
+.fullscreenChatMessageBits {
+  background: rgba(168, 85, 247, 0.25);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
 .fullscreenChatAvatar {
   flex-shrink: 0;
   width: 36px;
@@ -198,6 +304,19 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.fullscreenChatBadges {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.fullscreenChatBadge {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
 }
 
 .fullscreenChatAuthor {
@@ -208,6 +327,21 @@
 .fullscreenChatChannel {
   color: rgba(148, 163, 184, 0.75);
   font-size: 0.75rem;
+}
+
+.fullscreenChatBitsAmount {
+  color: rgba(168, 85, 247, 0.95);
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.45rem;
+  background: rgba(168, 85, 247, 0.25);
+  border-radius: 6px;
+}
+
+.emote {
+  height: 28px;
+  vertical-align: middle;
+  margin: 0 2px;
 }
 
 .fullscreenChatText {
