@@ -1,13 +1,15 @@
 import { fetchLiveStreams as fetchYouTubeLiveStreams, type YouTubeLiveStream } from './youtubeService';
 import { fetchLiveStreams as fetchTwitchLiveStreams, type TwitchLiveStreamInfo } from './twitchService';
 import { cacheService } from './cacheService';
+import { priorityManager } from './priorityManager';
+import type { ChannelClassification } from '../types/priority';
 
 // キャッシュTTL（秒）
-// 同期間隔（60秒）より少し長めに設定し、次回同期まで有効なキャッシュを保持
-const CACHE_TTL = 70; // 70秒
+// 同期間隔（90秒）より少し長めに設定し、次回同期まで有効なキャッシュを保持
+const CACHE_TTL = 100; // 100秒
 
 // 同期間隔（ミリ秒）
-const SYNC_INTERVAL = 60000; // 1分（より頻繁に更新）
+const SYNC_INTERVAL = 90000; // 1.5分（API消費を削減）
 
 // プラットフォーム別の配信情報
 export interface PlatformStreams {
@@ -63,6 +65,9 @@ class StreamSyncService {
       twitchAccessToken: tokens?.twitch
     });
     console.log(`[StreamSync] User registered: ${userId}, YouTube: ${channels.youtube.length}, Twitch: ${channels.twitch.length}`);
+
+    // PriorityManagerにも登録（重複度計算のため）
+    priorityManager.registerUser(userId, channels);
   }
 
   /**
@@ -71,6 +76,9 @@ class StreamSyncService {
   unregisterUser(userId: string): void {
     this.userSessions.delete(userId);
     console.log(`[StreamSync] User unregistered: ${userId}`);
+
+    // PriorityManagerからも削除
+    priorityManager.unregisterUser(userId);
   }
 
   /**
@@ -364,6 +372,29 @@ class StreamSyncService {
   async manualSync(): Promise<void> {
     console.log('[StreamSync] Manual sync triggered');
     await this.syncAllStreams(true); // forceNotify = true
+  }
+
+  /**
+   * 優先度別にチャンネルを分類
+   */
+  getChannelClassification(): ChannelClassification {
+    return priorityManager.classifyChannels();
+  }
+
+  /**
+   * 遅延許容チャンネルのみを取得（ポーリング対象）
+   */
+  getDelayedChannels(): { youtube: string[], twitch: string[] } {
+    const classification = this.getChannelClassification();
+    return classification.delayed;
+  }
+
+  /**
+   * リアルタイムチャンネルのみを取得（EventSub対象）
+   */
+  getRealtimeChannels(): { youtube: string[], twitch: string[] } {
+    const classification = this.getChannelClassification();
+    return classification.realtime;
   }
 
   /**

@@ -1,0 +1,251 @@
+.streams {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #3498DB;
+}
+
+/* 統計グリッド */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.statIcon {
+  font-size: 32px;
+}
+
+.statContent {
+  flex: 1;
+}
+
+.statLabel {
+  font-size: 14px;
+  color: #605e5c;
+  margin-bottom: 4px;
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 600;
+  color: #323130;
+}
+
+/* タブ */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #edebe9;
+}
+
+.tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #605e5c;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #323130;
+  background: #f3f2f1;
+}
+
+.tab.active {
+  color: #3498DB;
+  border-bottom-color: #3498DB;
+  font-weight: 600;
+}
+
+/* 配信リスト */
+.streamList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.streamCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.streamHeader {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+}
+
+.thumbnail {
+  width: 320px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.streamInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.streamTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.channelInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.channelName {
+  font-size: 16px;
+  font-weight: 500;
+  color: #3498DB;
+}
+
+.streamId {
+  font-size: 13px;
+  color: #605e5c;
+  font-family: 'Courier New', monospace;
+}
+
+.streamMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: auto;
+}
+
+.metaItem {
+  font-size: 14px;
+  color: #605e5c;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.streamDescription {
+  padding: 0 16px 16px 16px;
+  font-size: 14px;
+  color: #605e5c;
+  line-height: 1.6;
+  border-top: 1px solid #edebe9;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.emptyMessage {
+  text-align: center;
+  color: #605e5c;
+  padding: 40px 20px;
+  margin: 0;
+}
+
+.lastUpdate {
+  text-align: right;
+  font-size: 12px;
+  color: #605e5c;
+  margin-top: 16px;
+}
+
+.error {
+  padding: 40px;
+  text-align: center;
+}
+
+.error p {
+  color: #d13438;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+/* レスポンシブ */
+@media (max-width: 900px) {
+  .streamHeader {
+    flex-direction: column;
+  }
+
+  .thumbnail {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .streams {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .pageTitle {
+    font-size: 24px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    overflow-x: auto;
+  }
+
+  .tab {
+    white-space: nowrap;
+  }
+}

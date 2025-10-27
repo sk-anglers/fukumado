@@ -1,0 +1,118 @@
+import { Router } from 'express';
+import { ApiResponse } from '../types';
+import { env } from '../config/env';
+
+export const streamsRouter = Router();
+
+/**
+ * 本サービスのAPIを呼び出すヘルパー関数
+ */
+async function fetchMainServiceAPI<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
+  try {
+    const url = `${env.mainBackendUrl}${endpoint}`;
+    const response = await fetch(url, {
+      method: options?.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers
+      },
+      ...options
+    });
+
+    if (!response.ok) {
+      console.error(`[Main Service API] Error fetching ${endpoint}: ${response.statusText}`);
+      return null;
+    }
+
+    return await response.json() as T;
+  } catch (error) {
+    console.error(`[Main Service API] Failed to fetch ${endpoint}:`, error);
+    return null;
+  }
+}
+
+/**
+ * GET /admin/api/streams/details
+ * 配信詳細情報を取得
+ */
+streamsRouter.get('/details', async (req, res) => {
+  try {
+    const data = await fetchMainServiceAPI<{
+      stats: {
+        isRunning: boolean;
+        userCount: number;
+        youtubeStreamCount: number;
+        twitchStreamCount: number;
+        totalStreamCount: number;
+      };
+      streams: {
+        youtube: any[];
+        twitch: any[];
+      };
+      timestamp: string;
+    }>('/api/streams/details');
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to fetch stream details from main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('[API] Error getting stream details:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
+ * POST /admin/api/streams/sync
+ * 手動同期をトリガー
+ */
+streamsRouter.post('/sync', async (req, res) => {
+  try {
+    const data = await fetchMainServiceAPI<{ success: boolean; message: string }>(
+      '/api/streams/sync',
+      { method: 'POST' }
+    );
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to trigger sync on main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('[API] Error triggering sync:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});

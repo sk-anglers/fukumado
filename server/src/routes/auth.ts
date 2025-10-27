@@ -13,6 +13,7 @@ import {
   fetchTwitchUserInfo,
   refreshTwitchAccessToken
 } from '../utils/twitchOAuth';
+import { fetchGlobalEmotes } from '../services/twitchService';
 
 export const authRouter = Router();
 
@@ -86,8 +87,16 @@ authRouter.post('/logout', (req, res) => {
 authRouter.get('/twitch', (req, res) => {
   console.log('[Twitch Login] Starting OAuth flow');
   console.log('[Twitch Login] Session ID:', req.sessionID);
+
+  // adminパラメータを検出（管理ダッシュボード用）
+  const isAdminAuth = req.query.admin === 'true';
+  if (isAdminAuth) {
+    console.log('[Twitch Login] Admin authentication detected');
+  }
+
   const state = createState();
   req.session.twitchOauthState = state;
+  req.session.isAdminAuth = isAdminAuth; // adminフラグを保存
   const url = buildTwitchAuthUrl(state);
   console.log('[Twitch Login] Redirecting to:', url);
   res.redirect(url);
@@ -139,6 +148,50 @@ authRouter.get('/twitch/callback', async (req, res) => {
       hasTokens: !!req.session.twitchTokens,
       hasUser: !!req.session.twitchUser
     });
+
+    // 管理ダッシュボード用の認証の場合
+    const isAdminAuth = req.session.isAdminAuth;
+    req.session.isAdminAuth = undefined; // フラグをクリア
+
+    if (isAdminAuth) {
+      console.log('[Twitch Callback] Admin authentication - sending credentials to admin dashboard');
+
+      // トークンをEventSubManagerに送信
+      try {
+        const { fetch } = await import('undici');
+        const response = await fetch('http://localhost:4000/api/admin/eventsub/credentials', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            accessToken: tokenResponse.access_token,
+            clientId: process.env.TWITCH_CLIENT_ID
+          })
+        });
+
+        if (response.ok) {
+          console.log('[Twitch Callback] Credentials sent to EventSubManager successfully');
+        } else {
+          console.error('[Twitch Callback] Failed to send credentials:', response.status);
+        }
+      } catch (error) {
+        console.error('[Twitch Callback] Error sending credentials:', error);
+      }
+
+      // 管理ダッシュボードにリダイレクト
+      return res.redirect(`http://localhost:5174/eventsub?twitch_auth=success&username=${encodeURIComponent(userInfo.login)}`);
+    }
+
+    // 通常の認証フロー
+    // グローバルエモートを先読み（バックグラウンドで非同期実行）
+    fetchGlobalEmotes(tokenResponse.access_token)
+      .then(() => {
+        console.log('[Twitch Callback] Global emotes preloaded successfully');
+      })
+      .catch((error) => {
+        console.error('[Twitch Callback] Failed to preload global emotes:', error.message);
+      });
 
     // セッションを保存してからリダイレクト
     req.session.save((err) => {
@@ -209,8 +262,25 @@ authRouter.get('/success', (_req, res) => {
         </div>
         <script>
           setTimeout(function() {
-            window.location.href = 'http://localhost:5173/';
+            // 別ウィンドウで開かれている場合は閉じる
+            if (window.opener) {
+              window.close();
+            } else {
+              // 同じウィンドウで開かれている場合はリダイレクト
+              window.location.href = 'http://localhost:5173/';
+            }
           }, 3000);
+
+          // ボタンのクリック処理も同様に
+          document.addEventListener('DOMContentLoaded', function() {
+            var link = document.querySelector('a');
+            if (link && window.opener) {
+              link.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.close();
+              });
+            }
+          });
         </script>
       </body>
     </html>

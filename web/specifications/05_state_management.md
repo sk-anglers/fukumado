@@ -186,6 +186,9 @@ interface AuthState {
     displayName: string;
     profileImageUrl?: string;
   };
+
+  // セッションID（WebSocket用トークン管理）
+  sessionId?: string;
 }
 ```
 
@@ -201,6 +204,9 @@ interface AuthActions {
   setTwitchStatus: (data: { authenticated: boolean; user?: TwitchUser; error?: string }) => void;
   setTwitchLoading: (loading: boolean) => void;
   setTwitchError: (error?: string) => void;
+
+  // セッションID
+  setSessionId: (sessionId: string) => void;
 }
 ```
 
@@ -344,7 +350,75 @@ interface NotificationActions {
 - **通知音**: Base64エンコードされたWAV音声を再生
 - **トースト**: stream_started通知時に自動表示
 
-## 5.7 dataUsageStore (src/stores/dataUsageStore.ts)
+## 5.7 maintenanceStore (src/stores/maintenanceStore.ts)
+
+メンテナンスモードの状態を管理。
+
+### State
+```typescript
+interface MaintenanceState {
+  enabled: boolean;                      // メンテナンスモード有効
+  message: string;                       // メンテナンスメッセージ
+  enabledAt?: string;                    // 有効化日時
+  duration?: number;                     // 期間（分単位）、0=無期限
+  scheduledEndAt?: string;               // 終了予定日時
+}
+```
+
+### Actions
+```typescript
+interface MaintenanceActions {
+  setMaintenance: (data: {
+    enabled: boolean;
+    message?: string;
+    enabledAt?: string;
+    duration?: number;
+    scheduledEndAt?: string;
+  }) => void;
+  clearMaintenance: () => void;
+}
+```
+
+### 永続化
+- **ストレージ**: なし
+
+### 重要な仕様
+- **動的更新**: バックエンドAPIから状態を取得して更新
+- **メンテナンスページ**: `enabled: true` の場合、MaintenancePageを表示
+- **管理者制御**: 管理ダッシュボードから有効/無効を切り替え可能
+
+## 5.8 mobileMenuStore (src/stores/mobileMenuStore.ts)
+
+モバイル環境でのサイドバー・チャットパネルの開閉状態を管理。
+
+### State
+```typescript
+interface MobileMenuState {
+  sidebarOpen: boolean;                  // サイドバー開閉状態
+  chatOpen: boolean;                     // チャットパネル開閉状態
+}
+```
+
+### Actions
+```typescript
+interface MobileMenuActions {
+  setSidebarOpen: (open: boolean) => void;
+  setChatOpen: (open: boolean) => void;
+  toggleSidebar: () => void;             // サイドバートグル（チャットは閉じる）
+  toggleChat: () => void;                // チャットトグル（サイドバーは閉じる）
+  closeAll: () => void;                  // 両方閉じる
+}
+```
+
+### 永続化
+- **ストレージ**: なし
+
+### 重要な仕様
+- **排他制御**: サイドバーとチャットは同時に開かない
+- **モバイル専用**: レスポンシブデザインでモバイル環境のみ使用
+- **useMediaQuery**: `useIsMobile()` フックと連携
+
+## 5.9 dataUsageStore (src/stores/dataUsageStore.ts)
 
 データ転送量を監視・管理。
 
@@ -377,7 +451,11 @@ interface DataUsageActions {
 - **測定対象**: JS/CSS/画像、APIリクエストなど
 - **更新間隔**: 5秒ごとに新規リソースをチェック
 
-## 5.8 ストア間の依存関係
+### 重要な仕様
+- **sessionId**: WebSocket経由でバックエンドのTokenStorageからトークンを取得するためのキー
+- **useStreamUpdates**: sessionIdを使用してWebSocket経由で配信リスト更新を受信
+
+## 5.10 ストア間の依存関係
 
 ```
 ┌──────────────────────────────────────┐
@@ -429,9 +507,19 @@ interface DataUsageActions {
 │       dataUsageStore                 │
 │  - データ使用量監視                   │
 └──────────────────────────────────────┘
+
+┌──────────────────────────────────────┐
+│       maintenanceStore               │
+│  - メンテナンスモード管理             │
+└──────────────────────────────────────┘
+
+┌──────────────────────────────────────┐
+│       mobileMenuStore                │
+│  - モバイルメニュー開閉状態           │
+└──────────────────────────────────────┘
 ```
 
-## 5.9 ストア使用のベストプラクティス
+## 5.11 ストア使用のベストプラクティス
 
 ### useStoreWithEqualityFn の使用
 

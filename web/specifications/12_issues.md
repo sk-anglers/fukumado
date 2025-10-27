@@ -138,29 +138,110 @@ const resources = performance.getEntriesByType('resource');
 
 ## 12.7 認証・セキュリティ
 
-### セッション管理
-- **Cookie使用**: バックエンドでセッションCookieを使用
-- **CSRF対策**: 未確認（要実装）
-- **セキュアCookie**: 本番環境でのHTTPS必須
-- **セッションタイムアウト**: 未設定（要実装）
+**注**: セキュリティの詳細な仕様については、[15. セキュリティ仕様](./15_security.md) を参照してください。
+
+このセクションでは、既知の問題と改善が必要な点のみを記載します。
+
+### OAuth 2.0 セキュリティ
+
+#### CSRF対策（State パラメータ）
+- ✅ **実装済み**: `state`パラメータによるCSRF攻撃対策
+- ✅ Google OAuth: `req.session.oauthState`で検証
+- ✅ Twitch OAuth: `req.session.twitchOauthState`で検証
+- ✅ コールバック時に`state`不一致の場合はエラー
+
+**実装箇所**: `server/src/routes/auth.ts`
+
+#### 認証完了画面のセキュリティ
+- ✅ **ポップアップウィンドウ判定**: `window.opener`による安全な判定
+- ✅ **自動クローズ**: 3秒後に自動的にウィンドウを閉じる
+- ⚠️ **window.openerリスク**: タブナビゲーションのリスクあり（将来的に`rel="noopener"`推奨）
+- ⚠️ **CSP未設定**: Content Security Policyの設定が必要
 
 **推奨改善**:
 ```typescript
-// CSRF トークン生成
-app.use(csrf());
+// OAuth認証ウィンドウを開く際
+window.open(authUrl, '_blank', 'noopener,noreferrer');
 
-// セッションタイムアウト
+// CSP設定
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline';");
+  next();
+});
+```
+
+### セッション管理
+- ✅ **Cookie使用**: バックエンドでセッションCookieを使用
+- ✅ **httpOnly**: XSS対策として`httpOnly: true`を設定
+- ✅ **sameSite**: CSRF対策として`sameSite: 'lax'`を設定
+- ⚠️ **secure**: 開発環境では`false`、本番環境では`true`必須
+- ⚠️ **セッションタイムアウト**: 未設定（要実装）
+
+**現在の設定**: `server/src/index.ts`
+```typescript
+session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  }
+})
+```
+
+**推奨改善**:
+```typescript
+// セッションタイムアウト設定
 session({
   cookie: {
     maxAge: 24 * 60 * 60 * 1000 // 24時間
   }
 })
+
+// セッションストアをRedisに移行（本番環境）
+import RedisStore from 'connect-redis';
+session({
+  store: new RedisStore({ client: redisClient }),
+  // ...
+})
 ```
 
 ### OAuth トークン管理
-- **リフレッシュトークン**: 未実装
-- **トークン期限切れ時の挙動**: 要確認
-- **推奨**: リフレッシュトークンの実装
+- ✅ **リフレッシュトークン**: 実装済み
+  - `ensureGoogleAccessToken()`: Google トークン自動リフレッシュ
+  - `ensureTwitchAccessToken()`: Twitch トークン自動リフレッシュ
+  - 期限切れ30秒前に自動更新
+- ✅ **トークン保存**: サーバーサイドセッションに保存（フロントエンドに非公開）
+- ✅ **TokenStorage**: sessionID → トークンのマッピング（WebSocket用）
+
+**実装箇所**: `server/src/routes/auth.ts`
+
+### セキュリティ監査チェックリスト
+
+**詳細**: [15. セキュリティ仕様 - 15.8 セキュリティ監査チェックリスト](./15_security.md#158-セキュリティ監査チェックリスト) を参照
+
+#### 実装済み
+- ✅ OAuth 2.0 CSRF対策（state パラメータ）
+- ✅ セッションCookie（httpOnly, sameSite）
+- ✅ アクセストークンのサーバーサイド管理
+- ✅ トークン自動リフレッシュ
+- ✅ Webhook署名検証（Twitch EventSub）
+- ✅ セキュリティヘッダー（Helmet、CSP、HSTS）
+- ✅ レート制限（API、認証、WebSocket）
+- ✅ DDoS対策（IPブロックリスト、リクエストサイズ制限）
+- ✅ セッションセキュリティ（ハイジャック検出、タイムアウト、CSRF保護）
+- ✅ 異常検知・監視（トラフィック急増、エラー急増、不審なアクティビティ）
+
+#### 要改善
+- ⚠️ 本番環境でのHTTPS設定（secure: true）
+- ⚠️ 本番環境でのRedis Session Store導入
+- ⚠️ `rel="noopener"`使用（認証ポップアップ）
+- ⚠️ HTTPS強制リダイレクト（本番環境）
+- ⚠️ ログの永続化（ログファイルまたはログ管理サービス）
+- ⚠️ アラート通知機能（Slack、Email等）
 
 ## 12.8 エラーハンドリング
 

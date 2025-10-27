@@ -1,0 +1,258 @@
+.maintenance {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0 0 24px 0;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #3498DB;
+}
+
+.statusContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #EEEEEE;
+  border-radius: 8px;
+}
+
+.indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.enabled {
+  background: #d13438;
+  box-shadow: 0 0 12px rgba(209, 52, 56, 0.5);
+}
+
+.disabled {
+  background: #107c10;
+  box-shadow: 0 0 12px rgba(16, 124, 16, 0.5);
+}
+
+.statusText {
+  font-size: 20px;
+  font-weight: 600;
+  color: #323130;
+}
+
+.currentMessage {
+  padding: 16px;
+  background: #fff8e1;
+  border-left: 4px solid #ffb900;
+  border-radius: 4px;
+}
+
+.currentMessage h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #605e5c;
+}
+
+.currentMessage p {
+  margin: 0;
+  font-size: 16px;
+  color: #323130;
+  white-space: pre-wrap;
+}
+
+.timestamp {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.label {
+  color: #605e5c;
+  font-weight: 500;
+}
+
+.value {
+  color: #323130;
+}
+
+.bypassInfo {
+  padding: 16px;
+  background: #e3f2fd;
+  border-left: 4px solid #3498DB;
+  border-radius: 4px;
+}
+
+.bypassInfo h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #605e5c;
+}
+
+.tokenContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.token {
+  flex: 1;
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #323130;
+  word-break: break-all;
+}
+
+.expiryNote {
+  margin: 0;
+  font-size: 12px;
+  color: #605e5c;
+}
+
+.description {
+  margin: 0 0 20px 0;
+  color: #605e5c;
+  line-height: 1.6;
+}
+
+.enableForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323130;
+}
+
+.textarea {
+  padding: 10px 12px;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #323130;
+  resize: vertical;
+  outline: none;
+}
+
+.textarea:focus {
+  border-color: #3498DB;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.select {
+  padding: 10px 12px;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #323130;
+  background: white;
+  cursor: pointer;
+  outline: none;
+}
+
+.select:focus {
+  border-color: #3498DB;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #323130;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.error {
+  padding: 40px;
+  text-align: center;
+}
+
+.error p {
+  color: #d13438;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #323130;
+}
+
+.info p {
+  margin: 0;
+  color: #605e5c;
+  line-height: 1.6;
+}
+
+.example {
+  padding: 10px 12px;
+  background: #EEEEEE;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #323130;
+}
+
+.notesList {
+  margin: 0;
+  padding-left: 20px;
+  color: #605e5c;
+  line-height: 1.8;
+}
+
+.notesList li {
+  margin-bottom: 4px;
+}

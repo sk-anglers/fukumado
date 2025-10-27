@@ -1,0 +1,288 @@
+.container {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #323130;
+  margin: 0;
+}
+
+.refreshButton {
+  padding: 10px 20px;
+  background: #3498DB;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.refreshButton:hover {
+  background: #0078C4;
+}
+
+.loading,
+.error {
+  padding: 60px 20px;
+  text-align: center;
+  font-size: 16px;
+  color: #605e5c;
+}
+
+.error {
+  color: #e74c3c;
+}
+
+/* 統計カード */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.statCard {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.statLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #605e5c;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: #323130;
+  margin-bottom: 4px;
+}
+
+.statSubtext {
+  font-size: 13px;
+  color: #8a8886;
+}
+
+/* セクション */
+.section {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0 0 16px 0;
+}
+
+.noData {
+  padding: 40px;
+  text-align: center;
+  color: #8a8886;
+  font-size: 14px;
+}
+
+/* テーブル */
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table thead {
+  background: #F3F2F1;
+  border-bottom: 2px solid #edebe9;
+}
+
+.table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #323130;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.table td {
+  padding: 16px;
+  border-bottom: 1px solid #edebe9;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background: #F9F9F9;
+}
+
+.sessionId {
+  font-family: monospace;
+  font-size: 12px;
+  color: #605e5c;
+}
+
+.authStatus {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #3498DB;
+  color: white;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badgeGray {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #EEEEEE;
+  color: #8a8886;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.userName {
+  font-weight: 500;
+  color: #323130;
+}
+
+.userEmail {
+  font-size: 12px;
+  color: #8a8886;
+}
+
+.ipAddress {
+  font-family: monospace;
+  font-size: 12px;
+  color: #605e5c;
+}
+
+.destroyButton {
+  padding: 6px 12px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.destroyButton:hover {
+  background: #c0392b;
+}
+
+/* 最近のログイン */
+.recentLogins {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.loginCard {
+  background: #F9F9F9;
+  border: 1px solid #edebe9;
+  border-radius: 6px;
+  padding: 16px;
+  transition: box-shadow 0.2s;
+}
+
+.loginCard:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.loginTime {
+  font-size: 12px;
+  color: #8a8886;
+  margin-bottom: 8px;
+}
+
+.loginUsers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loginUser {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loginName {
+  font-size: 14px;
+  font-weight: 500;
+  color: #323130;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tableContainer {
+    overflow-x: scroll;
+  }
+
+  .table {
+    min-width: 900px;
+  }
+
+  .recentLogins {
+    grid-template-columns: 1fr;
+  }
+}

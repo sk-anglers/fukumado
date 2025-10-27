@@ -1,0 +1,363 @@
+.container {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #323130;
+  margin: 0;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 12px;
+}
+
+.refreshButton,
+.deletePatternButton,
+.flushButton {
+  padding: 10px 20px;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.refreshButton {
+  background: #3498DB;
+}
+
+.refreshButton:hover {
+  background: #0078C4;
+}
+
+.deletePatternButton {
+  background: #e67e22;
+}
+
+.deletePatternButton:hover {
+  background: #d35400;
+}
+
+.flushButton {
+  background: #e74c3c;
+}
+
+.flushButton:hover {
+  background: #c0392b;
+}
+
+.loading,
+.error,
+.noData {
+  padding: 60px 20px;
+  text-align: center;
+  font-size: 16px;
+  color: #605e5c;
+}
+
+.error {
+  color: #e74c3c;
+}
+
+/* セクション */
+.section {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0 0 16px 0;
+}
+
+/* Redis接続状態 */
+.disconnected {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.disconnectedIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.disconnectedText {
+  font-size: 20px;
+  font-weight: 600;
+  color: #323130;
+  margin-bottom: 8px;
+}
+
+.disconnectedSubtext {
+  font-size: 14px;
+  color: #8a8886;
+}
+
+.connected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+}
+
+.connectedIcon {
+  font-size: 24px;
+}
+
+.connectedText {
+  font-size: 16px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+/* 統計カード */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.statCard {
+  background: #F9F9F9;
+  border: 1px solid #edebe9;
+  border-radius: 6px;
+  padding: 20px;
+}
+
+.statLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #605e5c;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: #323130;
+  margin-bottom: 4px;
+}
+
+.statSubtext {
+  font-size: 13px;
+  color: #8a8886;
+}
+
+/* 検索バー */
+.searchBar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 14px;
+  border: 1px solid #edebe9;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+  border-color: #3498DB;
+}
+
+.searchButton {
+  padding: 10px 24px;
+  background: #3498DB;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.searchButton:hover {
+  background: #0078C4;
+}
+
+/* 検索結果 */
+.searchResults {
+  margin-top: 20px;
+}
+
+.searchSummary {
+  font-size: 14px;
+  color: #605e5c;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #F9F9F9;
+  border-radius: 4px;
+}
+
+/* キーリスト */
+.keysList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 12px;
+}
+
+.keyCard {
+  background: #F9F9F9;
+  border: 1px solid #edebe9;
+  border-radius: 6px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.keyCard:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: #3498DB;
+}
+
+.keyCardSelected {
+  border-color: #3498DB;
+  background: #e6f3ff;
+}
+
+.keyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.keyName {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #323130;
+  word-break: break-all;
+}
+
+.deleteKeyButton {
+  padding: 4px 8px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.deleteKeyButton:hover {
+  background: #c0392b;
+}
+
+.keyMeta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #8a8886;
+}
+
+.keyType,
+.keyTtl,
+.keySize {
+  padding: 2px 8px;
+  background: #FFFFFF;
+  border-radius: 4px;
+}
+
+/* キー詳細 */
+.keyDetail {
+  margin-top: 16px;
+}
+
+.detailMeta {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #F9F9F9;
+  border-radius: 6px;
+}
+
+.detailMetaItem {
+  display: flex;
+  gap: 8px;
+}
+
+.detailLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #605e5c;
+  margin-bottom: 8px;
+}
+
+.detailValue {
+  font-family: monospace;
+  font-size: 13px;
+  color: #323130;
+}
+
+.valueDisplay {
+  background: #F9F9F9;
+  border: 1px solid #edebe9;
+  border-radius: 6px;
+  padding: 16px;
+  font-family: monospace;
+  font-size: 13px;
+  color: #323130;
+  overflow-x: auto;
+  max-height: 400px;
+  margin: 0;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .keysList {
+    grid-template-columns: 1fr;
+  }
+
+  .searchBar {
+    flex-direction: column;
+  }
+}

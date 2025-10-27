@@ -524,10 +524,76 @@ export const fetchFollowedChannels = async (
   - YouTube: `youtube.readonly`
   - Twitch: `user:read:follows`, `chat:read`, `chat:edit`
 
+#### CSRF対策（State パラメータ）
+OAuth 2.0フローでは、CSRF攻撃を防ぐために`state`パラメータを使用：
+
+**実装**: `server/src/routes/auth.ts`
+
+```typescript
+// Google OAuth
+authRouter.get('/google', (req, res) => {
+  const state = createState(); // ランダムな文字列生成
+  req.session.oauthState = state; // セッションに保存
+  const url = buildGoogleAuthUrl(state);
+  res.redirect(url);
+});
+
+authRouter.get('/google/callback', async (req, res) => {
+  const { code, state, error } = req.query;
+
+  // state検証
+  if (!state || typeof state !== 'string') {
+    return res.status(400).json({ error: 'Missing state' });
+  }
+  if (!req.session.oauthState || req.session.oauthState !== state) {
+    return res.status(400).json({ error: 'Invalid state' });
+  }
+
+  // state検証成功後、トークン交換処理
+  // ...
+});
+```
+
+**セキュリティポイント**:
+- ✅ 認証リクエストごとに一意な`state`を生成
+- ✅ セッションに保存して、コールバック時に検証
+- ✅ `state`不一致の場合はエラーを返す（CSRF攻撃を防止）
+- ✅ Twitch OAuthでも同様の実装（`twitchOauthState`）
+
+#### 認証完了画面のセキュリティ
+`/auth/success`エンドポイントは認証完了後にユーザーに表示される画面で、以下のセキュリティ考慮事項があります：
+
+**ポップアップウィンドウ判定**:
+```javascript
+// window.openerの存在確認
+if (window.opener) {
+  // ポップアップウィンドウの場合: 自動クローズ
+  window.close();
+} else {
+  // 通常ウィンドウの場合: リダイレクト
+  window.location.href = 'http://localhost:5173/';
+}
+```
+
+**セキュリティポイント**:
+- ✅ `window.opener`による安全なウィンドウ種別判定
+- ✅ ポップアップブロッカー対策（ユーザーアクションでウィンドウを開く）
+- ✅ XSSリスク軽減（インラインJavaScriptは最小限）
+- ⚠️ `window.opener`アクセスによるタブナビゲーションリスク（将来的に`rel="noopener"`を検討）
+
+**推奨改善**:
+- OAuth認証ウィンドウを開く際に`rel="noopener"`を追加
+- Content Security Policy (CSP)の設定
+- 認証完了画面のHTMLをテンプレートエンジンで管理
+
 #### アクセストークン管理
 - **保存場所**: サーバーサイドセッション（express-session）
 - **フロントエンド**: トークン非公開（セッションCookieのみ）
 - **TokenStorage**: sessionID → トークンのマッピング（メモリ内）
+- **トークンリフレッシュ**:
+  - Google: `ensureGoogleAccessToken()`で自動リフレッシュ
+  - Twitch: `ensureTwitchAccessToken()`で自動リフレッシュ
+  - 期限切れ30秒前に自動更新
 
 ### 2.5.2 Webhook署名検証
 

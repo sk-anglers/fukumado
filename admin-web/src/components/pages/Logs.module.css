@@ -1,0 +1,473 @@
+.container {
+  padding: 24px;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #323130;
+  margin: 0;
+}
+
+.refreshButton {
+  padding: 10px 20px;
+  background: #3498DB;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.refreshButton:hover {
+  background: #0078C4;
+}
+
+/* サマリー */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summaryCard {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.summaryLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #605e5c;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summaryValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: #323130;
+  margin-bottom: 4px;
+}
+
+.summarySubtext {
+  font-size: 13px;
+  color: #8a8886;
+}
+
+/* タブ */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #edebe9;
+}
+
+.tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #605e5c;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #323130;
+  background: #F9F9F9;
+}
+
+.activeTab {
+  color: #3498DB;
+  border-bottom-color: #3498DB;
+}
+
+/* フィルター */
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.filters select,
+.filters input {
+  padding: 8px 12px;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.clearButton {
+  padding: 8px 16px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+  margin-left: auto;
+}
+
+.clearButton:hover {
+  background: #c0392b;
+}
+
+/* ログセクション */
+.logsSection {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 8px;
+  padding: 24px;
+  min-height: 400px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.loading,
+.error,
+.noData {
+  padding: 60px 20px;
+  text-align: center;
+  font-size: 16px;
+  color: #605e5c;
+}
+
+.error {
+  color: #e74c3c;
+}
+
+/* テーブル（アクセスログ） */
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table thead {
+  background: #F3F2F1;
+  border-bottom: 2px solid #edebe9;
+}
+
+.table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #323130;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #edebe9;
+}
+
+.table tbody tr:hover {
+  background: #F9F9F9;
+}
+
+.monospace {
+  font-family: monospace;
+  font-size: 13px;
+  color: #605e5c;
+}
+
+.method {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #3498DB;
+  color: white;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.path {
+  font-family: monospace;
+  font-size: 13px;
+  color: #323130;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status2 {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status3 {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status4 {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status5 {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* エラーログ */
+.errorLogs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.errorLogCard {
+  background: #F9F9F9;
+  border: 1px solid #edebe9;
+  border-left: 4px solid #e74c3c;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.errorLogHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.errorLevel {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.errorLevel.error {
+  background: #e74c3c;
+  color: white;
+}
+
+.errorLevel.warn {
+  background: #f39c12;
+  color: white;
+}
+
+.errorTime {
+  font-size: 12px;
+  color: #8a8886;
+}
+
+.errorMessage {
+  font-size: 14px;
+  color: #323130;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.errorContext {
+  margin-top: 12px;
+}
+
+.errorContext pre {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 12px;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* セキュリティログ */
+.securityLogs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.securityLogCard {
+  background: #F9F9F9;
+  border: 1px solid #edebe9;
+  border-left: 4px solid #e67e22;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.securityLogHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.securityType {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.securityType.block {
+  background: #e74c3c;
+  color: white;
+}
+
+.securityType.rate_limit {
+  background: #f39c12;
+  color: white;
+}
+
+.securityType.anomaly {
+  background: #9b59b6;
+  color: white;
+}
+
+.securityType.auth_failed {
+  background: #e67e22;
+  color: white;
+}
+
+.securityTime {
+  font-size: 12px;
+  color: #8a8886;
+}
+
+.securityInfo {
+  font-size: 14px;
+  color: #323130;
+  line-height: 1.6;
+}
+
+.securityInfo div {
+  margin-bottom: 4px;
+}
+
+.securityMetadata {
+  margin-top: 12px;
+}
+
+.securityMetadata pre {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 12px;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* ページネーション */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #edebe9;
+}
+
+.paginationButton {
+  padding: 8px 16px;
+  background: #3498DB;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.paginationButton:hover:not(:disabled) {
+  background: #0078C4;
+}
+
+.paginationButton:disabled {
+  background: #EEEEEE;
+  color: #8a8886;
+  cursor: not-allowed;
+}
+
+.paginationInfo {
+  font-size: 14px;
+  color: #605e5c;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters {
+    flex-direction: column;
+  }
+
+  .filters select,
+  .filters input {
+    width: 100%;
+  }
+
+  .clearButton {
+    margin-left: 0;
+  }
+
+  .tableContainer {
+    overflow-x: scroll;
+  }
+
+  .table {
+    min-width: 800px;
+  }
+}

@@ -39,3 +39,28 @@ streamsRouter.get('/cached', async (req, res) => {
     res.status(500).json({ error: message });
   }
 });
+
+/**
+ * 配信の詳細情報を取得（管理画面用）
+ */
+streamsRouter.get('/details', async (req, res) => {
+  try {
+    const stats = streamSyncService.getStats();
+    const cached = await streamSyncService.getCachedStreams();
+
+    res.json({
+      stats: {
+        isRunning: stats.isRunning,
+        userCount: stats.userCount,
+        youtubeStreamCount: stats.youtubeStreamCount,
+        twitchStreamCount: stats.twitchStreamCount,
+        totalStreamCount: stats.youtubeStreamCount + stats.twitchStreamCount
+      },
+      streams: cached || { youtube: [], twitch: [] },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: message });
+  }
+});

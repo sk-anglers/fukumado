@@ -6,6 +6,8 @@
   overflow: visible;
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   display: flex;
+  contain: layout style;
+  will-change: transform;
 }
 
 .empty:hover {
@@ -124,7 +126,8 @@
 }
 
 .placeholder {
-  position: relative;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: flex;

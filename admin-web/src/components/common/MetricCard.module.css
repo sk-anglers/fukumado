@@ -1,0 +1,79 @@
+.metricCard {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 180px;
+  transition: all 0.2s ease;
+}
+
+.metricCard:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Status variants */
+.normal {
+  border-left: 4px solid #3498DB;
+}
+
+.warning {
+  border-left: 4px solid #ffb900;
+  background: #fff8e1;
+}
+
+.critical {
+  border-left: 4px solid #d13438;
+  background: #ffebee;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.icon {
+  font-size: 20px;
+}
+
+.label {
+  font-size: 13px;
+  color: #605e5c;
+  font-weight: 500;
+}
+
+.valueContainer {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #323130;
+  line-height: 1;
+}
+
+.unit {
+  font-size: 14px;
+  color: #605e5c;
+}
+
+.trend {
+  font-size: 18px;
+  margin-left: auto;
+}
+
+.trend-up {
+  color: #107c10;
+}
+
+.trend-down {
+  color: #d13438;
+}
+
+.trend-neutral {
+  color: #605e5c;
+}

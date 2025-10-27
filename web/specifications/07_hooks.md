@@ -251,7 +251,102 @@ useEffect(() => {
 }, []);
 ```
 
-## 7.10 フック設計のベストプラクティス
+## 7.10 useMediaQuery (src/hooks/useMediaQuery.ts)
+
+メディアクエリの状態を監視するカスタムフック。レスポンシブデザインに使用。
+
+### 引数
+```typescript
+function useMediaQuery(query: string): boolean
+```
+
+- `query`: メディアクエリ文字列（例: `'(max-width: 768px)'`）
+
+### 戻り値
+- `boolean`: クエリがマッチする場合は`true`
+
+### 処理
+1. `window.matchMedia(query)` でMediaQueryListを取得
+2. `matches`プロパティで現在の状態を取得
+3. `change`イベントをリスンして状態を更新
+
+### ヘルパーフック
+```typescript
+export const useIsMobile = (): boolean => useMediaQuery('(max-width: 768px)');
+export const useIsTablet = (): boolean => useMediaQuery('(min-width: 769px) and (max-width: 1200px)');
+export const useIsDesktop = (): boolean => useMediaQuery('(min-width: 1201px)');
+```
+
+### 使用例
+```typescript
+const isMobile = useIsMobile();
+
+if (isMobile) {
+  // モバイル専用UI
+  return <MobileLayout />;
+}
+```
+
+### 依存
+- なし（標準Web API使用）
+
+## 7.11 useStreamUpdates (src/hooks/useStreamUpdates.ts)
+
+WebSocket経由で配信リスト更新を受信するフック。バックエンドのStreamSyncServiceと連携。
+
+### 引数
+```typescript
+function useStreamUpdates(
+  youtubeChannelIds: string[] = [],
+  twitchChannelIds: string[] = []
+): void
+```
+
+### 処理
+1. **WebSocket接続**: グローバルシングルトンのwebsocketServiceを使用
+2. **メッセージハンドラー登録**: `stream_list_updated`メッセージを受信
+3. **データ変換**: プラットフォーム別にStreamer型に変換
+4. **ストア更新**: layoutStore.setAvailableStreamsForPlatformで配信リストを更新
+5. **通知生成**: 初回ロード以降、新規配信を検出してnotificationStoreに追加
+6. **購読送信**: チャンネルまたはsessionIdが変更されたら`subscribe_streams`メッセージを送信
+
+### WebSocketメッセージ形式
+#### 送信: subscribe_streams
+```typescript
+{
+  type: 'subscribe_streams',
+  youtubeChannels: string[],
+  twitchChannels: string[],
+  sessionId: string
+}
+```
+
+#### 受信: stream_list_updated
+```typescript
+{
+  type: 'stream_list_updated',
+  platform: 'youtube' | 'twitch',
+  streams: any[],
+  changes: {
+    added: string[],
+    removed: string[]
+  }
+}
+```
+
+### 依存
+- layoutStore
+- notificationStore
+- syncStore
+- authStore（sessionId取得）
+- websocketService
+
+### 重要な仕様
+- **初回ロードスキップ**: 初回ロード時は通知を生成しない
+- **重複購読防止**: チャンネルとsessionIdが同じ場合は再送信しない
+- **グローバル接続**: WebSocket接続はグローバルで1つのみ（複数フック間で共有）
+
+## 7.12 フック設計のベストプラクティス
 
 ### 単一責任の原則
 各フックは1つの明確な責務を持ちます。

@@ -1,5 +1,7 @@
 ﻿import { request } from 'undici';
 import { ensureTwitchOAuthConfig } from '../config/env';
+import { emoteCacheService } from './emoteCacheService';
+import { followedChannelsCacheService } from './followedChannelsCacheService';
 
 const TWITCH_BASE = 'https://api.twitch.tv/helix';
 
@@ -99,7 +101,14 @@ export const fetchFollowedChannels = async (
   accessToken: string,
   userId: string
 ): Promise<TwitchChannelInfo[]> => {
-  console.log('[Twitch Service] Fetching followed channels for user:', userId);
+  // キャッシュチェック
+  const cached = followedChannelsCacheService.getFollowedChannels(userId);
+  if (cached) {
+    console.log('[Twitch Service] Returning cached followed channels for user:', userId);
+    return cached;
+  }
+
+  console.log('[Twitch Service] Fetching followed channels from API for user:', userId);
   const headers = buildHeaders(accessToken);
   const allChannels: TwitchChannelInfo[] = [];
   let cursor: string | undefined = undefined;
@@ -162,6 +171,10 @@ export const fetchFollowedChannels = async (
   } while (cursor);
 
   console.log(`[Twitch Service] Finished fetching all ${allChannels.length} channels in ${pageCount} pages`);
+
+  // キャッシュに保存
+  followedChannelsCacheService.setFollowedChannels(userId, allChannels);
+
   return allChannels;
 };
 
@@ -272,7 +285,14 @@ export const searchChannels = async (
 export const fetchGlobalEmotes = async (
   accessToken: string
 ): Promise<TwitchEmoteInfo[]> => {
-  console.log('[Twitch Service] Fetching global emotes');
+  // キャッシュチェック
+  const cached = emoteCacheService.getGlobalEmotes();
+  if (cached) {
+    console.log('[Twitch Service] Returning cached global emotes');
+    return cached;
+  }
+
+  console.log('[Twitch Service] Fetching global emotes from API');
   const headers = buildHeaders(accessToken);
 
   const response = await request(`${TWITCH_BASE}/chat/emotes/global`, {
@@ -287,9 +307,9 @@ export const fetchGlobalEmotes = async (
   }
 
   const data = (await response.body.json()) as TwitchApiResponse<TwitchEmote>;
-  console.log(`[Twitch Service] Fetched ${data.data.length} global emotes`);
+  console.log(`[Twitch Service] Fetched ${data.data.length} global emotes from API`);
 
-  return data.data.map((item) => ({
+  const emotes = data.data.map((item) => ({
     id: item.id,
     name: item.name,
     imageUrl: item.images.url_1x,
@@ -297,13 +317,25 @@ export const fetchGlobalEmotes = async (
     emoteSetId: item.emote_set_id,
     ownerId: item.owner_id
   }));
+
+  // キャッシュに保存
+  emoteCacheService.setGlobalEmotes(emotes);
+
+  return emotes;
 };
 
 export const fetchChannelEmotes = async (
   accessToken: string,
   broadcasterId: string
 ): Promise<TwitchEmoteInfo[]> => {
-  console.log('[Twitch Service] Fetching channel emotes for broadcaster:', broadcasterId);
+  // キャッシュチェック
+  const cached = emoteCacheService.getChannelEmotes(broadcasterId);
+  if (cached) {
+    console.log('[Twitch Service] Returning cached channel emotes for broadcaster:', broadcasterId);
+    return cached;
+  }
+
+  console.log('[Twitch Service] Fetching channel emotes from API for broadcaster:', broadcasterId);
   const headers = buildHeaders(accessToken);
   const params = new URLSearchParams({
     broadcaster_id: broadcasterId
@@ -321,9 +353,9 @@ export const fetchChannelEmotes = async (
   }
 
   const data = (await response.body.json()) as TwitchApiResponse<TwitchEmote>;
-  console.log(`[Twitch Service] Fetched ${data.data.length} channel emotes`);
+  console.log(`[Twitch Service] Fetched ${data.data.length} channel emotes from API`);
 
-  return data.data.map((item) => ({
+  const emotes = data.data.map((item) => ({
     id: item.id,
     name: item.name,
     imageUrl: item.images.url_1x,
@@ -331,4 +363,9 @@ export const fetchChannelEmotes = async (
     emoteSetId: item.emote_set_id,
     ownerId: item.owner_id
   }));
+
+  // キャッシュに保存
+  emoteCacheService.setChannelEmotes(broadcasterId, emotes);
+
+  return emotes;
 };

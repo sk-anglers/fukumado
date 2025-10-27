@@ -3,21 +3,23 @@ import { ensureTwitchAccessToken } from './auth';
 import { fetchFollowedChannels, fetchLiveStreams, searchChannels, fetchGlobalEmotes, fetchChannelEmotes } from '../services/twitchService';
 import { twitchChatService } from '../services/twitchChatService';
 import { twitchEventSubService } from '../services/twitchEventSubService';
+import { twitchEventSubManager } from '../services/twitchEventSubManager';
 import { twitchEventSubWebhookService } from '../services/twitchEventSubWebhookService';
-import { tokenStorage } from '../services/streamSyncService';
+import { tokenStorage, streamSyncService } from '../services/streamSyncService';
+import { priorityManager } from '../services/priorityManager';
+import { dynamicChannelAllocator } from '../services/dynamicChannelAllocator';
+import { followedChannelsCacheService } from '../services/followedChannelsCacheService';
 import { env } from '../config/env';
 
 export const twitchRouter = Router();
 
-// 配信情報のキャッシュ（60秒TTL）
+// チャンネル検索キャッシュ（5分TTL）
 interface CacheEntry {
   data: any;
   timestamp: number;
 }
 
-const liveStreamsCache = new Map<string, CacheEntry>();
 const channelSearchCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 60000; // 60秒
 const SEARCH_CACHE_TTL_MS = 300000; // 5分
 
 twitchRouter.get('/subscriptions', async (req, res) => {
@@ -26,6 +28,12 @@ twitchRouter.get('/subscriptions', async (req, res) => {
     const user = req.session.twitchUser;
     if (!accessToken || !user) {
       return res.status(401).json({ error: 'Twitch authentication required' });
+    }
+
+    // refresh=true の場合はキャッシュを無効化
+    if (req.query.refresh === 'true') {
+      followedChannelsCacheService.invalidateUser(user.id);
+      console.log('[Twitch Subscriptions] Cache invalidated for user:', user.id);
     }
 
     // チャットサービスに認証情報を設定（バッジ取得のため）
@@ -60,37 +68,27 @@ twitchRouter.get('/live', async (req, res) => {
         ? [String(channelIdsParam)]
         : [];
 
-    // キャッシュキーを生成（チャンネルIDをソートして結合）
-    const cacheKey = [...channelIds].sort().join(',');
-    const now = Date.now();
+    // チャンネルIDが指定されていない場合、StreamSyncServiceのキャッシュから返す
+    if (channelIds.length === 0) {
+      console.log('[Twitch API] No channelId specified, trying cache...');
+      const cached = await streamSyncService.getCachedStreams();
 
-    // キャッシュチェック
-    const cached = liveStreamsCache.get(cacheKey);
-    if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-      const remainingTtl = Math.ceil((CACHE_TTL_MS - (now - cached.timestamp)) / 1000);
-      console.log(`[Twitch API Cache] キャッシュヒット (TTL残り: ${remainingTtl}秒)`);
-      return res.json(cached.data);
-    }
-
-    // キャッシュミス - APIから取得
-    console.log('[Twitch API Cache] キャッシュミス - APIから取得します');
-    const streams = await fetchLiveStreams(accessToken, channelIds);
-    const responseData = { items: streams };
-
-    // キャッシュに保存
-    liveStreamsCache.set(cacheKey, {
-      data: responseData,
-      timestamp: now
-    });
-
-    // 古いキャッシュエントリを削除（メモリリーク対策）
-    for (const [key, entry] of liveStreamsCache.entries()) {
-      if (now - entry.timestamp >= CACHE_TTL_MS) {
-        liveStreamsCache.delete(key);
+      if (cached && cached.twitch) {
+        console.log(`[Twitch API] Returning ${cached.twitch.length} cached streams`);
+        return res.json({ items: cached.twitch });
       }
+
+      // キャッシュがない場合はエラー
+      console.log('[Twitch API] No cache available');
+      return res.status(400).json({
+        error: 'Either "channelId" (can be multiple) must be provided or StreamSync must be running.'
+      });
     }
 
-    res.json(responseData);
+    // チャンネルIDが指定されている場合は直接API呼び出し
+    console.log('[Twitch API] Fetching from Twitch API...');
+    const streams = await fetchLiveStreams(accessToken, channelIds);
+    res.json({ items: streams });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ error: message });
@@ -236,14 +234,26 @@ twitchRouter.post('/eventsub/connect', async (req, res) => {
 
     // 認証情報を設定
     twitchChatService.setCredentials(accessToken, user.login);
-    twitchEventSubService.setCredentials(accessToken, env.twitch.clientId);
 
-    // EventSubに接続
-    await twitchEventSubService.connect();
+    // 新: EventSubManager（3本接続）を使用
+    twitchEventSubManager.setCredentials(accessToken, env.twitch.clientId);
 
-    res.json({ success: true, message: 'EventSub connected' });
+    // DynamicChannelAllocatorに認証情報を設定
+    dynamicChannelAllocator.setTwitchCredentials(accessToken, env.twitch.clientId);
+
+    // EventSubに接続（全ての接続を開始）
+    await twitchEventSubManager.connectAll();
+
+    // 統計情報を取得
+    const stats = twitchEventSubManager.getStats();
+
+    res.json({
+      success: true,
+      message: 'EventSub Manager connected with 3 connections',
+      stats
+    });
   } catch (error) {
-    console.error('[Twitch EventSub] Connection error:', error);
+    console.error('[Twitch EventSub Manager] Connection error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ error: message });
   }
@@ -262,22 +272,38 @@ twitchRouter.post('/eventsub/subscribe', async (req, res) => {
       return res.status(400).json({ error: 'userIds must be an array' });
     }
 
-    await twitchEventSubService.subscribeToUsers(userIds);
+    // 新: EventSubManager（3本接続）を使用
+    await twitchEventSubManager.subscribeToUsers(userIds);
 
-    res.json({ success: true, subscribedCount: userIds.length });
+    // 統計情報を取得
+    const stats = twitchEventSubManager.getStats();
+    const capacity = twitchEventSubManager.getCapacity();
+
+    res.json({
+      success: true,
+      subscribedCount: userIds.length,
+      stats,
+      capacity
+    });
   } catch (error) {
-    console.error('[Twitch EventSub] Subscribe error:', error);
+    console.error('[Twitch EventSub Manager] Subscribe error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ error: message });
   }
 });
 
 twitchRouter.get('/eventsub/status', (req, res) => {
-  const subscribedUserIds = twitchEventSubService.getSubscribedUserIds();
+  // 新: EventSubManager（3本接続）の統計情報を取得
+  const stats = twitchEventSubManager.getStats();
+  const capacity = twitchEventSubManager.getCapacity();
+  const subscribedUserIds = twitchEventSubManager.getSubscribedUserIds();
+
   res.json({
-    connected: subscribedUserIds.length > 0,
+    connected: stats.activeConnections > 0,
     subscribedCount: subscribedUserIds.length,
-    subscribedUserIds
+    subscribedUserIds,
+    stats,
+    capacity
   });
 });
 
@@ -309,6 +335,9 @@ twitchRouter.post('/eventsub/webhook/connect', async (req, res) => {
       env.twitch.webhookSecret,
       env.twitch.webhookUrl
     );
+
+    // DynamicChannelAllocatorでWebhookフォールバックを有効化
+    dynamicChannelAllocator.enableWebhook(env.twitch.webhookUrl, env.twitch.webhookSecret);
 
     res.json({ success: true, message: 'EventSub Webhook configured' });
   } catch (error) {
@@ -393,5 +422,160 @@ twitchRouter.post('/webhooks/twitch', (req, res) => {
     default:
       console.log(`[Twitch Webhook] Unknown message type: ${messageType}`);
       return res.status(200).json({ success: true });
+  }
+});
+
+// ========================================
+// 優先度管理エンドポイント
+// ========================================
+
+/**
+ * 優先度統計情報を取得
+ * GET /api/twitch/priority/status
+ */
+twitchRouter.get('/priority/status', (req, res) => {
+  try {
+    const stats = priorityManager.getStats();
+    const classification = streamSyncService.getChannelClassification();
+
+    res.json({
+      success: true,
+      stats,
+      classification,
+      summary: {
+        totalChannels: stats.totalChannels,
+        realtimeChannels: stats.realtimeChannels,
+        delayedChannels: stats.delayedChannels,
+        totalUsers: stats.totalUsers,
+        realtimePercentage: stats.totalChannels > 0
+          ? ((stats.realtimeChannels / stats.totalChannels) * 100).toFixed(1)
+          : '0.0',
+        delayedPercentage: stats.totalChannels > 0
+          ? ((stats.delayedChannels / stats.totalChannels) * 100).toFixed(1)
+          : '0.0'
+      }
+    });
+  } catch (error) {
+    console.error('[Priority] Error getting status:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * 優先度を手動で再計算（デバッグ用）
+ * POST /api/twitch/priority/recalculate
+ */
+twitchRouter.post('/priority/recalculate', (req, res) => {
+  try {
+    console.log('[Priority] Manual recalculation requested');
+
+    // 現在の統計情報を取得
+    const beforeStats = priorityManager.getStats();
+
+    // 優先度を再計算（PriorityManagerは自動的に再計算するので、統計情報を取得するだけ）
+    const afterStats = priorityManager.getStats();
+
+    res.json({
+      success: true,
+      message: 'Priority recalculated',
+      before: beforeStats,
+      after: afterStats
+    });
+  } catch (error) {
+    console.error('[Priority] Error recalculating:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: message });
+  }
+});
+
+// ========================================
+// 動的チャンネル割り当てエンドポイント
+// ========================================
+
+/**
+ * チャンネル割り当て状況を取得
+ * GET /api/twitch/allocation/status
+ */
+twitchRouter.get('/allocation/status', (req, res) => {
+  try {
+    const stats = dynamicChannelAllocator.getStats();
+    const eventSubCapacity = stats.eventSubCapacity;
+
+    res.json({
+      success: true,
+      stats,
+      summary: {
+        totalChannels: stats.total,
+        eventSubChannels: stats.byMethod.eventsub,
+        webhookChannels: stats.byMethod.webhook,
+        pollingChannels: stats.byMethod.polling,
+        realtimeChannels: stats.byPriority.realtime,
+        delayedChannels: stats.byPriority.delayed,
+        eventSubCapacity: {
+          used: eventSubCapacity.used,
+          total: eventSubCapacity.total,
+          available: eventSubCapacity.available,
+          percentage: eventSubCapacity.percentage.toFixed(1) + '%'
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[Allocation] Error getting status:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * チャンネル割り当てを手動でリバランス
+ * POST /api/twitch/allocation/rebalance
+ */
+twitchRouter.post('/allocation/rebalance', async (req, res) => {
+  try {
+    console.log('[Allocation] Manual rebalance requested');
+
+    await dynamicChannelAllocator.rebalance();
+
+    const stats = dynamicChannelAllocator.getStats();
+
+    res.json({
+      success: true,
+      message: 'Channel allocation rebalanced',
+      stats
+    });
+  } catch (error) {
+    console.error('[Allocation] Error rebalancing:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * 特定チャンネルの割り当て情報を取得
+ * GET /api/twitch/allocation/:platform/:channelId
+ */
+twitchRouter.get('/allocation/:platform/:channelId', (req, res) => {
+  try {
+    const { platform, channelId } = req.params;
+
+    if (platform !== 'youtube' && platform !== 'twitch') {
+      return res.status(400).json({ error: 'Invalid platform. Must be "youtube" or "twitch"' });
+    }
+
+    const allocation = dynamicChannelAllocator.getAllocation(channelId, platform as 'youtube' | 'twitch');
+
+    if (!allocation) {
+      return res.status(404).json({ error: 'Channel not found in allocations' });
+    }
+
+    res.json({
+      success: true,
+      allocation
+    });
+  } catch (error) {
+    console.error('[Allocation] Error getting channel allocation:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: message });
   }
 });

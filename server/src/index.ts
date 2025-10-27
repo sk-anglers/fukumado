@@ -2,16 +2,46 @@ import express from 'express';
 import session from 'express-session';
 import cors from 'cors';
 import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { randomUUID } from 'crypto';
 import { env } from './config/env';
 import { authRouter } from './routes/auth';
 import { youtubeRouter } from './routes/youtube';
 import { twitchRouter } from './routes/twitch';
 import { streamsRouter } from './routes/streams';
+import { securityRouter } from './routes/security';
+import { consentRouter } from './routes/consent';
+import { legalRouter } from './routes/legal';
+import { maintenanceRouter } from './routes/maintenance';
+import { usersRouter } from './routes/users';
+import { logsRouter } from './routes/logs';
+import { eventsubRouter } from './routes/eventsub';
+import { cacheRouter } from './routes/cache';
 import { twitchChatService } from './services/twitchChatService';
 import { streamSyncService, tokenStorage } from './services/streamSyncService';
+import { fetchChannelEmotes } from './services/twitchService';
 import { twitchEventSubService } from './services/twitchEventSubService';
+import { twitchEventSubManager } from './services/twitchEventSubManager';
+import { twitchEventSubWebhookService } from './services/twitchEventSubWebhookService';
+import { priorityManager } from './services/priorityManager';
+import { dynamicChannelAllocator } from './services/dynamicChannelAllocator';
+import {
+  securityHeaders,
+  apiRateLimiter,
+  authRateLimiter,
+  checkBlockedIP,
+  validateRequestSize,
+} from './middleware/security';
+import { maintenanceMode } from './middleware/maintenanceMode';
+import {
+  wsConnectionManager,
+  validateWebSocketMessage,
+  wsHeartbeat,
+} from './middleware/websocketSecurity';
+import { requestLogger, recordAccessStats, SecurityLogger } from './middleware/logging';
+import { anomalyDetectionService } from './services/anomalyDetection';
+import { metricsCollector } from './services/metricsCollector';
+import { initializeSession, detectSessionHijacking, checkSessionTimeout, includeCSRFToken } from './middleware/sessionSecurity';
 
 const app = express();
 
@@ -27,7 +57,32 @@ app.use(
   })
 );
 
-app.use(express.json());
+// セキュリティミドルウェア
+app.use(securityHeaders); // セキュリティヘッダー
+app.use(checkBlockedIP); // IPブロックチェック
+app.use(validateRequestSize); // リクエストサイズ検証
+app.use(express.json({ limit: '10kb' })); // JSONパーサー（サイズ制限付き）
+
+// ロギングミドルウェア
+app.use(requestLogger); // HTTPリクエストログ
+app.use(recordAccessStats); // アクセス統計記録
+
+// 異常検知用のリクエスト記録 & メトリクス収集
+app.use((req, res, next) => {
+  const startTime = Date.now();
+
+  res.on('finish', () => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const duration = Date.now() - startTime;
+
+    // 異常検知サービスに記録
+    anomalyDetectionService.recordRequest(ip, req.path, res.statusCode);
+
+    // メトリクス収集
+    metricsCollector.recordHttpRequest(req.method, req.path, res.statusCode, duration);
+  });
+  next();
+});
 
 // セッションミドルウェア（WebSocketでも使用するためexport）
 const sessionMiddleware = session({
@@ -44,22 +99,41 @@ const sessionMiddleware = session({
 
 app.use(sessionMiddleware);
 
+// セッションセキュリティミドルウェア
+app.use(initializeSession); // セッション初期化
+app.use(detectSessionHijacking); // セッションハイジャック検出
+app.use(checkSessionTimeout(30)); // 30分のタイムアウト
+app.use(includeCSRFToken); // CSRFトークンをレスポンスに含める
+
+// メンテナンスモードチェック（/healthは除外される）
+app.use(maintenanceMode);
+
 app.get('/health', (_, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.use('/auth', authRouter);
+// 認証ルーター（厳しいレート制限）
+app.use('/auth', authRateLimiter, authRouter);
 
 // YouTube機能が有効な場合のみルーターを登録
 if (env.enableYoutube) {
-  app.use('/api/youtube', youtubeRouter);
+  app.use('/api/youtube', apiRateLimiter, youtubeRouter);
   console.log('[server] YouTube API enabled');
 } else {
   console.log('[server] YouTube API disabled');
 }
 
-app.use('/api/twitch', twitchRouter);
-app.use('/api/streams', streamsRouter);
+// APIルーター（レート制限付き）
+app.use('/api/twitch', apiRateLimiter, twitchRouter);
+app.use('/api/streams', apiRateLimiter, streamsRouter);
+app.use('/api/security', apiRateLimiter, securityRouter);
+app.use('/api/consent', apiRateLimiter, consentRouter);
+app.use('/api/legal', apiRateLimiter, legalRouter);
+app.use('/api/admin/maintenance', maintenanceRouter);
+app.use('/api/admin/users', usersRouter);
+app.use('/api/admin/logs', logsRouter);
+app.use('/api/admin/eventsub', eventsubRouter);
+app.use('/api/admin/cache', cacheRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);
@@ -84,8 +158,23 @@ interface ClientData {
 const clients = new Map<WebSocket, ClientData>();
 
 // EventSubイベントハンドラー（全クライアントに通知）
-twitchEventSubService.onStreamEvent((event) => {
-  console.log('[EventSub] Stream event received:', event);
+// 旧: 単一接続版（後方互換性のため保持）
+// twitchEventSubService.onStreamEvent((event) => {
+//   console.log('[EventSub] Stream event received:', event);
+//   const payload = JSON.stringify({
+//     type: 'eventsub_stream_event',
+//     event
+//   });
+//   clients.forEach((_, ws) => {
+//     if (ws.readyState === WebSocket.OPEN) {
+//       ws.send(payload);
+//     }
+//   });
+// });
+
+// 新: 3本接続版（EventSubManager使用）
+twitchEventSubManager.onStreamEvent((event) => {
+  console.log('[EventSub Manager] Stream event received:', event);
 
   // 全クライアントに通知
   const payload = JSON.stringify({
@@ -125,8 +214,72 @@ streamSyncService.onStreamUpdate((event) => {
   });
 });
 
+// PriorityManagerのイベントハンドラー（優先度変更を全クライアントに通知）
+priorityManager.onChange((event) => {
+  console.log('[PriorityManager] Priority change event:', {
+    toRealtime: event.changes.toRealtime.length,
+    toDelayed: event.changes.toDelayed.length,
+    timestamp: event.timestamp
+  });
+
+  // 優先度変更の詳細をログ出力
+  if (event.changes.toRealtime.length > 0) {
+    console.log('[PriorityManager] Channels upgraded to REALTIME:', event.changes.toRealtime);
+  }
+  if (event.changes.toDelayed.length > 0) {
+    console.log('[PriorityManager] Channels downgraded to DELAYED:', event.changes.toDelayed);
+  }
+
+  // 全クライアントに優先度変更を通知
+  const payload = JSON.stringify({
+    type: 'priority_changed',
+    changes: event.changes,
+    timestamp: event.timestamp
+  });
+
+  clients.forEach((_, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+    }
+  });
+});
+
+// Webhookサービスのイベントハンドラー（Webhook経由のイベントも全クライアントに通知）
+twitchEventSubWebhookService.onStreamEvent((event) => {
+  console.log('[EventSub Webhook] Stream event received:', event);
+
+  // 全クライアントに通知（EventSubManagerと同じ形式）
+  const payload = JSON.stringify({
+    type: 'eventsub_stream_event',
+    event
+  });
+
+  clients.forEach((_, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+    }
+  });
+});
+
 wss.on('connection', (ws, request) => {
+  const clientIP = request.socket.remoteAddress || 'unknown';
+  console.log(`[WebSocket] Client attempting connection from ${clientIP}`);
+
+  // セキュリティチェック：接続数制限
+  const canConnect = wsConnectionManager.canConnect(clientIP);
+  if (!canConnect.allowed) {
+    console.warn(`[WebSocket Security] Connection rejected: ${clientIP} - ${canConnect.reason}`);
+    ws.close(1008, canConnect.reason);
+    return;
+  }
+
+  // 接続を記録
+  wsConnectionManager.registerConnection(clientIP);
+  metricsCollector.recordWebSocketConnection(true); // メトリクス記録
   console.log('[WebSocket] Client connected');
+
+  // ハートビートを開始
+  wsHeartbeat.start(ws);
 
   // セッション情報を取得するためにミドルウェアを手動で適用
   const mockResponse = {
@@ -182,8 +335,27 @@ wss.on('connection', (ws, request) => {
 
   ws.on('message', async (data) => {
     try {
+      // レート制限チェック
+      const canSend = wsConnectionManager.canSendMessage(clientIP);
+      if (!canSend.allowed) {
+        console.warn(`[WebSocket Security] Message rate limit exceeded: ${clientIP}`);
+        ws.send(JSON.stringify({ type: 'error', error: canSend.reason }));
+        return;
+      }
+
       const payload = JSON.parse(data.toString());
       console.log('[WebSocket] Received message:', payload);
+
+      // メトリクス記録
+      metricsCollector.recordWebSocketMessage(payload.type || 'unknown', 'in');
+
+      // メッセージ検証
+      const validation = validateWebSocketMessage(payload);
+      if (!validation.valid) {
+        console.warn(`[WebSocket Security] Invalid message from ${clientIP}: ${validation.reason}`);
+        ws.send(JSON.stringify({ type: 'error', error: validation.reason }));
+        return;
+      }
 
       if (payload.type === 'subscribe') {
         // Twitchチャットチャンネル購読
@@ -218,6 +390,24 @@ wss.on('connection', (ws, request) => {
 
           clientData.channels = newChannels;
           console.log('[WebSocket] Client channels updated:', Array.from(clientData.channels));
+
+          // チャンネルエモートの先読み（非同期、ノンブロッキング）
+          if (channelIdMapping && typeof channelIdMapping === 'object') {
+            const tokens = req.session?.twitchTokens;
+            if (tokens?.accessToken) {
+              Object.values(channelIdMapping).forEach((channelId) => {
+                if (channelId && typeof channelId === 'string') {
+                  fetchChannelEmotes(tokens.accessToken, channelId)
+                    .then(() => {
+                      console.log(`[WebSocket] Channel emotes preloaded for ${channelId}`);
+                    })
+                    .catch((error) => {
+                      console.error(`[WebSocket] Failed to preload emotes for ${channelId}:`, error.message);
+                    });
+                }
+              });
+            }
+          }
         }
       } else if (payload.type === 'subscribe_streams') {
         // 配信リスト同期のためのフォローチャンネル登録
@@ -271,7 +461,14 @@ wss.on('connection', (ws, request) => {
   });
 
   ws.on('close', async () => {
-    console.log('[WebSocket] Client disconnected');
+    console.log(`[WebSocket] Client disconnected: ${clientIP}`);
+
+    // ハートビートを停止
+    wsHeartbeat.stop(ws);
+
+    // 接続を解除
+    wsConnectionManager.unregisterConnection(clientIP);
+    metricsCollector.recordWebSocketConnection(false); // メトリクス記録
 
     // クリーンアップ
     if (clientData.cleanup) {
@@ -309,8 +506,35 @@ wss.on('connection', (ws, request) => {
   }); // sessionMiddlewareコールバックの終了
 });
 
-server.listen(env.port, () => {
+server.listen(env.port, async () => {
   // eslint-disable-next-line no-console
   console.log(`[server] listening on http://localhost:${env.port}`);
   console.log('[server] StreamSyncService will start automatically when clients connect');
+
+  // EventSubが有効な場合、EventSubManagerを初期化
+  if (env.enableEventSub) {
+    console.log('[server] EventSub is enabled, initializing EventSubManager...');
+    try {
+      const { getTwitchAppAccessToken } = await import('./services/twitchAppAuth');
+      const appAccessToken = await getTwitchAppAccessToken();
+      const clientId = env.twitch.clientId;
+
+      if (!clientId) {
+        throw new Error('Twitch Client ID is not configured');
+      }
+
+      // EventSubManagerに認証情報を設定
+      twitchEventSubManager.setCredentials(appAccessToken, clientId);
+
+      // 全ての接続を確立
+      await twitchEventSubManager.connectAll();
+
+      console.log('[server] EventSubManager initialized and connected successfully');
+    } catch (error) {
+      console.error('[server] Failed to initialize EventSubManager:', error);
+      console.error('[server] EventSub features will not be available');
+    }
+  } else {
+    console.log('[server] EventSub is disabled');
+  }
 });

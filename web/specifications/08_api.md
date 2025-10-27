@@ -63,6 +63,60 @@ Twitch OAuth2認証開始（リダイレクト）。
 ### GET `/auth/twitch/logout`
 Twitchログアウト。
 
+### GET `/auth/success`
+OAuth認証完了画面を表示。
+
+**機能**:
+- Google/Twitch OAuth認証完了後にリダイレクトされるエンドポイント
+- ポップアップウィンドウで開かれた場合は自動的にウィンドウを閉じる
+- 通常のウィンドウで開かれた場合はフロントエンド（`http://localhost:5173/`）にリダイレクト
+
+**動作フロー**:
+1. 認証成功後、`/auth/google/callback`または`/auth/twitch/callback`から`/auth/success`にリダイレクト
+2. 認証完了画面（HTML）を表示
+   - ✅アイコン
+   - 「認証が完了しました」メッセージ
+   - 「アプリに戻る」ボタン
+3. JavaScriptで`window.opener`の存在を確認
+   - **ポップアップウィンドウの場合**:
+     - 3秒後に`window.close()`でウィンドウを自動クローズ
+     - 「アプリに戻る」ボタンクリック時も`window.close()`を実行
+   - **通常ウィンドウの場合**:
+     - 3秒後に`http://localhost:5173/`へリダイレクト
+     - 「アプリに戻る」ボタンは通常のリンクとして機能
+
+**実装詳細**:
+```javascript
+setTimeout(function() {
+  // 別ウィンドウで開かれている場合は閉じる
+  if (window.opener) {
+    window.close();
+  } else {
+    // 同じウィンドウで開かれている場合はリダイレクト
+    window.location.href = 'http://localhost:5173/';
+  }
+}, 3000);
+
+// ボタンのクリック処理も同様に
+document.addEventListener('DOMContentLoaded', function() {
+  var link = document.querySelector('a');
+  if (link && window.opener) {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      window.close();
+    });
+  }
+});
+```
+
+**UI仕様**:
+- 背景色: `#0f172a` (ダークブルーグレー)
+- テキスト色: `#e2e8f0` (ライトグレー)
+- ボタン背景: `#38bdf8` (ライトブルー)
+- ボタンテキスト: `#0f172a` (ダーク)
+- フォント: `sans-serif`
+- レスポンシブ対応: `max-width: 500px`, `padding: 1rem`
+
 ## 8.2 YouTube API
 
 ### GET `/api/youtube/live`

@@ -412,7 +412,120 @@ interface ToastContainerProps {
 - 5秒後に自動消去
 - 閉じるボタン
 
-## 6.13 コンポーネント設計原則
+## 6.13 GlobalControls (src/components/GlobalControls/GlobalControls.tsx)
+
+レイアウトプリセット選択UI。
+
+### Props
+```typescript
+interface GlobalControlsProps {
+  onOpenPresetModal: () => void;
+}
+```
+
+### 機能
+- **プリセット切り替え**: twoByTwo / oneByTwo / focus
+- **プリセット編集**: モーダルを開く
+- シンプルなUIでレイアウト変更を提供
+
+## 6.14 ConsentManager (src/components/ConsentManager.tsx)
+
+利用規約・プライバシーポリシー・Cookie同意管理。
+
+### 機能
+- **同意状態チェック**: `/api/consent/status` で現在の同意状態を取得
+- **利用規約・プライバシーポリシー同意**: 初回訪問時にTermsAndPrivacyModalを表示
+- **Cookie同意**: 利用規約同意後にCookieConsentBannerを表示
+- **段階的同意**: 利用規約 → プライバシーポリシー → Cookie の順に同意を取得
+
+### 同意状態
+```typescript
+interface ConsentStatus {
+  hasAcceptedTerms: boolean;
+  hasAcceptedPrivacy: boolean;
+  essentialCookies: boolean;
+  analyticsCookies: boolean;
+  marketingCookies: boolean;
+  termsVersion: string | null;
+  privacyVersion: string | null;
+  lastUpdated: Date | null;
+}
+```
+
+## 6.15 CookieConsentBanner (src/components/CookieConsentBanner.tsx)
+
+Cookie同意バナー。
+
+### Props
+```typescript
+interface CookieConsentBannerProps {
+  onAccept: () => void;
+}
+```
+
+### 機能
+- **Cookie選択**: 必須Cookie（常時有効）、分析Cookie、マーケティングCookie
+- **全て受け入れる**: すべてのCookieを有効化
+- **カスタマイズ**: Cookie設定を個別に選択
+- **バックエンド連携**: `/api/consent/cookie` に選択を送信
+
+## 6.16 TermsAndPrivacyModal (src/components/TermsAndPrivacyModal.tsx)
+
+利用規約・プライバシーポリシー同意モーダル。
+
+### Props
+```typescript
+interface TermsAndPrivacyModalProps {
+  onAccept: () => void;
+}
+```
+
+### 機能
+- **2ステップ同意**:
+  1. 利用規約に同意
+  2. プライバシーポリシーに同意
+- **スクロール要求**: 全文をスクロールしないと同意ボタンが無効
+- **バックエンド連携**: `/api/consent/terms`, `/api/consent/privacy` に送信
+
+## 6.17 Legal (src/components/Legal/*)
+
+法的文書コンポーネント群。
+
+### LegalModal
+法的文書表示用モーダル。
+
+#### Props
+```typescript
+interface LegalModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  type: 'terms' | 'privacy';
+}
+```
+
+### TermsOfService
+利用規約の全文を表示。
+
+### PrivacyPolicy
+プライバシーポリシーの全文を表示。
+
+## 6.18 MaintenancePage (src/components/MaintenancePage/MaintenancePage.tsx)
+
+メンテナンスモード時の画面。
+
+### 機能
+- **メンテナンス情報表示**:
+  - メンテナンスメッセージ
+  - 開始日時
+  - 終了予定日時（設定されている場合）
+- **自動リフレッシュ**: 1分ごとにメンテナンス状態をチェック
+- **終了検知**: メンテナンスが終了したら自動的に通常画面にリダイレクト
+
+### データ取得
+- maintenanceStore から状態を取得
+- バックエンド `/api/admin/maintenance/status` から最新情報を取得
+
+## 6.19 コンポーネント設計原則
 
 ### 単一責任の原則
 各コンポーネントは1つの明確な責務を持ちます。

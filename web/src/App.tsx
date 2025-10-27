@@ -1,5 +1,7 @@
 ﻿import { useEffect, useRef, useMemo } from "react";
 import { AppShell } from "./components/AppShell/AppShell";
+import { ConsentManager } from "./components/ConsentManager";
+import { MaintenancePage } from "./components/MaintenancePage/MaintenancePage";
 import { useStreamUpdates } from "./hooks/useStreamUpdates";
 import { useTwitchChat } from "./hooks/useTwitchChat";
 import { useLayoutStore } from "./stores/layoutStore";
@@ -8,6 +10,7 @@ import { useAuthStatus } from "./hooks/useAuthStatus";
 import { useTwitchAuthStatus } from "./hooks/useTwitchAuthStatus";
 import { useAuthStore } from "./stores/authStore";
 import { useSyncStore } from "./stores/syncStore";
+import { useMaintenanceStore } from "./stores/maintenanceStore";
 import { apiFetch } from "./utils/api";
 import { config } from "./config";
 
@@ -24,6 +27,7 @@ function App(): JSX.Element {
   const twitchUser = useAuthStore((state) => state.twitchUser);
   const setSessionId = useAuthStore((state) => state.setSessionId);
   const triggerManualSync = useSyncStore((state) => state.triggerManualSync);
+  const maintenanceEnabled = useMaintenanceStore((state) => state.enabled);
 
   // メモ化してuseEffectの不要な再実行を防ぐ
   const followedChannelIds = useMemo(
@@ -260,7 +264,17 @@ function App(): JSX.Element {
     }
   }, [twitchAuthenticated]);
 
-  return <AppShell />;
+  // メンテナンス中の場合はメンテナンス画面を表示
+  if (maintenanceEnabled) {
+    return <MaintenancePage />;
+  }
+
+  return (
+    <>
+      <ConsentManager />
+      <AppShell />
+    </>
+  );
 }
 
 export default App;

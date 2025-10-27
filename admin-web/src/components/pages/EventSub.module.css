@@ -1,0 +1,293 @@
+.container {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #323130;
+  margin: 0;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 12px;
+}
+
+.twitchLoginButton,
+.refreshButton,
+.reconnectButton {
+  padding: 10px 20px;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.twitchLoginButton {
+  background: #6441a5;
+}
+
+.twitchLoginButton:hover {
+  background: #4b2e83;
+}
+
+.twitchStatus {
+  padding: 10px 20px;
+  background: #f0f0f0;
+  border: 1px solid #edebe9;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #323130;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refreshButton {
+  background: #3498DB;
+}
+
+.refreshButton:hover {
+  background: #0078C4;
+}
+
+.reconnectButton {
+  background: #9b59b6;
+}
+
+.reconnectButton:hover {
+  background: #8e44ad;
+}
+
+.loading,
+.error,
+.noData {
+  padding: 60px 20px;
+  text-align: center;
+  font-size: 16px;
+  color: #605e5c;
+}
+
+.error {
+  color: #e74c3c;
+}
+
+/* 統計カード */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.statCard {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.statLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #605e5c;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: #323130;
+  margin-bottom: 4px;
+}
+
+.statSubtext {
+  font-size: 13px;
+  color: #8a8886;
+}
+
+/* セクション */
+.section {
+  background: #FFFFFF;
+  border: 1px solid #edebe9;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0 0 16px 0;
+}
+
+/* 接続状況 */
+.connectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.connectionCard {
+  background: #F9F9F9;
+  border: 1px solid #edebe9;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.connectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edebe9;
+}
+
+.connectionIndex {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323130;
+}
+
+.connectionStatus {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.connectionStatus.connected {
+  background: #27ae60;
+  color: white;
+}
+
+.connectionStatus.connecting {
+  background: #f39c12;
+  color: white;
+}
+
+.connectionStatus.disconnected {
+  background: #95a5a6;
+  color: white;
+}
+
+.connectionStatus.error {
+  background: #e74c3c;
+  color: white;
+}
+
+.connectionStatus.reconnecting {
+  background: #3498db;
+  color: white;
+}
+
+.connectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.connectionStat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.connectionLabel {
+  color: #8a8886;
+  font-weight: 500;
+}
+
+.connectionValue {
+  color: #323130;
+  font-family: monospace;
+}
+
+/* 購読チャンネル */
+.channelList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.channelCard {
+  background: #F9F9F9;
+  border: 1px solid #edebe9;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow 0.2s;
+}
+
+.channelCard:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.channelId {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #323130;
+}
+
+.unsubscribeButton {
+  padding: 6px 12px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.unsubscribeButton:hover {
+  background: #c0392b;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .connectionsGrid,
+  .channelList {
+    grid-template-columns: 1fr;
+  }
+}

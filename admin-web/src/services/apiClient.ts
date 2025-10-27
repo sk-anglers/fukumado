@@ -1,0 +1,470 @@
+import {
+  ApiResponse,
+  SystemMetrics,
+  TwitchRateLimit,
+  YouTubeQuota,
+  SecurityMetrics,
+  MaintenanceStatus,
+  MainServiceSecurityStats,
+  MainServiceHealthCheck,
+  AnomalyAlertsResponse,
+  SessionStats,
+  WebSocketStats,
+  SecuritySummary,
+  StreamDetails,
+  SessionListResponse,
+  UserStats,
+  AccessLogEntry,
+  ErrorLogEntry,
+  SecurityLogEntry,
+  LogListResponse,
+  LogSummary,
+  EventSubStatsResponse,
+  EventSubSubscriptionsResponse,
+  CacheInfoResponse,
+  CacheKeysResponse,
+  CacheKeyValueResponse
+} from '../types';
+
+/**
+ * API基本設定
+ */
+const API_BASE_URL = '/admin/api';
+
+/**
+ * Basic認証のクレデンシャル
+ * 本番環境では環境変数から取得することを推奨
+ */
+let authCredentials: { username: string; password: string } | null = null;
+
+export const setAuthCredentials = (username: string, password: string) => {
+  authCredentials = { username, password };
+};
+
+/**
+ * Basic認証ヘッダーを生成
+ */
+const getAuthHeader = (): string => {
+  if (!authCredentials) {
+    throw new Error('Authentication credentials not set');
+  }
+
+  const { username, password } = authCredentials;
+  const encoded = btoa(`${username}:${password}`);
+  return `Basic ${encoded}`;
+};
+
+/**
+ * HTTP リクエストヘルパー
+ */
+async function fetchAPI<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+
+  // ヘルスチェック以外はBasic認証を付与
+  if (!endpoint.includes('/health')) {
+    headers['Authorization'] = getAuthHeader();
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      // 認証エラーイベントを発火してログアウトを促す
+      window.dispatchEvent(new Event('auth-error'));
+      throw new Error('Authentication failed');
+    }
+    if (response.status === 403) {
+      throw new Error('Access forbidden');
+    }
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  const data: ApiResponse<T> = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.error || 'API request failed');
+  }
+
+  return data.data as T;
+}
+
+/**
+ * ヘルスチェック
+ */
+export const getHealth = async (): Promise<{
+  status: string;
+  timestamp: string;
+  uptime: number;
+  redis: string;
+}> => {
+  return fetchAPI('/health');
+};
+
+/**
+ * システムメトリクス取得
+ */
+export const getSystemMetrics = async (): Promise<SystemMetrics> => {
+  return fetchAPI<SystemMetrics>('/metrics/system');
+};
+
+/**
+ * Twitch APIレート制限情報取得
+ */
+export const getTwitchRateLimit = async (): Promise<TwitchRateLimit> => {
+  return fetchAPI<TwitchRateLimit>('/metrics/api/twitch');
+};
+
+/**
+ * YouTube APIクォータ情報取得
+ */
+export const getYouTubeQuota = async (): Promise<YouTubeQuota> => {
+  return fetchAPI<YouTubeQuota>('/metrics/api/youtube');
+};
+
+/**
+ * セキュリティメトリクス取得
+ */
+export const getSecurityMetrics = async (): Promise<SecurityMetrics> => {
+  return fetchAPI<SecurityMetrics>('/security/metrics');
+};
+
+/**
+ * IPをブロック
+ */
+export const blockIP = async (
+  ip: string,
+  permanent: boolean = false,
+  reason?: string
+): Promise<void> => {
+  await fetchAPI('/security/block-ip', {
+    method: 'POST',
+    body: JSON.stringify({ ip, permanent, reason })
+  });
+};
+
+/**
+ * IPブロック解除
+ */
+export const unblockIP = async (ip: string): Promise<void> => {
+  await fetchAPI('/security/unblock-ip', {
+    method: 'POST',
+    body: JSON.stringify({ ip })
+  });
+};
+
+/**
+ * IPをホワイトリストに追加
+ */
+export const whitelistIP = async (ip: string): Promise<void> => {
+  await fetchAPI('/security/whitelist-ip', {
+    method: 'POST',
+    body: JSON.stringify({ ip })
+  });
+};
+
+/**
+ * メンテナンスモード状態取得
+ */
+export const getMaintenanceStatus = async (): Promise<MaintenanceStatus> => {
+  return fetchAPI<MaintenanceStatus>('/maintenance/status');
+};
+
+/**
+ * メンテナンスモード有効化
+ */
+export const enableMaintenance = async (
+  message: string,
+  generateBypass: boolean = false,
+  duration: number = 0
+): Promise<MaintenanceStatus> => {
+  return fetchAPI<MaintenanceStatus>('/maintenance/enable', {
+    method: 'POST',
+    body: JSON.stringify({ message, generateBypass, duration })
+  });
+};
+
+/**
+ * メンテナンスモード無効化
+ */
+export const disableMaintenance = async (): Promise<void> => {
+  await fetchAPI('/maintenance/disable', {
+    method: 'POST'
+  });
+};
+
+// ========================================
+// 本サービスのセキュリティAPI
+// ========================================
+
+/**
+ * 本サービスのセキュリティ統計取得
+ */
+export const getMainServiceStats = async (): Promise<MainServiceSecurityStats> => {
+  return fetchAPI<MainServiceSecurityStats>('/security/main-service/stats');
+};
+
+/**
+ * 本サービスのセキュリティヘルスチェック
+ */
+export const getMainServiceHealth = async (): Promise<MainServiceHealthCheck> => {
+  return fetchAPI<MainServiceHealthCheck>('/security/main-service/health');
+};
+
+/**
+ * 本サービスの異常検知アラート取得
+ */
+export const getMainServiceAlerts = async (limit: number = 50): Promise<AnomalyAlertsResponse> => {
+  return fetchAPI<AnomalyAlertsResponse>(`/security/main-service/alerts?limit=${limit}`);
+};
+
+/**
+ * 本サービスのセッション統計取得
+ */
+export const getMainServiceSessions = async (): Promise<SessionStats> => {
+  return fetchAPI<SessionStats>('/security/main-service/sessions');
+};
+
+/**
+ * 本サービスのWebSocket統計取得
+ */
+export const getMainServiceWebSocket = async (): Promise<WebSocketStats> => {
+  return fetchAPI<WebSocketStats>('/security/main-service/websocket');
+};
+
+/**
+ * 本サービスのセキュリティサマリー取得
+ */
+export const getMainServiceSummary = async (): Promise<SecuritySummary> => {
+  return fetchAPI<SecuritySummary>('/security/main-service/summary');
+};
+
+// ========================================
+// 配信管理API
+// ========================================
+
+/**
+ * 配信詳細情報取得
+ */
+export const getStreamDetails = async (): Promise<StreamDetails> => {
+  return fetchAPI<StreamDetails>('/streams/details');
+};
+
+/**
+ * 手動同期をトリガー
+ */
+export const triggerStreamSync = async (): Promise<void> => {
+  await fetchAPI('/streams/sync', {
+    method: 'POST'
+  });
+};
+
+// ========================================
+// ユーザー/セッション管理API
+// ========================================
+
+/**
+ * セッション一覧取得
+ */
+export const getUserSessions = async (): Promise<SessionListResponse> => {
+  return fetchAPI<SessionListResponse>('/users/sessions');
+};
+
+/**
+ * セッション強制終了
+ */
+export const destroySession = async (sessionId: string): Promise<void> => {
+  await fetchAPI(`/users/sessions/${sessionId}`, {
+    method: 'DELETE'
+  });
+};
+
+/**
+ * ユーザー統計取得
+ */
+export const getUserStats = async (): Promise<UserStats> => {
+  return fetchAPI<UserStats>('/users/stats');
+};
+
+// ========================================
+// ログ閲覧API
+// ========================================
+
+/**
+ * アクセスログ取得
+ */
+export const getAccessLogs = async (options: {
+  limit?: number;
+  offset?: number;
+  method?: string;
+  statusCode?: number;
+  searchPath?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<LogListResponse<AccessLogEntry>> => {
+  const params = new URLSearchParams();
+  if (options.limit) params.set('limit', options.limit.toString());
+  if (options.offset) params.set('offset', options.offset.toString());
+  if (options.method) params.set('method', options.method);
+  if (options.statusCode) params.set('statusCode', options.statusCode.toString());
+  if (options.searchPath) params.set('searchPath', options.searchPath);
+  if (options.startDate) params.set('startDate', options.startDate);
+  if (options.endDate) params.set('endDate', options.endDate);
+
+  return fetchAPI<LogListResponse<AccessLogEntry>>(`/logs/access?${params.toString()}`);
+};
+
+/**
+ * エラーログ取得
+ */
+export const getErrorLogs = async (options: {
+  limit?: number;
+  offset?: number;
+  level?: 'error' | 'warn';
+  searchMessage?: string;
+}): Promise<LogListResponse<ErrorLogEntry>> => {
+  const params = new URLSearchParams();
+  if (options.limit) params.set('limit', options.limit.toString());
+  if (options.offset) params.set('offset', options.offset.toString());
+  if (options.level) params.set('level', options.level);
+  if (options.searchMessage) params.set('searchMessage', options.searchMessage);
+
+  return fetchAPI<LogListResponse<ErrorLogEntry>>(`/logs/error?${params.toString()}`);
+};
+
+/**
+ * セキュリティログ取得
+ */
+export const getSecurityLogs = async (options: {
+  limit?: number;
+  offset?: number;
+  type?: SecurityLogEntry['type'];
+  searchIp?: string;
+}): Promise<LogListResponse<SecurityLogEntry>> => {
+  const params = new URLSearchParams();
+  if (options.limit) params.set('limit', options.limit.toString());
+  if (options.offset) params.set('offset', options.offset.toString());
+  if (options.type) params.set('type', options.type);
+  if (options.searchIp) params.set('searchIp', options.searchIp);
+
+  return fetchAPI<LogListResponse<SecurityLogEntry>>(`/logs/security?${params.toString()}`);
+};
+
+/**
+ * ログサマリー取得
+ */
+export const getLogSummary = async (): Promise<LogSummary> => {
+  return fetchAPI<LogSummary>('/logs/summary');
+};
+
+/**
+ * ログクリア
+ */
+export const clearLogs = async (type: 'access' | 'error' | 'security' | 'all'): Promise<void> => {
+  await fetchAPI(`/logs/${type}`, {
+    method: 'DELETE'
+  });
+};
+
+// ========================================
+// EventSub管理API
+// ========================================
+
+/**
+ * EventSub統計取得
+ */
+export const getEventSubStats = async (): Promise<EventSubStatsResponse> => {
+  return fetchAPI<EventSubStatsResponse>('/eventsub/stats');
+};
+
+/**
+ * EventSub購読一覧取得
+ */
+export const getEventSubSubscriptions = async (): Promise<EventSubSubscriptionsResponse> => {
+  return fetchAPI<EventSubSubscriptionsResponse>('/eventsub/subscriptions');
+};
+
+/**
+ * EventSub購読解除
+ */
+export const unsubscribeEventSub = async (userId: string): Promise<void> => {
+  await fetchAPI(`/eventsub/subscriptions/${userId}`, {
+    method: 'DELETE'
+  });
+};
+
+/**
+ * EventSub再接続
+ */
+export const reconnectEventSub = async (): Promise<void> => {
+  await fetchAPI('/eventsub/reconnect', {
+    method: 'POST'
+  });
+};
+
+// ========================================
+// キャッシュ/DB管理API
+// ========================================
+
+/**
+ * キャッシュ情報取得
+ */
+export const getCacheInfo = async (): Promise<CacheInfoResponse> => {
+  return fetchAPI<CacheInfoResponse>('/cache/info');
+};
+
+/**
+ * キャッシュキー一覧取得
+ */
+export const getCacheKeys = async (pattern = '*', limit = 100): Promise<CacheKeysResponse> => {
+  const params = new URLSearchParams();
+  params.set('pattern', pattern);
+  params.set('limit', limit.toString());
+
+  return fetchAPI<CacheKeysResponse>(`/cache/keys?${params.toString()}`);
+};
+
+/**
+ * キャッシュキー値取得
+ */
+export const getCacheKeyValue = async (key: string): Promise<CacheKeyValueResponse> => {
+  return fetchAPI<CacheKeyValueResponse>(`/cache/key/${encodeURIComponent(key)}`);
+};
+
+/**
+ * キャッシュキー削除
+ */
+export const deleteCacheKey = async (key: string): Promise<void> => {
+  await fetchAPI(`/cache/key/${encodeURIComponent(key)}`, {
+    method: 'DELETE'
+  });
+};
+
+/**
+ * パターンに一致するキャッシュを一括削除
+ */
+export const deleteCachePattern = async (pattern: string): Promise<void> => {
+  await fetchAPI('/cache/pattern', {
+    method: 'DELETE',
+    body: JSON.stringify({ pattern })
+  });
+};
+
+/**
+ * 全キャッシュをフラッシュ
+ */
+export const flushCache = async (): Promise<void> => {
+  await fetchAPI('/cache/flush', {
+    method: 'POST'
+  });
+};

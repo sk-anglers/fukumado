@@ -177,11 +177,13 @@ class TwitchChatService {
       });
 
       // 接続が完了するまで待機
-      this.connectionPromise = this.client.connect().catch((error) => {
-        console.error('[Twitch Chat Service] Connection failed:', error);
-        this.connectionPromise = null;
-        throw error;
-      });
+      this.connectionPromise = this.client.connect()
+        .then(() => {}) // void を返すように変換
+        .catch((error) => {
+          console.error('[Twitch Chat Service] Connection failed:', error);
+          this.connectionPromise = null;
+          throw error;
+        });
     }
 
     return this.connectionPromise!;
