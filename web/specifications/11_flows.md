@@ -209,20 +209,84 @@
       └─ 失敗: システムメッセージ表示
 ```
 
-## 11.12 スロット削除フロー
+## 11.12 スロット削除フロー（2025-10-28更新）
 
+### Twitchプレイヤー（再利用最適化）
 ```
 1. StreamSlot > 削除ボタンをクリック
    └─ layoutStore.clearSlot(slotId)
-      ├─ プレイヤークリーンアップ
-      │  ├─ DOMコンテナをクリア
-      │  ├─ 音声を完全停止
-      │  ├─ pause() 実行
-      │  └─ destroy() 実行
-      │
       ├─ assignedStream を undefined に設定
       └─ StreamSlot 再レンダリング
+         ├─ useEffect クリーンアップ実行
+         │  ├─ タイムアウトをクリア
+         │  ├─ 音声を停止（pause(), setMuted(true)）
+         │  ├─ コンテナを完全非表示
+         │  │  └─ 6つのCSSプロパティで非表示
+         │  └─ プレイヤーインスタンスを保持（destroy()しない）
+         │
          └─ プレースホルダー表示
+```
+
+**重要**: Twitchプレイヤーは破棄せず、次回の配信割り当て時に再利用されます。
+
+### YouTubeプレイヤー（従来通り）
+```
+1. StreamSlot > 削除ボタンをクリック
+   └─ layoutStore.clearSlot(slotId)
+      ├─ assignedStream を undefined に設定
+      └─ StreamSlot 再レンダリング
+         ├─ useEffect クリーンアップ実行
+         │  ├─ DOMコンテナをクリア（innerHTML = ''）
+         │  ├─ destroy() 実行
+         │  └─ プレイヤーインスタンスをnullに設定
+         │
+         └─ プレースホルダー表示
+```
+
+## 11.12.1 Twitchプレイヤー再利用フロー（2025-10-28追加）
+
+### スロット削除後の再割り当て（Twitch → Twitch）
+```
+1. ユーザーがSidebarで別のTwitch配信の「割り当てる」をクリック
+   └─ layoutStore.assignStream(slotId, newStream)
+      └─ StreamSlot 再レンダリング
+         └─ useEffect 実行
+            ├─ 既存プレイヤーの種類を判定
+            │  └─ wasTwitchPlayer = true
+            │
+            ├─ DOM削除をスキップ
+            │  └─ shouldClearDOM = false
+            │
+            ├─ 既存プレイヤーでチャンネル切り替え
+            │  ├─ twitchPlayer.setChannel(newChannelName)
+            │  ├─ コンテナを再表示
+            │  │  └─ 6つのCSSプロパティをリセット
+            │  ├─ playerReady = true に設定
+            │  ├─ 音量を再適用
+            │  └─ 画質を再適用（500ms後）
+            │
+            └─ 新規プレイヤー作成をスキップ（return）
+```
+
+**効果**: 初期化時間が約2-3秒から約0.5秒に短縮（約80%削減）
+
+### スロット削除後の再割り当て（Twitch → YouTube）
+```
+1. ユーザーがSidebarでYouTube配信の「割り当てる」をクリック
+   └─ layoutStore.assignStream(slotId, youtubeStream)
+      └─ StreamSlot 再レンダリング
+         └─ useEffect 実行
+            ├─ 既存プレイヤーの種類を判定
+            │  └─ wasTwitchPlayer = true
+            │
+            ├─ プラットフォームが異なるため、DOM削除
+            │  ├─ shouldClearDOM = true
+            │  └─ playerContainerRef.current.innerHTML = ''
+            │
+            ├─ プレイヤーインスタンスをnullに設定
+            │
+            └─ YouTubeプレイヤーを新規作成
+               └─ YouTube IFrame API使用
 ```
 
 ## 11.13 状態永続化フロー

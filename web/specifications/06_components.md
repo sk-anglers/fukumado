@@ -211,17 +211,53 @@ interface StreamSlotCardProps {
 - **空スロット**: placeholder表示、クリックでSlotSelectionModal
 - **配信割り当て済**: iframe埋め込み
 
-### プレイヤークリーンアップ
-- **Twitchプレイヤー破棄シーケンス**:
-  1. DOMコンテナをクリア（`innerHTML = ''`）
-  2. 音声を完全停止（`setMuted(true)`, `setVolume(0)`）
-  3. pause()を実行
-  4. destroy()を即座に実行（setTimeout削除）
-  5. グローバル参照を削除
-- **YouTubeプレイヤー破棄シーケンス**:
-  1. DOMコンテナをクリア
-  2. destroy()を実行
-- **デバッグログ**: クリーンアップの各ステップをコンソールに出力
+### プレイヤー管理（2025-10-28更新）
+
+#### Twitchプレイヤーの再利用最適化
+**概要**: Twitchプレイヤーは破棄せずに再利用し、パフォーマンスを向上
+- **DOM保持**: プレイヤーコンテナを常にレンダリング（削除しない）
+- **非表示制御**: 複数のCSSプロパティで完全非表示
+  ```tsx
+  style={{
+    display: assignedStream ? 'block' : 'none',
+    position: assignedStream ? 'relative' : 'absolute',
+    visibility: assignedStream ? 'visible' : 'hidden',
+    opacity: assignedStream ? 1 : 0,
+    pointerEvents: assignedStream ? 'auto' : 'none',
+    zIndex: assignedStream ? 0 : -9999
+  }}
+  ```
+
+#### Twitchプレイヤー切り替えフロー
+**TwitchからTwitchへの切り替え時**:
+1. 既存プレイヤーの存在を確認（`wasTwitchPlayer`）
+2. DOM削除をスキップ
+3. `setChannel(channelName)`でチャンネル切り替え
+4. コンテナを再表示（全スタイルをリセット）
+5. 音量・画質を再適用
+6. 新規プレイヤー作成をスキップ（`return`）
+
+**効果**:
+- プレイヤー初期化時間: 約2-3秒 → 約0.5秒（約80%削減）
+- メモリ使用量の削減
+- CPU使用率のスパイク減少
+
+#### Twitchプレイヤークリーンアップ（非破棄）
+**スロット削除時**:
+1. タイムアウトをクリア
+2. 音声を停止（`pause()`, `setMuted(true)`）
+3. コンテナを完全非表示（6つのCSSプロパティ）
+4. プレイヤーインスタンスを保持（**destroy()しない**）
+
+**理由**: 次回の配信割り当て時に再利用するため
+
+#### YouTubeプレイヤークリーンアップ（従来通り）
+**スロット削除時**:
+1. DOMコンテナをクリア（`innerHTML = ''`）
+2. `destroy()`を実行
+3. プレイヤーインスタンスをnullに設定
+
+**詳細**: [12. 制限事項・既知の問題 - 12.13 Twitchプレイヤーの再利用最適化](./12_issues.md#1213-twitchプレイヤーの再利用最適化2025-10-28追加) を参照
 
 ### モバイル対応
 - **小さな×ボタン**: スロット右上に配置、タップで配信削除
