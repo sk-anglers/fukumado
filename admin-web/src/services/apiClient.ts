@@ -21,6 +21,8 @@ import {
   LogSummary,
   EventSubStatsResponse,
   EventSubSubscriptionsResponse,
+  EventSubEventsResponse,
+  StreamsResponse,
   CacheInfoResponse,
   CacheKeysResponse,
   CacheKeyValueResponse
@@ -467,4 +469,26 @@ export const flushCache = async (): Promise<void> => {
   await fetchAPI('/cache/flush', {
     method: 'POST'
   });
+};
+
+// ========================================
+// EventSubイベント履歴API
+// ========================================
+
+/**
+ * EventSubイベント履歴を取得
+ */
+export const getEventSubEvents = async (limit = 50): Promise<EventSubEventsResponse> => {
+  return await fetchAPI(`/eventsub/events?limit=${limit}`);
+};
+
+// ========================================
+// 配信情報API
+// ========================================
+
+/**
+ * 配信情報を取得
+ */
+export const getStreams = async (): Promise<StreamsResponse> => {
+  return await fetchAPI('/streams');
 };

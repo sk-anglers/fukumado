@@ -83,6 +83,36 @@ export class MetricsCollector {
       labels: new Map()
     });
 
+    // Twitch API呼び出しカウンター
+    this.counters.set('twitch_api_calls_total', {
+      value: 0,
+      labels: new Map()
+    });
+
+    // Twitch APIエラーカウンター
+    this.counters.set('twitch_api_errors_total', {
+      value: 0,
+      labels: new Map()
+    });
+
+    // EventSub WebSocketエラーカウンター
+    this.counters.set('eventsub_websocket_errors_total', {
+      value: 0,
+      labels: new Map()
+    });
+
+    // EventSubサブスクリプション試行カウンター
+    this.counters.set('eventsub_subscription_attempts_total', {
+      value: 0,
+      labels: new Map()
+    });
+
+    // EventSubサブスクリプション失敗カウンター
+    this.counters.set('eventsub_subscription_failures_total', {
+      value: 0,
+      labels: new Map()
+    });
+
     // レスポンス時間ヒストグラム
     this.histograms.set('http_request_duration_ms', {
       sum: 0,
@@ -243,6 +273,54 @@ export class MetricsCollector {
   }
 
   /**
+   * Twitch API呼び出しを記録
+   */
+  public recordTwitchApiCall(endpoint: string, method: string): void {
+    this.incrementCounter('twitch_api_calls_total', {
+      endpoint,
+      method
+    });
+  }
+
+  /**
+   * Twitch APIエラーを記録
+   */
+  public recordTwitchApiError(endpoint: string, statusCode: number, errorType: string): void {
+    this.incrementCounter('twitch_api_errors_total', {
+      endpoint,
+      status: statusCode.toString(),
+      type: errorType
+    });
+  }
+
+  /**
+   * EventSub WebSocketエラーを記録
+   */
+  public recordEventSubWebSocketError(connectionIndex: number, errorCode: number): void {
+    this.incrementCounter('eventsub_websocket_errors_total', {
+      connection: connectionIndex.toString(),
+      code: errorCode.toString()
+    });
+  }
+
+  /**
+   * EventSubサブスクリプション試行を記録
+   */
+  public recordEventSubSubscriptionAttempt(userId: string): void {
+    this.incrementCounter('eventsub_subscription_attempts_total');
+  }
+
+  /**
+   * EventSubサブスクリプション失敗を記録
+   */
+  public recordEventSubSubscriptionFailure(userId: string, reason: string, statusCode?: number): void {
+    this.incrementCounter('eventsub_subscription_failures_total', {
+      reason,
+      status: statusCode ? statusCode.toString() : 'unknown'
+    });
+  }
+
+  /**
    * ラベルからキーを生成
    */
   private getLabelKey(labels: Record<string, string>): string {
@@ -381,6 +459,11 @@ export class MetricsCollector {
     websocketConnections: number;
     securityAlerts: number;
     rateLimitViolations: number;
+    twitchApiCalls: number;
+    twitchApiErrors: number;
+    eventsubWebSocketErrors: number;
+    eventsubSubscriptionAttempts: number;
+    eventsubSubscriptionFailures: number;
   } {
     const httpRequests = this.counters.get('http_requests_total')?.value || 0;
     const httpErrors = this.counters.get('http_errors_total')?.value || 0;
@@ -395,7 +478,12 @@ export class MetricsCollector {
       averageResponseTime: Math.round(avgResponseTime * 100) / 100,
       websocketConnections: this.gauges.get('websocket_connections')?.value || 0,
       securityAlerts: this.counters.get('security_alerts_total')?.value || 0,
-      rateLimitViolations: this.counters.get('rate_limit_violations_total')?.value || 0
+      rateLimitViolations: this.counters.get('rate_limit_violations_total')?.value || 0,
+      twitchApiCalls: this.counters.get('twitch_api_calls_total')?.value || 0,
+      twitchApiErrors: this.counters.get('twitch_api_errors_total')?.value || 0,
+      eventsubWebSocketErrors: this.counters.get('eventsub_websocket_errors_total')?.value || 0,
+      eventsubSubscriptionAttempts: this.counters.get('eventsub_subscription_attempts_total')?.value || 0,
+      eventsubSubscriptionFailures: this.counters.get('eventsub_subscription_failures_total')?.value || 0
     };
   }
 

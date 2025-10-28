@@ -44,6 +44,30 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
         try {
           const message = JSON.parse(event.data);
 
+          // 受信メッセージの詳細をログ出力（デバッグ用）
+          console.log('[useTwitchChat] Received raw message:', message);
+
+          // チャットメッセージのみを処理（typeフィールドがない、またはplatformがtwitchのメッセージ）
+          // EventSub通知、配信リスト更新、優先度変更などは無視する
+          if (message.type && message.type !== 'chat') {
+            console.log('[useTwitchChat] Ignoring non-chat message:', message.type);
+            return;
+          }
+
+          // チャットメッセージかどうかを確認（platformまたはchannelLoginフィールドの存在）
+          if (!message.platform && !message.channelLogin) {
+            console.log('[useTwitchChat] Ignoring message without platform/channelLogin');
+            return;
+          }
+
+          console.log('[useTwitchChat] Processing chat message fields:', {
+            id: message.id,
+            author: message.author,
+            message: message.message,
+            timestamp: message.timestamp,
+            channelName: message.channelName
+          });
+
           // ChatMessage型に変換してストアに追加
           const chatMessage: ChatMessage = {
             id: message.id,
@@ -62,6 +86,7 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
             isVip: message.isVip
           };
 
+          console.log('[useTwitchChat] Converted ChatMessage:', chatMessage);
           addMessage(chatMessage);
         } catch (error) {
           console.error('[useTwitchChat] Error parsing message:', error);

@@ -601,3 +601,52 @@ export interface CacheKeyValueResponse {
   ttl: number | null;
   type: string;
 }
+
+// ========================================
+// EventSubイベント履歴型定義
+// ========================================
+
+/**
+ * EventSubイベントタイプ
+ */
+export type EventSubEventType = 'online' | 'offline';
+
+/**
+ * EventSubイベント履歴アイテム
+ */
+export interface EventSubHistoryItem {
+  id: string;
+  timestamp: string;
+  type: EventSubEventType;
+  broadcasterId: string;
+  broadcasterLogin: string;
+  broadcasterName: string;
+  startedAt?: string;
+}
+
+/**
+ * EventSubイベント履歴レスポンス
+ */
+export interface EventSubEventsResponse {
+  events: EventSubHistoryItem[];
+  totalEvents: number;
+}
+
+// ========================================
+// 配信情報型定義
+// ========================================
+
+/**
+ * 配信情報レスポンス
+ */
+export interface StreamsResponse {
+  youtube: YouTubeLiveStream[];
+  twitch: TwitchLiveStream[];
+  stats: {
+    isRunning: boolean;
+    userCount: number;
+    youtubeStreamCount: number;
+    twitchStreamCount: number;
+    cacheAvailable: boolean;
+  };
+}

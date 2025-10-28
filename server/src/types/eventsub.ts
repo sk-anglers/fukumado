@@ -97,3 +97,11 @@ export interface ManagerStats {
   subscribedChannelCount: number;
   connections: ConnectionStats[];
 }
+
+/**
+ * EventSub イベント履歴
+ */
+export interface EventSubHistoryItem extends StreamEvent {
+  timestamp: string;
+  id: string;
+}

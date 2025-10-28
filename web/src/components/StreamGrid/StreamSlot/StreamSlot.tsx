@@ -6,7 +6,9 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/shallow';
 import { useLayoutStore } from '../../../stores/layoutStore';
 import type { StreamSlot, VideoQuality } from '../../../types';
 import { loadYouTubeIframeApi } from '../../../hooks/useYouTubeIframeApi';
@@ -79,8 +81,8 @@ const platformLabel = {
 const formatViewerLabel = (viewerCount?: number): string =>
   viewerCount != null ? `${viewerCount.toLocaleString()} 人視聴中` : '視聴者数 -';
 
-export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelection, onSelect }: StreamSlotCardProps): JSX.Element => {
-  const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen, userInteracted, masterSlotId } = useLayoutStore((state) => ({
+const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelection, onSelect }: StreamSlotCardProps): JSX.Element => {
+  const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen, userInteracted, masterSlotId } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     setVolume: state.setVolume,
     toggleSlotMute: state.toggleSlotMute,
     preset: state.preset,
@@ -92,7 +94,7 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
     setModalOpen: state.setModalOpen,
     userInteracted: state.userInteracted,
     masterSlotId: state.masterSlotId
-  }));
+  }), shallow);
 
   const isMobile = useIsMobile();
   const assignedStream = slot.assignedStream;
@@ -106,6 +108,19 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [showMobileControls, setShowMobileControls] = useState(false);
   const mobileControlsTimerRef = useRef<number | null>(null);
+
+  // Twitchイベントリスナーとタイマーの参照を保持
+  const twitchEventHandlersRef = useRef<{
+    readyHandler: (() => void) | null;
+    offlineHandler: (() => void) | null;
+    errorHandler: ((event: any) => void) | null;
+    qualityTimeoutId: number | undefined;
+  }>({
+    readyHandler: null,
+    offlineHandler: null,
+    errorHandler: null,
+    qualityTimeoutId: undefined
+  });
 
   const isMaster = masterSlotId === slot.id;
 
@@ -139,33 +154,57 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
 
     const setupPlayer = async (): Promise<void> => {
       if (!assignedStream || !playerContainerRef.current) {
+        // プレイヤーがない場合は完全非表示にする（DOM削除しない）
         if (playerContainerRef.current) {
-          playerContainerRef.current.innerHTML = '';
+          playerContainerRef.current.style.display = 'none';
+          playerContainerRef.current.style.visibility = 'hidden';
+          playerContainerRef.current.style.opacity = '0';
+          playerContainerRef.current.style.pointerEvents = 'none';
+          playerContainerRef.current.style.position = 'absolute';
+          playerContainerRef.current.style.zIndex = '-9999';
         }
-        playerInstanceRef.current = null;
         setPlayerReady(false);
         return;
+      }
+
+      // プレイヤーがある場合は表示（スタイルをリセット）
+      if (playerContainerRef.current) {
+        playerContainerRef.current.style.display = 'block';
+        playerContainerRef.current.style.visibility = 'visible';
+        playerContainerRef.current.style.opacity = '1';
+        playerContainerRef.current.style.pointerEvents = 'auto';
+        playerContainerRef.current.style.position = 'relative';
+        playerContainerRef.current.style.zIndex = '0';
       }
 
       // 既存のプレイヤーをクリア
       if (playerInstanceRef.current) {
         try {
-          if (typeof (playerInstanceRef.current as any).destroy === 'function') {
-            (playerInstanceRef.current as any).destroy();
+          const existingPlayer = playerInstanceRef.current;
+          // YouTubeプレイヤーの場合のみdestroy()を呼ぶ
+          if (typeof (existingPlayer as any).destroy === 'function' && assignedStream?.platform === 'youtube') {
+            (existingPlayer as any).destroy();
           }
         } catch (e) {
           // エラーは無視
         }
       }
-      playerInstanceRef.current = null;
-      if (playerContainerRef.current) {
+
+      // Twitchプレイヤーの場合は参照を保持、それ以外はクリア
+      const wasTwitchPlayer = playerInstanceRef.current && 'setMuted' in playerInstanceRef.current;
+      if (!wasTwitchPlayer) {
+        playerInstanceRef.current = null;
+      }
+
+      // TwitchからTwitchへの切り替えの場合、DOM削除をスキップ
+      const shouldClearDOM = !(wasTwitchPlayer && assignedStream.platform === 'twitch');
+
+      if (shouldClearDOM && playerContainerRef.current) {
         playerContainerRef.current.innerHTML = '';
       }
 
       if (assignedStream.platform === 'twitch') {
         // Twitch: Twitch Embed API使用
-        console.log('[Twitch] Twitch Embed API初期化開始');
-        console.log('[Twitch] 画質設定:', slot.quality);
         try {
           const TwitchAPI = await loadTwitchEmbedApi();
           if (!isMounted || !playerContainerRef.current) return;
@@ -173,6 +212,57 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
           // embedUrlから "channel=チャンネル名" を抽出
           const channelMatch = assignedStream.embedUrl.match(/channel=([^&]+)/);
           const channelName = channelMatch ? channelMatch[1] : assignedStream.id;
+
+          // 既存のTwitchプレイヤーがある場合、setChannel()でチャンネル切り替え
+          if (wasTwitchPlayer && playerInstanceRef.current) {
+            const twitchPlayer = playerInstanceRef.current as TwitchPlayer;
+            twitchPlayer.setChannel(channelName);
+
+            // コンテナを再表示
+            if (playerContainerRef.current) {
+              playerContainerRef.current.style.display = 'block';
+              playerContainerRef.current.style.visibility = 'visible';
+              playerContainerRef.current.style.opacity = '1';
+              playerContainerRef.current.style.pointerEvents = 'auto';
+              playerContainerRef.current.style.position = 'relative';
+              playerContainerRef.current.style.zIndex = '0';
+
+              // iframeのpointerEventsもリセット
+              const iframe = playerContainerRef.current.querySelector('iframe');
+              if (iframe) {
+                iframe.style.pointerEvents = 'auto';
+              }
+            }
+
+            // playerReadyをtrueに（既にREADY状態）
+            setPlayerReady(true);
+
+            // 音量と画質を再適用
+            if (!slot.muted) {
+              const combinedVolume = (slot.volume * (masterVolume / 100)) / 100;
+              twitchPlayer.setVolume(combinedVolume);
+            }
+
+            // 画質設定
+            const timeoutId = window.setTimeout(() => {
+              if (!isMounted) return;
+              try {
+                const availableQualities = twitchPlayer.getQualities();
+                if (slot.quality !== 'auto' && availableQualities && availableQualities.length > 0) {
+                  const targetQuality = getBestTwitchQuality(slot.quality, availableQualities);
+                  if (targetQuality) {
+                    twitchPlayer.setQuality(targetQuality);
+                  }
+                }
+              } catch (err) {
+                console.error('[Twitch] 画質設定エラー:', err);
+              }
+            }, 500);
+
+            twitchEventHandlersRef.current.qualityTimeoutId = timeoutId;
+
+            return; // 新規プレイヤー作成をスキップ
+          }
 
           playerInstanceRef.current = new TwitchAPI.Player(playerContainerRef.current, {
             channel: channelName,
@@ -185,8 +275,8 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
 
           const twitchPlayer = playerInstanceRef.current as TwitchPlayer;
 
-          // エラーイベントをリッスン
-          twitchPlayer.addEventListener(TwitchAPI.Player.READY, () => {
+          // イベントハンドラーを作成
+          const readyHandler = () => {
             if (!isMounted) return;
             setPlayerReady(true);
 
@@ -197,10 +287,10 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
             }
 
             // 画質設定（少し遅延させて確実に適用）
-            setTimeout(() => {
+            const timeoutId = window.setTimeout(() => {
+              if (!isMounted) return;
               try {
                 const availableQualities = twitchPlayer.getQualities();
-
                 if (slot.quality !== 'auto' && availableQualities && availableQualities.length > 0) {
                   const targetQuality = getBestTwitchQuality(slot.quality, availableQualities);
                   if (targetQuality) {
@@ -211,15 +301,27 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
                 console.error('[Twitch] 画質設定エラー:', err);
               }
             }, 500);
-          });
 
-          twitchPlayer.addEventListener(TwitchAPI.Player.OFFLINE, () => {
+            twitchEventHandlersRef.current.qualityTimeoutId = timeoutId;
+          };
+
+          const offlineHandler = () => {
             console.error('[Twitch] チャンネルがオフラインです:', channelName);
-          });
+          };
 
-          twitchPlayer.addEventListener(TwitchAPI.Player.ERROR, (errorEvent: any) => {
+          const errorHandler = (errorEvent: any) => {
             console.error('[Twitch] プレイヤーエラー:', errorEvent);
-          });
+          };
+
+          // イベントリスナーを登録
+          twitchPlayer.addEventListener(TwitchAPI.Player.READY, readyHandler);
+          twitchPlayer.addEventListener(TwitchAPI.Player.OFFLINE, offlineHandler);
+          twitchPlayer.addEventListener(TwitchAPI.Player.ERROR, errorHandler);
+
+          // ハンドラーを保存（クリーンアップ時に使用）
+          twitchEventHandlersRef.current.readyHandler = readyHandler;
+          twitchEventHandlersRef.current.offlineHandler = offlineHandler;
+          twitchEventHandlersRef.current.errorHandler = errorHandler;
 
           // グローバルに登録（同期機能のため）
           (window as any)[`twitchPlayer_${slot.id}`] = playerInstanceRef.current;
@@ -295,25 +397,68 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
         window.clearTimeout(initTimeout);
       }
 
-      // DOMをクリア
-      if (playerContainerRef.current) {
-        playerContainerRef.current.innerHTML = '';
-      }
-
-      // プレイヤーを破棄
+      // プレイヤーをクリーンアップ
       if (playerInstanceRef.current) {
         try {
-          if (typeof (playerInstanceRef.current as any).destroy === 'function') {
-            (playerInstanceRef.current as any).destroy();
+          const player = playerInstanceRef.current;
+
+          // Twitchプレイヤーの場合: 音声停止と非表示のみ
+          if (assignedStream?.platform === 'twitch' && 'setMuted' in player) {
+            try {
+              // タイムアウトをクリア
+              const timeoutId = twitchEventHandlersRef.current.qualityTimeoutId;
+              if (timeoutId !== undefined) {
+                window.clearTimeout(timeoutId);
+                twitchEventHandlersRef.current.qualityTimeoutId = undefined;
+              }
+
+              // 音声を停止
+              const twitchPlayer = player as TwitchPlayer;
+              try {
+                twitchPlayer.pause();
+                twitchPlayer.setMuted(true);
+              } catch (e) {
+                // エラーは無視
+              }
+
+              // コンテナを完全非表示
+              const iframe = playerContainerRef.current?.querySelector('iframe');
+              if (iframe) {
+                iframe.style.pointerEvents = 'none';
+              }
+
+              if (playerContainerRef.current) {
+                playerContainerRef.current.style.display = 'none';
+                playerContainerRef.current.style.visibility = 'hidden';
+                playerContainerRef.current.style.opacity = '0';
+                playerContainerRef.current.style.pointerEvents = 'none';
+                playerContainerRef.current.style.position = 'absolute';
+                playerContainerRef.current.style.zIndex = '-9999';
+              }
+            } catch (hideError) {
+              console.warn('[Twitch] クリーンアップエラー:', hideError);
+            }
+          }
+
+          // YouTubeプレイヤーの場合: destroy()を呼ぶ
+          if (assignedStream?.platform === 'youtube' && typeof (player as any).destroy === 'function') {
+            (player as any).destroy();
+            if (playerContainerRef.current) {
+              playerContainerRef.current.innerHTML = '';
+            }
           }
         } catch (e) {
-          // エラーは無視
+          console.error('[Cleanup] エラー:', e);
         }
       }
-      playerInstanceRef.current = null;
 
-      // グローバル参照を削除
-      delete (window as any)[`twitchPlayer_${slot.id}`];
+      // Twitchプレイヤーの場合は参照を保持、それ以外はクリア
+      // ⚠️ assignedStreamではなく、playerInstanceRef自体の種類で判定する
+      const isTwitchPlayer = playerInstanceRef.current && 'setMuted' in playerInstanceRef.current;
+
+      if (!isTwitchPlayer) {
+        playerInstanceRef.current = null;
+      }
     };
   }, [assignedStream?.id, assignedStream?.platform, slot.quality]);
 
@@ -492,47 +637,64 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
       }}
     >
       <div className={styles.surface}>
-        {assignedStream ? (
-          <div className={styles.playerContainer} ref={containerRef}>
+        {/* ⚠️ playerContainer を常にレンダリング（DOM削除防止） */}
+        <div
+          className={styles.playerContainer}
+          ref={containerRef}
+          style={{
+            display: assignedStream ? 'block' : 'none',
+            position: assignedStream ? 'relative' : 'absolute',
+            visibility: assignedStream ? 'visible' : 'hidden',
+            opacity: assignedStream ? 1 : 0,
+            pointerEvents: assignedStream ? 'auto' : 'none',
+            zIndex: assignedStream ? 0 : -9999
+          }}
+        >
           <div className={styles.playerFrame} ref={playerContainerRef} id={`player-${slot.id}`} />
-          <div
-            className={styles.selectableOverlay}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect();
-            }}
-          />
-          {!playerReady && (
-            <div className={styles.preview} style={{ '--accent-color': accentColor } as CSSProperties}>
-              <div className={styles.previewBackdrop}>
-                <div className={styles.noise} />
-              </div>
-              <div className={styles.previewContent}>
-                <span className={styles.previewInitials}>{initials}</span>
-                <span className={styles.previewStatus}>LOADING</span>
-              </div>
-            </div>
-          )}
-          {/* モバイル用の小さな×ボタン */}
-          {isMobile && (
-            <button
-              className={styles.mobileCloseButton}
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                clearSlot(slot.id);
-              }}
-              aria-label="配信を削除"
-              style={{
-                opacity: showMobileControls ? 1 : 0,
-                pointerEvents: showMobileControls ? 'auto' : 'none'
-              }}
-            >
-              <XMarkIcon />
-            </button>
+          {assignedStream && (
+            <>
+              <div
+                className={styles.selectableOverlay}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect();
+                }}
+              />
+              {!playerReady && (
+                <div className={styles.preview} style={{ '--accent-color': accentColor } as CSSProperties}>
+                  <div className={styles.previewBackdrop}>
+                    <div className={styles.noise} />
+                  </div>
+                  <div className={styles.previewContent}>
+                    <span className={styles.previewInitials}>{initials}</span>
+                    <span className={styles.previewStatus}>LOADING</span>
+                  </div>
+                </div>
+              )}
+              {/* モバイル用の小さな×ボタン */}
+              {isMobile && (
+                <button
+                  className={styles.mobileCloseButton}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    clearSlot(slot.id);
+                  }}
+                  aria-label="配信を削除"
+                  style={{
+                    opacity: showMobileControls ? 1 : 0,
+                    pointerEvents: showMobileControls ? 'auto' : 'none'
+                  }}
+                >
+                  <XMarkIcon />
+                </button>
+              )}
+            </>
           )}
         </div>
-        ) : (
+
+        {/* placeholder は assignedStream が null の時のみ表示 */}
+        {!assignedStream && (
           <div
             className={styles.placeholder}
             onClick={(e) => {
@@ -655,3 +817,23 @@ export const StreamSlotCard = ({ slot, isActive, isFocused = false, showSelectio
     </article>
   );
 };
+
+// React.memo カスタム比較関数
+const arePropsEqual = (
+  prevProps: StreamSlotCardProps,
+  nextProps: StreamSlotCardProps
+): boolean => {
+  return (
+    prevProps.slot.id === nextProps.slot.id &&
+    prevProps.slot.assignedStream?.id === nextProps.slot.assignedStream?.id &&
+    prevProps.slot.quality === nextProps.slot.quality &&
+    prevProps.slot.volume === nextProps.slot.volume &&
+    prevProps.slot.muted === nextProps.slot.muted &&
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.isFocused === nextProps.isFocused &&
+    prevProps.showSelection === nextProps.showSelection
+  );
+};
+
+// React.memo でラップして export
+export const StreamSlotCard = memo(StreamSlotCardComponent, arePropsEqual);

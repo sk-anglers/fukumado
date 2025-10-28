@@ -200,3 +200,47 @@ eventsubRouter.post('/reconnect', async (req, res) => {
     res.status(500).json(response);
   }
 });
+
+/**
+ * GET /admin/api/eventsub/events
+ * EventSubイベント履歴取得
+ */
+eventsubRouter.get('/events', async (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
+      data: {
+        events: any[];
+        totalEvents: number;
+      };
+      timestamp: string;
+    }>(`/api/admin/eventsub/events?limit=${limit}`);
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to fetch EventSub events from main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('[API] Error getting EventSub events:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});

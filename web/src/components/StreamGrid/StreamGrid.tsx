@@ -62,7 +62,7 @@ const renderMessageWithEmotes = (message: ChatMessage) => {
 };
 
 export const StreamGrid = (): JSX.Element => {
-  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen } = useLayoutStore((state) => ({
+  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     slots: state.slots,
     preset: state.preset,
     selectedSlotId: state.selectedSlotId,
@@ -74,7 +74,7 @@ export const StreamGrid = (): JSX.Element => {
     setFullscreen: state.setFullscreen,
     clearSelection: state.clearSelection,
     isModalOpen: state.isModalOpen
-  }));
+  }), shallow);
 
   const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [showChat, setShowChat] = useState(false);

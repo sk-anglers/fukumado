@@ -17,6 +17,7 @@ import { usersRouter } from './routes/users';
 import { logsRouter } from './routes/logs';
 import { eventsubRouter } from './routes/eventsub';
 import { cacheRouter } from './routes/cache';
+import { adminStreamsRouter } from './routes/adminStreams';
 import { twitchChatService } from './services/twitchChatService';
 import { streamSyncService, tokenStorage } from './services/streamSyncService';
 import { fetchChannelEmotes } from './services/twitchService';
@@ -134,6 +135,7 @@ app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/logs', logsRouter);
 app.use('/api/admin/eventsub', eventsubRouter);
 app.use('/api/admin/cache', cacheRouter);
+app.use('/api/admin/streams', adminStreamsRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);
@@ -511,29 +513,10 @@ server.listen(env.port, async () => {
   console.log(`[server] listening on http://localhost:${env.port}`);
   console.log('[server] StreamSyncService will start automatically when clients connect');
 
-  // EventSubが有効な場合、EventSubManagerを初期化
+  // EventSubが有効な場合の通知（接続は管理者ログイン時に実行）
   if (env.enableEventSub) {
-    console.log('[server] EventSub is enabled, initializing EventSubManager...');
-    try {
-      const { getTwitchAppAccessToken } = await import('./services/twitchAppAuth');
-      const appAccessToken = await getTwitchAppAccessToken();
-      const clientId = env.twitch.clientId;
-
-      if (!clientId) {
-        throw new Error('Twitch Client ID is not configured');
-      }
-
-      // EventSubManagerに認証情報を設定
-      twitchEventSubManager.setCredentials(appAccessToken, clientId);
-
-      // 全ての接続を確立
-      await twitchEventSubManager.connectAll();
-
-      console.log('[server] EventSubManager initialized and connected successfully');
-    } catch (error) {
-      console.error('[server] Failed to initialize EventSubManager:', error);
-      console.error('[server] EventSub features will not be available');
-    }
+    console.log('[server] EventSub is enabled');
+    console.log('[server] EventSub will be initialized when admin authenticates via dashboard');
   } else {
     console.log('[server] EventSub is disabled');
   }

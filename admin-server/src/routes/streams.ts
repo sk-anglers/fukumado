@@ -32,6 +32,55 @@ async function fetchMainServiceAPI<T>(endpoint: string, options?: RequestInit): 
 }
 
 /**
+ * GET /admin/api/streams
+ * 配信情報を取得
+ */
+streamsRouter.get('/', async (req, res) => {
+  try {
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
+      data: {
+        youtube: any[];
+        twitch: any[];
+        stats: {
+          isRunning: boolean;
+          userCount: number;
+          youtubeStreamCount: number;
+          twitchStreamCount: number;
+          cacheAvailable: boolean;
+        };
+      };
+      timestamp: string;
+    }>('/api/admin/streams');
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to fetch streams from main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('[API] Error getting streams:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
  * GET /admin/api/streams/details
  * 配信詳細情報を取得
  */

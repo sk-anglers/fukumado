@@ -1,5 +1,6 @@
 import * as WS from 'ws';
 import { fetch } from 'undici';
+import { metricsCollector } from './metricsCollector';
 import type {
   EventSubMessage,
   StreamEvent,
@@ -102,6 +103,19 @@ export class TwitchEventSubConnection {
     this.ws.on('error', (error) => {
       console.error(`[EventSub Connection ${this.index}] WebSocket error:`, error);
       this.status = 'error';
+
+      // エラーコードを抽出（429レート制限など）
+      const errorMessage = error.message || '';
+      const statusMatch = errorMessage.match(/response: (\d+)/);
+      if (statusMatch) {
+        const statusCode = parseInt(statusMatch[1], 10);
+        metricsCollector.recordEventSubWebSocketError(this.index, statusCode);
+
+        // 429エラーの場合は特別にログ
+        if (statusCode === 429) {
+          console.error(`[EventSub Connection ${this.index}] ⚠️ Rate limit (429) detected!`);
+        }
+      }
     });
   }
 
@@ -293,11 +307,13 @@ export class TwitchEventSubConnection {
 
       try {
         // stream.online イベントをサブスクライブ
+        metricsCollector.recordEventSubSubscriptionAttempt(userId);
         const onlineSubId = await this.createSubscription('stream.online', '1', {
           broadcaster_user_id: userId
         });
 
         // stream.offline イベントをサブスクライブ
+        metricsCollector.recordEventSubSubscriptionAttempt(userId);
         const offlineSubId = await this.createSubscription('stream.offline', '1', {
           broadcaster_user_id: userId
         });
@@ -309,6 +325,23 @@ export class TwitchEventSubConnection {
         console.log(`[EventSub Connection ${this.index}] Subscribed to user ${userId}: online=${onlineSubId}, offline=${offlineSubId}`);
       } catch (error) {
         console.error(`[EventSub Connection ${this.index}] Failed to subscribe to user ${userId}:`, error);
+
+        // エラー情報を抽出
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const statusMatch = errorMessage.match(/(\d+)/);
+        const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : undefined;
+
+        // エラー理由を判定
+        let reason = 'unknown';
+        if (errorMessage.includes('invalid transport and auth combination')) {
+          reason = 'invalid_auth';
+        } else if (statusCode === 429) {
+          reason = 'rate_limit';
+        } else if (statusCode === 400) {
+          reason = 'bad_request';
+        }
+
+        metricsCollector.recordEventSubSubscriptionFailure(userId, reason, statusCode);
       }
     }
   }
@@ -321,6 +354,9 @@ export class TwitchEventSubConnection {
     version: string,
     condition: Record<string, string>
   ): Promise<string> {
+    // API呼び出しを記録
+    metricsCollector.recordTwitchApiCall('/helix/eventsub/subscriptions', 'POST');
+
     const response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
       method: 'POST',
       headers: {
@@ -341,6 +377,20 @@ export class TwitchEventSubConnection {
 
     if (!response.ok) {
       const errorText = await response.text();
+
+      // エラータイプを判定
+      let errorType = 'unknown';
+      if (errorText.includes('invalid transport and auth combination')) {
+        errorType = 'invalid_auth';
+      } else if (response.status === 429) {
+        errorType = 'rate_limit';
+      } else if (response.status === 400) {
+        errorType = 'bad_request';
+      }
+
+      // APIエラーを記録
+      metricsCollector.recordTwitchApiError('/helix/eventsub/subscriptions', response.status, errorType);
+
       throw new Error(`Failed to create subscription: ${response.status} - ${errorText}`);
     }
 

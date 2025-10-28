@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
+import { env } from '../config/env';
 
 export const cacheRouter = Router();
-
-const SERVER_URL = process.env.SERVER_URL || 'http://localhost:4000';
 
 /**
  * Redis接続状態とサーバー情報を取得
@@ -10,7 +9,7 @@ const SERVER_URL = process.env.SERVER_URL || 'http://localhost:4000';
  */
 cacheRouter.get('/info', async (req: Request, res: Response) => {
   try {
-    const response = await fetch(`${SERVER_URL}/api/admin/cache/info`, {
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/info`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -39,7 +38,7 @@ cacheRouter.get('/keys', async (req: Request, res: Response) => {
     if (req.query.pattern) params.append('pattern', req.query.pattern as string);
     if (req.query.limit) params.append('limit', req.query.limit as string);
 
-    const url = `${SERVER_URL}/api/admin/cache/keys?${params.toString()}`;
+    const url = `${env.mainBackendUrl}/api/admin/cache/keys?${params.toString()}`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -68,7 +67,7 @@ cacheRouter.get('/key/:key', async (req: Request, res: Response) => {
   try {
     const { key } = req.params;
 
-    const response = await fetch(`${SERVER_URL}/api/admin/cache/key/${encodeURIComponent(key)}`, {
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/key/${encodeURIComponent(key)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -95,7 +94,7 @@ cacheRouter.delete('/key/:key', async (req: Request, res: Response) => {
   try {
     const { key } = req.params;
 
-    const response = await fetch(`${SERVER_URL}/api/admin/cache/key/${encodeURIComponent(key)}`, {
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/key/${encodeURIComponent(key)}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'
@@ -120,7 +119,7 @@ cacheRouter.delete('/key/:key', async (req: Request, res: Response) => {
  */
 cacheRouter.delete('/pattern', async (req: Request, res: Response) => {
   try {
-    const response = await fetch(`${SERVER_URL}/api/admin/cache/pattern`, {
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/pattern`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'
@@ -146,7 +145,7 @@ cacheRouter.delete('/pattern', async (req: Request, res: Response) => {
  */
 cacheRouter.post('/flush', async (req: Request, res: Response) => {
   try {
-    const response = await fetch(`${SERVER_URL}/api/admin/cache/flush`, {
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/flush`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

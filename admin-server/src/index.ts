@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import session from 'express-session';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { env } from './config/env';
@@ -30,6 +31,19 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// セッション設定
+app.use(session({
+  secret: env.sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: env.nodeEnv === 'production', // httpsのみ（本番環境）
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 24時間
+  }
+}));
 
 // IP制限ミドルウェア（全エンドポイントに適用）
 app.use(ipFilter);

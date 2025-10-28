@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AdjustmentsHorizontalIcon, CircleStackIcon, ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserStore } from '../../stores/userStore';
@@ -398,8 +398,20 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
     }
   };
 
+  // 最適化: Twitch スロットの変更のみを検出
+  const twitchSlotKey = useMemo(() => {
+    return slots
+      .slice(0, activeSlotsCount)
+      .filter((slot) => slot.assignedStream?.platform === 'twitch')
+      .map((slot) => `${slot.id}:${slot.assignedStream?.id || 'none'}`)
+      .join(',');
+  }, [slots, activeSlotsCount]);
+
   // 同期モニター：1秒ごとに再生位置を取得
   useEffect(() => {
+    const timestamp = new Date().toISOString();
+    console.log('[SyncMonitor]', timestamp, 'インターバル作成 - twitchSlotKey:', twitchSlotKey, 'masterSlotId:', masterSlotId);
+
     const updateSyncStatuses = () => {
       const twitchSlots = slots
         .slice(0, activeSlotsCount)
@@ -414,9 +426,11 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       let masterTime = 0;
       if (masterSlotId) {
         const masterPlayer = (window as any)[`twitchPlayer_${masterSlotId}`] as TwitchPlayer | undefined;
+        console.log('[SyncMonitor] マスタープレイヤー参照試行:', masterSlotId, 'exists:', !!masterPlayer);
         if (masterPlayer) {
           try {
             masterTime = masterPlayer.getCurrentTime();
+            console.log('[SyncMonitor] マスター getCurrentTime():', masterSlotId, 'time:', masterTime);
           } catch (error) {
             console.warn('[SyncMonitor] マスター時刻取得エラー:', error);
           }
@@ -426,10 +440,12 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       const statuses: SyncStatus[] = [];
       for (const slot of twitchSlots) {
         const player = (window as any)[`twitchPlayer_${slot.id}`] as TwitchPlayer | undefined;
+        console.log('[SyncMonitor] プレイヤー参照試行:', slot.id, 'exists:', !!player, 'hasStream:', !!slot.assignedStream);
         if (!player || !slot.assignedStream) continue;
 
         try {
           const currentTime = player.getCurrentTime();
+          console.log('[SyncMonitor] getCurrentTime():', slot.id, 'time:', currentTime);
           const timeDiff = masterSlotId ? currentTime - masterTime : 0;
 
           statuses.push({
@@ -452,8 +468,12 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
     // 1秒ごとに更新
     const interval = setInterval(updateSyncStatuses, 1000);
 
-    return () => clearInterval(interval);
-  }, [slots, activeSlotsCount, masterSlotId]);
+    return () => {
+      const cleanupTimestamp = new Date().toISOString();
+      console.log('[SyncMonitor]', cleanupTimestamp, 'インターバルクリーンアップ - twitchSlotKey:', twitchSlotKey);
+      clearInterval(interval);
+    };
+  }, [twitchSlotKey, masterSlotId, slots, activeSlotsCount]);
 
   const setMasterSlot = useLayoutStore((state) => state.setMasterSlot);
   const clearMasterSlot = useLayoutStore((state) => state.clearMasterSlot);

@@ -31,7 +31,7 @@ const renderMessageWithEmotes = (message: ChatMessage) => {
     // エモートの前のテキスト
     if (emote.start > lastIndex) {
       parts.push(
-        <span key={`text-${idx}`}>
+        <span key={`${message.id}-text-${idx}`}>
           {message.message.substring(lastIndex, emote.start)}
         </span>
       );
@@ -41,7 +41,7 @@ const renderMessageWithEmotes = (message: ChatMessage) => {
     const emoteUrl = `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/1.0`;
     parts.push(
       <img
-        key={`emote-${idx}`}
+        key={`${message.id}-emote-${emote.id}-${idx}`}
         src={emoteUrl}
         alt="emote"
         className={styles.emote}
@@ -55,7 +55,7 @@ const renderMessageWithEmotes = (message: ChatMessage) => {
   // 残りのテキスト
   if (lastIndex < message.message.length) {
     parts.push(
-      <span key="text-end">{message.message.substring(lastIndex)}</span>
+      <span key={`${message.id}-text-end`}>{message.message.substring(lastIndex)}</span>
     );
   }
 
@@ -221,9 +221,13 @@ export const ChatPanel = (): JSX.Element => {
       </div>
       )}
       <div className={styles.messageList} ref={messageListRef}>
-        {filteredMessages.slice().reverse().map((message) => (
+        {filteredMessages.slice().reverse().map((message, index) => {
+          if (!message.id) {
+            console.warn('[ChatPanel] Message without ID:', { index, message });
+          }
+          return (
           <article
-            key={message.id}
+            key={message.id || `fallback-${index}`}
             className={clsx(
               styles.message,
               message.highlight && styles.messageHighlight,
@@ -261,7 +265,8 @@ export const ChatPanel = (): JSX.Element => {
               <p>{renderMessageWithEmotes(message)}</p>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
       <footer className={styles.footer}>
         {watchingStreams.length > 0 && (

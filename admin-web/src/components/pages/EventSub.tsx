@@ -2,18 +2,21 @@ import React, { useEffect, useState } from 'react';
 import {
   getEventSubStats,
   getEventSubSubscriptions,
+  getEventSubEvents,
   unsubscribeEventSub,
   reconnectEventSub
 } from '../../services/apiClient';
 import {
   EventSubStatsResponse,
-  EventSubSubscriptionsResponse
+  EventSubSubscriptionsResponse,
+  EventSubEventsResponse
 } from '../../types';
 import styles from './EventSub.module.css';
 
 export const EventSub: React.FC = () => {
   const [statsData, setStatsData] = useState<EventSubStatsResponse | null>(null);
   const [subsData, setSubsData] = useState<EventSubSubscriptionsResponse | null>(null);
+  const [eventsData, setEventsData] = useState<EventSubEventsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [twitchUsername, setTwitchUsername] = useState<string | null>(null);
@@ -22,12 +25,14 @@ export const EventSub: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [stats, subs] = await Promise.all([
+      const [stats, subs, events] = await Promise.all([
         getEventSubStats(),
-        getEventSubSubscriptions()
+        getEventSubSubscriptions(),
+        getEventSubEvents(20) // 最新20件を取得
       ]);
       setStatsData(stats);
       setSubsData(subs);
+      setEventsData(events);
     } catch (err) {
       console.error('Failed to load EventSub data:', err);
       setError(err instanceof Error ? err.message : 'データの読み込みに失敗しました');
@@ -221,6 +226,45 @@ export const EventSub: React.FC = () => {
                   >
                     購読解除
                   </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* イベント履歴 */}
+      {eventsData && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>
+            イベント履歴 ({eventsData.totalEvents})
+          </h2>
+
+          {eventsData.totalEvents === 0 ? (
+            <div className={styles.noData}>イベント履歴はありません</div>
+          ) : (
+            <div className={styles.eventList}>
+              {eventsData.events.map((event) => (
+                <div key={event.id} className={styles.eventCard}>
+                  <div className={styles.eventHeader}>
+                    <span className={`${styles.eventType} ${styles[event.type]}`}>
+                      {event.type === 'online' ? '🟢 配信開始' : '🔴 配信終了'}
+                    </span>
+                    <span className={styles.eventTime}>
+                      {new Date(event.timestamp).toLocaleString('ja-JP')}
+                    </span>
+                  </div>
+                  <div className={styles.eventBody}>
+                    <div className={styles.eventBroadcaster}>
+                      <strong>{event.broadcasterName}</strong> (@{event.broadcasterLogin})
+                    </div>
+                    <div className={styles.eventId}>ID: {event.broadcasterId}</div>
+                    {event.startedAt && (
+                      <div className={styles.eventStarted}>
+                        開始: {new Date(event.startedAt).toLocaleString('ja-JP')}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

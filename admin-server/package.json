@@ -19,10 +19,12 @@
   "type": "commonjs",
   "dependencies": {
     "@types/cors": "^2.8.19",
+    "@types/express-session": "^1.18.2",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-session": "^1.18.2",
     "ioredis": "^5.4.1",
     "ws": "^8.18.3"
   },

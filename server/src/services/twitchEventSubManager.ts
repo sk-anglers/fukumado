@@ -1,5 +1,6 @@
 import { TwitchEventSubConnection } from './twitchEventSubConnection';
-import type { StreamEventHandler, ManagerStats } from '../types/eventsub';
+import type { StreamEventHandler, ManagerStats, EventSubHistoryItem } from '../types/eventsub';
+import { randomUUID } from 'crypto';
 
 /**
  * Twitch EventSub WebSocketの複数接続を管理するマネージャークラス
@@ -16,6 +17,8 @@ export class TwitchEventSubManager {
   private clientId: string | null = null;
   private readonly maxConnectionCount: number = 3;
   private readonly maxSubscriptionsPerConnection: number = 10000;
+  private eventHistory: EventSubHistoryItem[] = [];
+  private readonly maxHistorySize: number = 100; // 最大100件保持
 
   constructor() {
     console.log('[EventSub Manager] Initializing with 3 connections...');
@@ -26,6 +29,19 @@ export class TwitchEventSubManager {
 
       // 各接続からのイベントを統合
       connection.onStreamEvent((event) => {
+        // イベント履歴に追加
+        const historyItem: EventSubHistoryItem = {
+          ...event,
+          id: randomUUID(),
+          timestamp: new Date().toISOString()
+        };
+        this.eventHistory.unshift(historyItem); // 先頭に追加
+
+        // 履歴サイズを制限
+        if (this.eventHistory.length > this.maxHistorySize) {
+          this.eventHistory = this.eventHistory.slice(0, this.maxHistorySize);
+        }
+
         // 全てのイベントハンドラーに通知
         this.eventHandlers.forEach((handler) => {
           try {
@@ -312,6 +328,15 @@ export class TwitchEventSubManager {
     const percentage = (used / total) * 100;
 
     return { used, total, available, percentage };
+  }
+
+  /**
+   * イベント履歴を取得
+   * @param limit 取得件数（デフォルト: 50）
+   */
+  public getEventHistory(limit?: number): EventSubHistoryItem[] {
+    const maxLimit = limit || 50;
+    return this.eventHistory.slice(0, Math.min(maxLimit, this.eventHistory.length));
   }
 }
 

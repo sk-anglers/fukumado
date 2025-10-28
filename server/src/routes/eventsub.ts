@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { twitchEventSubManager } from '../services/twitchEventSubManager';
+import { dynamicChannelAllocator } from '../services/dynamicChannelAllocator';
+import { metricsCollector } from '../services/metricsCollector';
 
 export const eventsubRouter = Router();
 
@@ -11,12 +13,28 @@ eventsubRouter.get('/stats', async (req, res) => {
   try {
     const stats = twitchEventSubManager.getStats();
     const capacity = twitchEventSubManager.getCapacity();
+    const metrics = metricsCollector.getStats();
+
+    // エラー状態を判定
+    const hasRateLimitError = metrics.eventsubWebSocketErrors > 0;
+    const hasAuthError = metrics.eventsubSubscriptionFailures > 0;
 
     res.json({
       success: true,
       data: {
         stats,
-        capacity
+        capacity,
+        metrics: {
+          twitchApiCalls: metrics.twitchApiCalls,
+          twitchApiErrors: metrics.twitchApiErrors,
+          websocketErrors: metrics.eventsubWebSocketErrors,
+          subscriptionAttempts: metrics.eventsubSubscriptionAttempts,
+          subscriptionFailures: metrics.eventsubSubscriptionFailures
+        },
+        alerts: {
+          rateLimitDetected: hasRateLimitError,
+          authErrorDetected: hasAuthError
+        }
       },
       timestamp: new Date().toISOString()
     });
@@ -161,6 +179,65 @@ eventsubRouter.post('/subscribe', async (req, res) => {
 });
 
 /**
+ * GET /api/admin/eventsub/events
+ * EventSubイベント履歴を取得
+ */
+eventsubRouter.get('/events', async (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+    const events = twitchEventSubManager.getEventHistory(limit);
+
+    res.json({
+      success: true,
+      data: {
+        events,
+        totalEvents: events.length
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[EventSub] Error getting event history:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/eventsub/metrics
+ * Twitch API詳細メトリクスを取得
+ */
+eventsubRouter.get('/metrics', async (req, res) => {
+  try {
+    const fullMetrics = metricsCollector.getMetricsJSON();
+
+    res.json({
+      success: true,
+      data: {
+        twitch: {
+          apiCalls: fullMetrics.counters['twitch_api_calls_total'],
+          apiErrors: fullMetrics.counters['twitch_api_errors_total'],
+          websocketErrors: fullMetrics.counters['eventsub_websocket_errors_total'],
+          subscriptionAttempts: fullMetrics.counters['eventsub_subscription_attempts_total'],
+          subscriptionFailures: fullMetrics.counters['eventsub_subscription_failures_total']
+        },
+        system: fullMetrics.system
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[EventSub] Error getting metrics:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
  * POST /api/admin/eventsub/credentials
  * EventSub認証情報を設定
  * Body: { accessToken: "...", clientId: "..." }
@@ -184,6 +261,10 @@ eventsubRouter.post('/credentials', async (req, res) => {
 
     // 全接続を再接続
     await twitchEventSubManager.reconnectAll();
+
+    // 既存の優先度情報に基づいてチャンネルを再割り当て
+    console.log('[EventSub] Rebalancing channel allocations...');
+    await dynamicChannelAllocator.rebalance();
 
     console.log('[EventSub] Credentials updated and connections reestablished');
 

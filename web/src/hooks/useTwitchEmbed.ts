@@ -68,16 +68,21 @@ export const loadTwitchEmbedApi = (): Promise<TwitchEmbedAPI> => {
     return Promise.reject(new Error('Twitch Embed API is only available in browser environment'));
   }
 
+  console.log('[Twitch API] ロード要求 - 既存apiReadyPromise:', !!apiReadyPromise, '既存window.Twitch:', !!window.Twitch);
+
   if (apiReadyPromise) {
+    console.log('[Twitch API] 既存のPromiseを再利用');
     return apiReadyPromise;
   }
 
+  console.log('[Twitch API] 新規ロード開始');
   apiReadyPromise = new Promise((resolve, reject) => {
     loadScript()
       .then(() => {
         // Twitchオブジェクトが利用可能になるまで少し待つ
         const checkTwitch = (): void => {
           if (typeof window.Twitch !== 'undefined') {
+            console.log('[Twitch API] ロード完了 - window.Twitch type:', typeof window.Twitch);
             resolve(window.Twitch);
           } else {
             setTimeout(checkTwitch, 50);
@@ -85,7 +90,10 @@ export const loadTwitchEmbedApi = (): Promise<TwitchEmbedAPI> => {
         };
         checkTwitch();
       })
-      .catch(reject);
+      .catch((error) => {
+        console.error('[Twitch API] ロードエラー:', error);
+        reject(error);
+      });
   });
 
   return apiReadyPromise;

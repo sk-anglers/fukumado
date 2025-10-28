@@ -88,6 +88,19 @@ authRouter.get('/twitch/callback', async (req: Request, res: Response) => {
 
     console.log('[Twitch Auth] User authenticated:', user.login);
 
+    // セッションにトークンとユーザー情報を保存
+    (req.session as any).twitchAuth = {
+      accessToken: access_token,
+      refreshToken: refresh_token,
+      user: {
+        id: user.id,
+        login: user.login,
+        displayName: user.display_name,
+        profileImageUrl: user.profile_image_url
+      },
+      authenticatedAt: new Date().toISOString()
+    };
+
     // Main serverのEventSubManagerに認証情報を設定
     try {
       await axios.post(
@@ -113,9 +126,29 @@ authRouter.get('/twitch/callback', async (req: Request, res: Response) => {
 
 /**
  * GET /auth/twitch/status
- * Twitch認証状態確認（将来的にトークンを永続化する場合に使用）
+ * Twitch認証状態確認
  */
 authRouter.get('/twitch/status', (req: Request, res: Response) => {
-  // 現時点ではトークンを保存していないので、常に未認証を返す
-  res.json({ authenticated: false });
+  const twitchAuth = (req.session as any).twitchAuth;
+
+  if (!twitchAuth || !twitchAuth.accessToken) {
+    return res.json({
+      authenticated: false
+    });
+  }
+
+  res.json({
+    authenticated: true,
+    user: twitchAuth.user,
+    authenticatedAt: twitchAuth.authenticatedAt
+  });
+});
+
+/**
+ * POST /auth/logout
+ * ログアウト
+ */
+authRouter.post('/logout', (req: Request, res: Response) => {
+  (req.session as any).twitchAuth = null;
+  res.json({ success: true });
 });
