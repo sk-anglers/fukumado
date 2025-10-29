@@ -22,7 +22,7 @@ apiMonitorRouter.get('/logs', async (req, res) => {
     const url = `${SERVER_API_BASE}/api-monitor/logs?${params.toString()}`;
     console.log('[API Monitor] Proxying logs request to:', url);
     const response = await fetch(url);
-    const data = await response.json();
+    const data = await response.json() as any;
     console.log('[API Monitor] Logs response:', data.success ? `Success, ${data.data?.logs?.length || 0} logs` : `Failed: ${data.error}`);
 
     res.json(data);
@@ -46,7 +46,7 @@ apiMonitorRouter.get('/stats', async (req, res) => {
     const url = `${SERVER_API_BASE}/api-monitor/stats${serviceParam}`;
     console.log('[API Monitor] Proxying stats request to:', url);
     const response = await fetch(url);
-    const data = await response.json();
+    const data = await response.json() as any;
     console.log('[API Monitor] Stats response:', data.success ? `Success, ${data.data?.totalCalls || 0} total calls` : `Failed: ${data.error}`);
 
     res.json(data);

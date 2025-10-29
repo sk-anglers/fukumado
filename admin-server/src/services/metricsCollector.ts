@@ -3,7 +3,7 @@ import { SystemMetrics, REDIS_KEYS, TTL } from '../types';
 import { env } from '../config/env';
 
 class MetricsCollector {
-  private collectInterval: NodeJS.Timer | null = null;
+  private collectInterval: NodeJS.Timeout | null = null;
   private wsConnectionsCount: number = 0;
   // Redis未接続時のフォールバック用メモリストレージ
   private latestMetrics: SystemMetrics | null = null;

@@ -50,7 +50,7 @@ metricsRouter.get('/api/twitch', async (req, res) => {
   try {
     // serverからHTTP経由で取得
     const response = await fetch(`${SERVER_API_BASE}/api-tracking/rate-limit`);
-    const data = await response.json();
+    const data = await response.json() as any;
 
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch rate limit');
@@ -103,7 +103,7 @@ metricsRouter.get('/api/youtube', async (req, res) => {
   try {
     // serverからHTTP経由で取得
     const response = await fetch(`${SERVER_API_BASE}/api-tracking/youtube-quota`);
-    const data = await response.json();
+    const data = await response.json() as any;
 
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch YouTube quota');
