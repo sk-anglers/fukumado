@@ -17,7 +17,10 @@ interface TrackOptions {
  */
 export async function trackedRequest(
   url: string,
-  options: Dispatcher.RequestOptions & { body?: string },
+  options: Omit<Dispatcher.RequestOptions, 'path' | 'origin' | 'method'> & {
+    method?: string;
+    body?: string;
+  },
   trackOptions: TrackOptions
 ): Promise<Dispatcher.ResponseData> {
   const startTime = Date.now();
@@ -149,7 +152,10 @@ export async function trackedRequest(
  */
 export async function trackedTwitchRequest(
   url: string,
-  options: Dispatcher.RequestOptions & { body?: string },
+  options: Omit<Dispatcher.RequestOptions, 'path' | 'origin' | 'method'> & {
+    method?: string;
+    body?: string;
+  },
   endpoint: string
 ): Promise<Dispatcher.ResponseData> {
   return trackedRequest(url, options, {
@@ -165,7 +171,10 @@ export async function trackedTwitchRequest(
  */
 export async function trackedYouTubeRequest(
   url: string,
-  options: Dispatcher.RequestOptions & { body?: string },
+  options: Omit<Dispatcher.RequestOptions, 'path' | 'origin' | 'method'> & {
+    method?: string;
+    body?: string;
+  },
   endpoint: string,
   quotaCost: number = 1
 ): Promise<Dispatcher.ResponseData> {
@@ -205,7 +214,11 @@ export async function trackedFetch(
       });
     } else if (Array.isArray(options.headers)) {
       for (let i = 0; i < options.headers.length; i += 2) {
-        requestHeaders[options.headers[i] as string] = options.headers[i + 1] as string;
+        const key = options.headers[i];
+        const value = options.headers[i + 1];
+        if (typeof key === 'string' && typeof value === 'string') {
+          requestHeaders[key] = value;
+        }
       }
     } else {
       Object.entries(options.headers).forEach(([key, value]) => {

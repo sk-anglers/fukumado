@@ -12,7 +12,7 @@ usersRouter.get('/sessions', async (req, res) => {
     const sessionStore = req.sessionStore;
 
     // セッションストアから全セッションを取得
-    sessionStore.all((err, sessions) => {
+    sessionStore.all?.((err, sessions) => {
       if (err) {
         console.error('[Users] Error fetching sessions:', err);
         return res.status(500).json({
@@ -54,7 +54,7 @@ usersRouter.get('/sessions', async (req, res) => {
           twitchUser: session.twitchUser ? {
             id: session.twitchUser.id,
             login: session.twitchUser.login,
-            displayName: session.twitchUser.display_name
+            displayName: session.twitchUser.displayName
           } : null,
           createdAt: session.createdAt || null,
           lastActivity: session.lastActivity || null,
@@ -139,7 +139,7 @@ usersRouter.get('/stats', async (req, res) => {
   try {
     const sessionStore = req.sessionStore;
 
-    sessionStore.all((err, sessions) => {
+    sessionStore.all?.((err, sessions) => {
       if (err || !sessions) {
         return res.json({
           success: true,

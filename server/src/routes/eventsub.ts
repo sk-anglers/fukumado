@@ -93,7 +93,7 @@ eventsubRouter.delete('/subscriptions/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    await twitchEventSubManager.unsubscribeChannel(userId);
+    await twitchEventSubManager.unsubscribeFromUsers([userId]);
     console.log(`[EventSub] Unsubscribed channel: ${userId}`);
 
     res.json({
