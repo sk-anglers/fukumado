@@ -59,7 +59,10 @@ if (process.env.NODE_ENV === 'production') {
   allowedOrigins.push(
     'https://fukumado.jp',
     'https://www.fukumado.jp',
-    'https://admin.fukumado.jp'
+    'https://admin.fukumado.jp',
+    // ベータ環境
+    'https://beta.fukumado.jp',
+    'https://beta-admin.fukumado.jp'
   );
 }
 

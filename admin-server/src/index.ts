@@ -29,7 +29,11 @@ const allowedOrigins = [
 
 // 本番環境の場合は本番URLを追加
 if (env.nodeEnv === 'production') {
-  allowedOrigins.push('https://admin.fukumado.jp');
+  allowedOrigins.push(
+    'https://admin.fukumado.jp',
+    // ベータ環境
+    'https://beta-admin.fukumado.jp'
+  );
 }
 
 app.use(cors({

@@ -20,8 +20,7 @@ services:
     rootDir: server
     buildCommand: npm install && npm run build
     startCommand: npm start
-    customDomains:
-      - domain: api.fukumado.jp
+    healthCheckPath: /health
     envVars:
       - key: PORT
         value: 4000
@@ -47,7 +46,8 @@ services:
         sync: false
       - key: TWITCH_REDIRECT_URI
         value: https://api.fukumado.jp/auth/twitch/callback
-    healthCheckPath: /health
+    domains:
+      - api.fukumado.jp
 
   # ===================================
   # 管理ダッシュボードバックエンドAPI
@@ -59,8 +59,6 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
-    customDomains:
-      - domain: admin-api.fukumado.jp
     envVars:
       - key: PORT
         value: 4001
@@ -79,6 +77,8 @@ services:
           type: web
           name: fukumado-server
           property: host
+    domains:
+      - admin-api.fukumado.jp
 
   # ===================================
   # クライアントフロントエンド（静的サイト）
@@ -89,9 +89,6 @@ services:
     rootDir: web
     buildCommand: npm install && npm run build
     staticPublishPath: dist
-    customDomains:
-      - domain: fukumado.jp
-      - domain: www.fukumado.jp
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_API_URL
@@ -99,6 +96,9 @@ services:
           type: web
           name: fukumado-server
           property: host
+    domains:
+      - fukumado.jp
+      - www.fukumado.jp
 
   # ===================================
   # 管理ダッシュボードフロントエンド（静的サイト）
@@ -109,8 +109,6 @@ services:
     rootDir: admin-web
     buildCommand: npm install && npm run build
     staticPublishPath: dist
-    customDomains:
-      - domain: admin.fukumado.jp
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
@@ -120,3 +118,127 @@ services:
           property: host
       - key: VITE_ADMIN_WS_URL
         value: wss://admin-api.fukumado.jp
+    domains:
+      - admin.fukumado.jp
+
+  # ===================================
+  # ベータ環境 (BETA ENVIRONMENT)
+  # ===================================
+
+  # ===================================
+  # ベータ用Redis - キャッシュ・セッション管理
+  # ===================================
+  - type: redis
+    name: fukumado-redis-beta
+    ipAllowList: [] # 全サービスからアクセス可能
+    plan: starter # 無料プラン (25MB)
+    maxmemoryPolicy: allkeys-lru
+
+  # ===================================
+  # ベータメインバックエンドAPI
+  # ===================================
+  - type: web
+    name: fukumado-server-beta
+    runtime: node
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true # 自動生成
+      - key: REDIS_URL
+        fromDatabase:
+          name: fukumado-redis-beta
+          property: connectionString
+      - key: YOUTUBE_API_KEY
+        sync: false # Renderダッシュボードで手動設定
+      - key: YOUTUBE_CLIENT_ID
+        sync: false
+      - key: YOUTUBE_CLIENT_SECRET
+        sync: false
+      - key: YOUTUBE_REDIRECT_URI
+        value: https://beta-api.fukumado.jp/auth/google/callback
+      - key: TWITCH_CLIENT_ID
+        sync: false
+      - key: TWITCH_CLIENT_SECRET
+        sync: false
+      - key: TWITCH_REDIRECT_URI
+        value: https://beta-api.fukumado.jp/auth/twitch/callback
+    domains:
+      - beta-api.fukumado.jp
+
+  # ===================================
+  # ベータ管理ダッシュボードバックエンドAPI
+  # ===================================
+  - type: web
+    name: fukumado-admin-server-beta
+    runtime: node
+    rootDir: admin-server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 4001
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false # Renderダッシュボードで手動設定（強力なパスワード）
+      - key: REDIS_URL
+        fromDatabase:
+          name: fukumado-redis-beta
+          property: connectionString
+      - key: MAIN_BACKEND_URL
+        fromService:
+          type: web
+          name: fukumado-server-beta
+          property: host
+    domains:
+      - beta-admin-api.fukumado.jp
+
+  # ===================================
+  # ベータクライアントフロントエンド（静的サイト）
+  # ===================================
+  - type: web
+    name: fukumado-web-beta
+    runtime: static
+    rootDir: web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Vite環境変数（ビルド時に使用）
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: fukumado-server-beta
+          property: host
+    domains:
+      - beta.fukumado.jp
+
+  # ===================================
+  # ベータ管理ダッシュボードフロントエンド（静的サイト）
+  # ===================================
+  - type: web
+    name: fukumado-admin-web-beta
+    runtime: static
+    rootDir: admin-web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Vite環境変数（ビルド時に使用）
+      - key: VITE_ADMIN_API_URL
+        fromService:
+          type: web
+          name: fukumado-admin-server-beta
+          property: host
+      - key: VITE_ADMIN_WS_URL
+        value: wss://beta-admin-api.fukumado.jp
+    domains:
+      - beta-admin.fukumado.jp
