@@ -340,19 +340,27 @@ class StreamSyncService {
    * キャッシュされた配信リストを取得
    */
   async getCachedStreams(): Promise<PlatformStreams | null> {
-    if (!cacheService.isConnected()) {
-      console.warn('[StreamSync] Redis not connected');
-      return null;
+    // まずRedisから取得を試みる
+    if (cacheService.isConnected()) {
+      const [youtube, twitch] = await Promise.all([
+        cacheService.get<YouTubeLiveStream[]>('streams:youtube:all'),
+        cacheService.get<TwitchLiveStreamInfo[]>('streams:twitch:all')
+      ]);
+
+      // Redisにデータがある場合はそれを返す
+      if (youtube || twitch) {
+        return {
+          youtube: youtube || [],
+          twitch: twitch || []
+        };
+      }
     }
 
-    const [youtube, twitch] = await Promise.all([
-      cacheService.get<YouTubeLiveStream[]>('streams:youtube:all'),
-      cacheService.get<TwitchLiveStreamInfo[]>('streams:twitch:all')
-    ]);
-
+    // Redisが使えないか、データがない場合は、メモリ内のデータをフォールバックとして返す
+    console.log('[StreamSync] Using in-memory stream data as fallback');
     return {
-      youtube: youtube || [],
-      twitch: twitch || []
+      youtube: Array.from(this.previousYouTubeStreams.values()),
+      twitch: Array.from(this.previousTwitchStreams.values())
     };
   }
 

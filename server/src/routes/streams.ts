@@ -45,10 +45,14 @@ streamsRouter.get('/cached', async (req, res) => {
  */
 streamsRouter.get('/details', async (req, res) => {
   try {
+    console.log('[Streams] GET /details - Fetching stream details');
     const stats = streamSyncService.getStats();
     const cached = await streamSyncService.getCachedStreams();
 
-    res.json({
+    console.log('[Streams] Stats:', stats);
+    console.log('[Streams] Cached streams:', cached ? `YouTube: ${cached.youtube?.length || 0}, Twitch: ${cached.twitch?.length || 0}` : 'null');
+
+    const response = {
       stats: {
         isRunning: stats.isRunning,
         userCount: stats.userCount,
@@ -58,8 +62,12 @@ streamsRouter.get('/details', async (req, res) => {
       },
       streams: cached || { youtube: [], twitch: [] },
       timestamp: new Date().toISOString()
-    });
+    };
+
+    console.log('[Streams] Sending response:', JSON.stringify(response, null, 2));
+    res.json(response);
   } catch (error) {
+    console.error('[Streams] Error getting details:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ error: message });
   }

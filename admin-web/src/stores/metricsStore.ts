@@ -17,6 +17,15 @@ export interface MetricsHistoryPoint {
   youtubeUsagePercent?: number;
 }
 
+// API統計履歴データポイント
+export interface ApiStatsPoint {
+  timestamp: string;
+  totalCalls: number;
+  successfulCalls: number;
+  failedCalls: number;
+  averageResponseTime: number;
+}
+
 interface MetricsState {
   // データ
   systemMetrics: SystemMetrics | null;
@@ -25,6 +34,7 @@ interface MetricsState {
 
   // 履歴データ（最大60ポイント = 5分間分）
   metricsHistory: MetricsHistoryPoint[];
+  apiStatsHistory: ApiStatsPoint[];
 
   // 接続状態
   connectionStatus: ConnectionStatus;
@@ -35,6 +45,7 @@ interface MetricsState {
   setSystemMetrics: (metrics: SystemMetrics) => void;
   setTwitchRateLimit: (rateLimit: TwitchRateLimit) => void;
   setYoutubeQuota: (quota: YouTubeQuota) => void;
+  setApiStats: (stats: { totalCalls: number; successfulCalls: number; failedCalls: number; averageResponseTime: number }) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   setError: (error: string | null) => void;
   clearMetrics: () => void;
@@ -46,6 +57,7 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
   twitchRateLimit: null,
   youtubeQuota: null,
   metricsHistory: [],
+  apiStatsHistory: [],
   connectionStatus: 'disconnected',
   lastUpdate: null,
   error: null,
@@ -89,6 +101,28 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
       error: null
     }),
 
+  setApiStats: (stats) =>
+    set((state) => {
+      const { apiStatsHistory } = state;
+
+      // 履歴データポイントを作成
+      const historyPoint: ApiStatsPoint = {
+        timestamp: new Date().toISOString(),
+        totalCalls: stats.totalCalls,
+        successfulCalls: stats.successfulCalls,
+        failedCalls: stats.failedCalls,
+        averageResponseTime: stats.averageResponseTime
+      };
+
+      // 最大60ポイントまで保持（5分間分）
+      const newHistory = [...apiStatsHistory, historyPoint].slice(-60);
+
+      return {
+        apiStatsHistory: newHistory,
+        error: null
+      };
+    }),
+
   setConnectionStatus: (status) =>
     set({ connectionStatus: status }),
 
@@ -101,6 +135,7 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
       twitchRateLimit: null,
       youtubeQuota: null,
       metricsHistory: [],
+      apiStatsHistory: [],
       lastUpdate: null,
       error: null
     })

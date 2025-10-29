@@ -16,17 +16,24 @@ import { usersRouter } from './routes/users';
 import { logsRouter } from './routes/logs';
 import { eventsubRouter } from './routes/eventsub';
 import { cacheRouter } from './routes/cache';
+import { apiMonitorRouter } from './routes/apiMonitor';
 import { metricsCollector } from './services/metricsCollector';
 import { securityMonitor } from './services/securityMonitor';
 
 const app = express();
 
 // CORS設定
+const allowedOrigins = [
+  'http://localhost:5174'  // ローカル開発
+];
+
+// 本番環境の場合は本番URLを追加
+if (env.nodeEnv === 'production') {
+  allowedOrigins.push('https://admin.fukumado.jp');
+}
+
 app.use(cors({
-  origin: [
-    'http://localhost:5174',  // ローカル開発
-    'https://fukumado-admin-ui.onrender.com'  // 本番環境
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 
@@ -48,7 +55,11 @@ app.use(session({
 // IP制限ミドルウェア（全エンドポイントに適用）
 app.use(ipFilter);
 
-// ヘルスチェック（認証不要）
+// ヘルスチェック（認証不要・Render対応）
+app.get('/health', (_, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.use('/admin/api/health', healthRouter);
 
 // 認証エンドポイント（認証不要）
@@ -74,6 +85,7 @@ app.use('/admin/api/users', usersRouter);
 app.use('/admin/api/logs', logsRouter);
 app.use('/admin/api/eventsub', eventsubRouter);
 app.use('/admin/api/cache', cacheRouter);
+app.use('/admin/api/api-monitor', apiMonitorRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);

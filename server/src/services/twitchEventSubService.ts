@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { fetch } from 'undici';
+import { trackedFetch } from '../utils/apiTracker';
 
 interface EventSubSession {
   id: string;
@@ -294,7 +295,7 @@ class TwitchEventSubService {
     version: string,
     condition: Record<string, string>
   ): Promise<string> {
-    const response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
+    const response = await trackedFetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
@@ -309,7 +310,9 @@ class TwitchEventSubService {
           method: 'websocket',
           session_id: this.sessionId
         }
-      })
+      }),
+      service: 'twitch',
+      endpoint: 'POST /eventsub/subscriptions (websocket)'
     });
 
     if (!response.ok) {
@@ -346,12 +349,14 @@ class TwitchEventSubService {
   }
 
   private async deleteSubscription(subscriptionId: string): Promise<void> {
-    const response = await fetch(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${subscriptionId}`, {
+    const response = await trackedFetch(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${subscriptionId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
         'Client-Id': this.clientId!
-      }
+      },
+      service: 'twitch',
+      endpoint: 'DELETE /eventsub/subscriptions (websocket)'
     });
 
     if (!response.ok && response.status !== 404) {

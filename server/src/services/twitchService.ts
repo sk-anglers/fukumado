@@ -2,6 +2,7 @@
 import { ensureTwitchOAuthConfig } from '../config/env';
 import { emoteCacheService } from './emoteCacheService';
 import { followedChannelsCacheService } from './followedChannelsCacheService';
+import { trackedTwitchRequest } from '../utils/apiTracker';
 
 const TWITCH_BASE = 'https://api.twitch.tv/helix';
 
@@ -128,10 +129,10 @@ export const fetchFollowedChannels = async (
     const url = `${TWITCH_BASE}/channels/followed?${params.toString()}`;
     console.log(`[Twitch Service] Fetching page ${pageCount}:`, url);
 
-    const response = await request(url, {
+    const response = await trackedTwitchRequest(url, {
       method: 'GET',
       headers
-    });
+    }, 'GET /helix/channels/followed');
 
     console.log(`[Twitch Service] Page ${pageCount} response status:`, response.statusCode);
 
@@ -205,10 +206,10 @@ export const fetchLiveStreams = async (
 
     console.log(`[Twitch Service] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} channels)`);
 
-    const response = await request(`${TWITCH_BASE}/streams?${params.toString()}`, {
+    const response = await trackedTwitchRequest(`${TWITCH_BASE}/streams?${params.toString()}`, {
       method: 'GET',
       headers
-    });
+    }, 'GET /helix/streams');
 
     if (response.statusCode >= 400) {
       const text = await response.body.text();
@@ -262,10 +263,10 @@ export const searchChannels = async (
     first: String(Math.min(maxResults, 100))
   });
 
-  const response = await request(`${TWITCH_BASE}/search/channels?${params.toString()}`, {
+  const response = await trackedTwitchRequest(`${TWITCH_BASE}/search/channels?${params.toString()}`, {
     method: 'GET',
     headers
-  });
+  }, 'GET /helix/search/channels');
 
   if (response.statusCode >= 400) {
     const text = await response.body.text();
@@ -295,10 +296,10 @@ export const fetchGlobalEmotes = async (
   console.log('[Twitch Service] Fetching global emotes from API');
   const headers = buildHeaders(accessToken);
 
-  const response = await request(`${TWITCH_BASE}/chat/emotes/global`, {
+  const response = await trackedTwitchRequest(`${TWITCH_BASE}/chat/emotes/global`, {
     method: 'GET',
     headers
-  });
+  }, 'GET /helix/chat/emotes/global');
 
   if (response.statusCode >= 400) {
     const text = await response.body.text();
@@ -341,10 +342,10 @@ export const fetchChannelEmotes = async (
     broadcaster_id: broadcasterId
   });
 
-  const response = await request(`${TWITCH_BASE}/chat/emotes?${params.toString()}`, {
+  const response = await trackedTwitchRequest(`${TWITCH_BASE}/chat/emotes?${params.toString()}`, {
     method: 'GET',
     headers
-  });
+  }, 'GET /helix/chat/emotes');
 
   if (response.statusCode >= 400) {
     const text = await response.body.text();

@@ -18,6 +18,7 @@ import { logsRouter } from './routes/logs';
 import { eventsubRouter } from './routes/eventsub';
 import { cacheRouter } from './routes/cache';
 import { adminStreamsRouter } from './routes/adminStreams';
+import { adminRouter } from './routes/admin';
 import { twitchChatService } from './services/twitchChatService';
 import { streamSyncService, tokenStorage } from './services/streamSyncService';
 import { fetchChannelEmotes } from './services/twitchService';
@@ -46,14 +47,25 @@ import { initializeSession, detectSessionHijacking, checkSessionTimeout, include
 
 const app = express();
 
-// CORS設定（モバイル対応）
+// CORS設定（モバイル対応 + 本番環境）
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://192.168.11.18:5173',
+  'http://127.0.0.1:5173'
+];
+
+// 本番環境の場合は本番URLを追加
+if (process.env.NODE_ENV === 'production') {
+  allowedOrigins.push(
+    'https://fukumado.jp',
+    'https://www.fukumado.jp',
+    'https://admin.fukumado.jp'
+  );
+}
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',
-      'http://192.168.11.18:5173',
-      'http://127.0.0.1:5173'
-    ],
+    origin: allowedOrigins,
     credentials: true
   })
 );
@@ -92,7 +104,7 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: false, // ngrok使用時はfalseに設定
+    secure: process.env.NODE_ENV === 'production', // 本番環境ではHTTPSのみ
     sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
@@ -136,6 +148,7 @@ app.use('/api/admin/logs', logsRouter);
 app.use('/api/admin/eventsub', eventsubRouter);
 app.use('/api/admin/cache', cacheRouter);
 app.use('/api/admin/streams', adminStreamsRouter);
+app.use('/api/admin', adminRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);

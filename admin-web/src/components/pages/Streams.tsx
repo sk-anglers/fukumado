@@ -20,9 +20,10 @@ export const Streams: React.FC = () => {
   const loadStreamDetails = async () => {
     try {
       const data = await getStreamDetails();
+      console.log('[Streams] Loaded stream details:', data);
       setDetails(data);
     } catch (error) {
-      console.error('Failed to load stream details:', error);
+      console.error('[Streams] Failed to load stream details:', error);
     } finally {
       setIsLoading(false);
     }

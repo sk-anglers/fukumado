@@ -62,9 +62,15 @@ export const Security: React.FC = () => {
     return () => clearInterval(interval);
   }, [setMainServiceStats, setMainServiceHealth, setMainServiceAlerts, setMainServiceSessions, setMainServiceWebSocket, setMainServiceSummary]);
 
-  if (!securityMetrics) {
-    return <Loader text="セキュリティデータを読み込んでいます..." />;
-  }
+  // データがない場合はデフォルト値を使用
+  const metrics = securityMetrics || {
+    totalUniqueIPs: 0,
+    blockedIPs: 0,
+    suspiciousIPs: 0,
+    whitelistIPs: 0,
+    recentAlerts: [],
+    topIPs: []
+  };
 
   const getHealthStatusColor = (status: string) => {
     switch (status) {
@@ -125,28 +131,28 @@ export const Security: React.FC = () => {
           <MetricCard
             icon="👥"
             label="ユニークIP数"
-            value={securityMetrics.totalUniqueIPs}
+            value={metrics.totalUniqueIPs}
             unit="件"
             status="normal"
           />
           <MetricCard
             icon="🚫"
             label="ブロック中のIP"
-            value={securityMetrics.blockedIPs}
+            value={metrics.blockedIPs}
             unit="件"
-            status={securityMetrics.blockedIPs > 0 ? 'warning' : 'normal'}
+            status={metrics.blockedIPs > 0 ? 'warning' : 'normal'}
           />
           <MetricCard
             icon="⚠️"
             label="疑わしいIP"
-            value={securityMetrics.suspiciousIPs}
+            value={metrics.suspiciousIPs}
             unit="件"
-            status={securityMetrics.suspiciousIPs > 5 ? 'warning' : 'normal'}
+            status={metrics.suspiciousIPs > 5 ? 'warning' : 'normal'}
           />
           <MetricCard
             icon="✅"
             label="ホワイトリストIP"
-            value={securityMetrics.whitelistIPs}
+            value={metrics.whitelistIPs}
             unit="件"
             status="normal"
           />
@@ -157,7 +163,7 @@ export const Security: React.FC = () => {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>アクセス上位IP</h2>
         <Card>
-          {securityMetrics.topIPs.length === 0 ? (
+          {metrics.topIPs.length === 0 ? (
             <p className={styles.emptyMessage}>データがありません</p>
           ) : (
             <div className={styles.tableContainer}>
@@ -171,7 +177,7 @@ export const Security: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {securityMetrics.topIPs.slice(0, 10).map((ipInfo) => (
+                  {metrics.topIPs.slice(0, 10).map((ipInfo) => (
                     <tr key={ipInfo.ip}>
                       <td className={styles.ipCell}>{ipInfo.ip}</td>
                       <td>{ipInfo.requestCount}</td>
@@ -194,11 +200,11 @@ export const Security: React.FC = () => {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>最近のアラート</h2>
         <Card>
-          {securityMetrics.recentAlerts.length === 0 ? (
+          {metrics.recentAlerts.length === 0 ? (
             <p className={styles.emptyMessage}>アラートはありません</p>
           ) : (
             <div className={styles.alertList}>
-              {securityMetrics.recentAlerts.slice(0, 10).map((alert) => (
+              {metrics.recentAlerts.slice(0, 10).map((alert) => (
                 <div
                   key={alert.id}
                   className={`${styles.alertItem} ${styles[alert.type === 'error' ? 'critical' : alert.type]}`}

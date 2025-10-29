@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { request } from 'undici';
 import { ensureYouTubeOAuthConfig } from '../config/env';
+import { trackedYouTubeRequest } from './apiTracker';
 
 const GOOGLE_AUTH_BASE = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
@@ -53,7 +54,7 @@ const urlEncoded = (data: Record<string, string>): string =>
 export const exchangeCodeForTokens = async (code: string): Promise<OAuthTokenResponse> => {
   const { clientId, clientSecret, redirectUri } = ensureYouTubeOAuthConfig();
 
-  const response = await request(GOOGLE_TOKEN_ENDPOINT, {
+  const response = await trackedYouTubeRequest(GOOGLE_TOKEN_ENDPOINT, {
     method: 'POST',
     body: urlEncoded({
       code,
@@ -65,7 +66,7 @@ export const exchangeCodeForTokens = async (code: string): Promise<OAuthTokenRes
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     }
-  });
+  }, 'POST /oauth2/token (code exchange)', 0);
 
   if (response.statusCode >= 400) {
     const body = await response.body.text();
@@ -78,7 +79,7 @@ export const exchangeCodeForTokens = async (code: string): Promise<OAuthTokenRes
 export const refreshAccessToken = async (refreshToken: string): Promise<OAuthTokenResponse> => {
   const { clientId, clientSecret } = ensureYouTubeOAuthConfig();
 
-  const response = await request(GOOGLE_TOKEN_ENDPOINT, {
+  const response = await trackedYouTubeRequest(GOOGLE_TOKEN_ENDPOINT, {
     method: 'POST',
     body: urlEncoded({
       refresh_token: refreshToken,
@@ -89,7 +90,7 @@ export const refreshAccessToken = async (refreshToken: string): Promise<OAuthTok
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     }
-  });
+  }, 'POST /oauth2/token (refresh)', 0);
 
   if (response.statusCode >= 400) {
     const body = await response.body.text();
@@ -100,12 +101,12 @@ export const refreshAccessToken = async (refreshToken: string): Promise<OAuthTok
 };
 
 export const fetchGoogleUserInfo = async (accessToken: string): Promise<GoogleUserInfo> => {
-  const response = await request(GOOGLE_USERINFO_ENDPOINT, {
+  const response = await trackedYouTubeRequest(GOOGLE_USERINFO_ENDPOINT, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${accessToken}`
     }
-  });
+  }, 'GET /oauth2/v3/userinfo', 0);
 
   if (response.statusCode >= 400) {
     const body = await response.body.text();

@@ -492,3 +492,83 @@ export const getEventSubEvents = async (limit = 50): Promise<EventSubEventsRespo
 export const getStreams = async (): Promise<StreamsResponse> => {
   return await fetchAPI('/streams');
 };
+
+// ========================================
+// API監視API
+// ========================================
+
+/**
+ * API呼び出しログを取得
+ */
+export const getApiLogs = async (options: {
+  limit?: number;
+  offset?: number;
+  service?: 'twitch' | 'youtube' | 'other';
+  endpoint?: string;
+  method?: string;
+  statusCode?: number;
+  startDate?: string;
+  endDate?: string;
+}): Promise<any> => {
+  const params = new URLSearchParams();
+  if (options.limit) params.set('limit', options.limit.toString());
+  if (options.offset) params.set('offset', options.offset.toString());
+  if (options.service) params.set('service', options.service);
+  if (options.endpoint) params.set('endpoint', options.endpoint);
+  if (options.method) params.set('method', options.method);
+  if (options.statusCode) params.set('statusCode', options.statusCode.toString());
+  if (options.startDate) params.set('startDate', options.startDate);
+  if (options.endDate) params.set('endDate', options.endDate);
+
+  return fetchAPI(`/api-monitor/logs?${params.toString()}`);
+};
+
+/**
+ * API統計情報を取得
+ */
+export const getApiStats = async (service?: 'twitch' | 'youtube' | 'other'): Promise<any> => {
+  const params = new URLSearchParams();
+  if (service) params.set('service', service);
+
+  return fetchAPI(`/api-monitor/stats?${params.toString()}`);
+};
+
+/**
+ * Twitchレート制限情報を取得
+ */
+export const getApiRateLimit = async (): Promise<any> => {
+  return fetchAPI('/api-monitor/rate-limit');
+};
+
+/**
+ * YouTubeクォータ使用量を取得
+ */
+export const getApiYouTubeQuota = async (): Promise<any> => {
+  return fetchAPI('/api-monitor/youtube-quota');
+};
+
+/**
+ * 直近N分間のAPI呼び出し数を取得
+ */
+export const getApiRecentCalls = async (
+  service: 'twitch' | 'youtube' | 'other',
+  minutes: number = 60
+): Promise<any> => {
+  const params = new URLSearchParams();
+  params.set('service', service);
+  params.set('minutes', minutes.toString());
+
+  return fetchAPI(`/api-monitor/recent-calls?${params.toString()}`);
+};
+
+/**
+ * APIログをクリア
+ */
+export const clearApiLogs = async (service?: 'twitch' | 'youtube' | 'other'): Promise<void> => {
+  const params = new URLSearchParams();
+  if (service) params.set('service', service);
+
+  await fetchAPI(`/api-monitor/logs?${params.toString()}`, {
+    method: 'DELETE'
+  });
+};

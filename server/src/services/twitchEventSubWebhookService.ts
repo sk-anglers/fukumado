@@ -1,5 +1,6 @@
 import { createHmac } from 'crypto';
 import { fetch } from 'undici';
+import { trackedFetch } from '../utils/apiTracker';
 
 interface StreamEventHandler {
   (event: {
@@ -130,7 +131,7 @@ class TwitchEventSubWebhookService {
     version: string,
     condition: Record<string, string>
   ): Promise<string> {
-    const response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
+    const response = await trackedFetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
@@ -146,7 +147,9 @@ class TwitchEventSubWebhookService {
           callback: this.webhookUrl,
           secret: this.webhookSecret
         }
-      })
+      }),
+      service: 'twitch',
+      endpoint: 'POST /eventsub/subscriptions (webhook)'
     });
 
     if (!response.ok) {
@@ -183,12 +186,14 @@ class TwitchEventSubWebhookService {
   }
 
   private async deleteSubscription(subscriptionId: string): Promise<void> {
-    const response = await fetch(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${subscriptionId}`, {
+    const response = await trackedFetch(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${subscriptionId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
         'Client-Id': this.clientId!
-      }
+      },
+      service: 'twitch',
+      endpoint: 'DELETE /eventsub/subscriptions (webhook)'
     });
 
     if (!response.ok && response.status !== 404) {

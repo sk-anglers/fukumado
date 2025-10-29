@@ -1,5 +1,6 @@
 import { request } from 'undici';
 import { ensureYouTubeApiKey } from '../config/env';
+import { trackedYouTubeRequest } from '../utils/apiTracker';
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 
@@ -77,13 +78,13 @@ const maxResultsDefault = 10;
 const buildSearchUrl = (params: URLSearchParams): string =>
   `${YOUTUBE_API_BASE}/search?${params.toString()}`;
 
-const performRequest = async <T>(url: string): Promise<T> => {
-  const response = await request(url, {
+const performRequest = async <T>(url: string, endpoint: string, quotaCost: number): Promise<T> => {
+  const response = await trackedYouTubeRequest(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
     }
-  });
+  }, endpoint, quotaCost);
 
   if (response.statusCode >= 400) {
     const body = await response.body.text();
@@ -135,7 +136,7 @@ export const fetchLiveStreams = async (
           maxResults: maxResults.toString()
         });
         const url = buildSearchUrl(params);
-        const data = await performRequest<YouTubeSearchListResponse>(url);
+        const data = await performRequest<YouTubeSearchListResponse>(url, 'GET /youtube/v3/search (channel)', 100);
         return normalizeSearchItems(data.items);
       })
     );
@@ -155,7 +156,7 @@ export const fetchLiveStreams = async (
       q: options.query
     });
     const url = buildSearchUrl(params);
-    const data = await performRequest<YouTubeSearchListResponse>(url);
+    const data = await performRequest<YouTubeSearchListResponse>(url, 'GET /youtube/v3/search (query)', 100);
     results.push(...normalizeSearchItems(data.items));
   } else {
     throw new Error('Either channelIds or query must be provided to fetch YouTube live streams.');
@@ -194,7 +195,7 @@ export const searchChannels = async (query: string, maxResults: number = 10): Pr
   });
 
   const url = buildSearchUrl(params);
-  const data = await performRequest<YouTubeChannelSearchResponse>(url);
+  const data = await performRequest<YouTubeChannelSearchResponse>(url, 'GET /youtube/v3/search (channels)', 100);
   return normalizeChannelItems(data.items);
 };
 
@@ -218,12 +219,12 @@ export const fetchUserSubscriptions = async (accessToken: string): Promise<YouTu
     order: 'alphabetical'
   });
 
-  const response = await request(`${YOUTUBE_API_BASE}/subscriptions?${params.toString()}`, {
+  const response = await trackedYouTubeRequest(`${YOUTUBE_API_BASE}/subscriptions?${params.toString()}`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${accessToken}`
     }
-  });
+  }, 'GET /youtube/v3/subscriptions', 1);
 
   if (response.statusCode >= 400) {
     const body = await response.body.text();

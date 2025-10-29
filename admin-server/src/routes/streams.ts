@@ -86,6 +86,7 @@ streamsRouter.get('/', async (req, res) => {
  */
 streamsRouter.get('/details', async (req, res) => {
   try {
+    console.log('[Streams] Fetching details from main service:', `${env.mainBackendUrl}/api/streams/details`);
     const data = await fetchMainServiceAPI<{
       stats: {
         isRunning: boolean;
@@ -100,6 +101,13 @@ streamsRouter.get('/details', async (req, res) => {
       };
       timestamp: string;
     }>('/api/streams/details');
+
+    console.log('[Streams] Received data:', data ? 'Success' : 'Null');
+    if (data) {
+      console.log('[Streams] Stats:', data.stats);
+      console.log('[Streams] YouTube streams:', data.streams?.youtube?.length || 0);
+      console.log('[Streams] Twitch streams:', data.streams?.twitch?.length || 0);
+    }
 
     if (!data) {
       const response: ApiResponse = {

@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { trackedFetch } from '../utils/apiTracker';
 
 interface BadgeVersion {
   id: string;
@@ -46,11 +47,13 @@ class BadgeService {
     }
 
     try {
-      const response = await fetch('https://api.twitch.tv/helix/chat/badges/global', {
+      const response = await trackedFetch('https://api.twitch.tv/helix/chat/badges/global', {
         headers: {
           'Client-ID': this.clientId,
           'Authorization': `Bearer ${this.accessToken}`
-        }
+        },
+        service: 'twitch',
+        endpoint: 'GET /chat/badges/global'
       });
 
       if (!response.ok) {
@@ -87,13 +90,15 @@ class BadgeService {
     }
 
     try {
-      const response = await fetch(
+      const response = await trackedFetch(
         `https://api.twitch.tv/helix/chat/badges?broadcaster_id=${broadcasterId}`,
         {
           headers: {
             'Client-ID': this.clientId,
             'Authorization': `Bearer ${this.accessToken}`
-          }
+          },
+          service: 'twitch',
+          endpoint: 'GET /chat/badges (channel)'
         }
       );
 

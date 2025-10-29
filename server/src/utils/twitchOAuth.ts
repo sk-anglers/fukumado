@@ -1,5 +1,6 @@
 ﻿import { request } from 'undici';
 import { ensureTwitchOAuthConfig } from '../config/env';
+import { trackedTwitchRequest } from './apiTracker';
 
 const TWITCH_AUTH_BASE = 'https://id.twitch.tv/oauth2/authorize';
 const TWITCH_TOKEN_ENDPOINT = 'https://id.twitch.tv/oauth2/token';
@@ -57,13 +58,13 @@ export const exchangeTwitchCodeForTokens = async (code: string): Promise<TwitchT
     redirect_uri: redirectUri
   });
 
-  const response = await request(TWITCH_TOKEN_ENDPOINT, {
+  const response = await trackedTwitchRequest(TWITCH_TOKEN_ENDPOINT, {
     method: 'POST',
     body,
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     }
-  });
+  }, 'POST /oauth2/token (code exchange)');
 
   if (response.statusCode >= 400) {
     const text = await response.body.text();
@@ -85,13 +86,13 @@ export const refreshTwitchAccessToken = async (refreshToken: string): Promise<Tw
     grant_type: 'refresh_token'
   });
 
-  const response = await request(TWITCH_TOKEN_ENDPOINT, {
+  const response = await trackedTwitchRequest(TWITCH_TOKEN_ENDPOINT, {
     method: 'POST',
     body,
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     }
-  });
+  }, 'POST /oauth2/token (refresh)');
 
   if (response.statusCode >= 400) {
     const text = await response.body.text();
@@ -103,13 +104,13 @@ export const refreshTwitchAccessToken = async (refreshToken: string): Promise<Tw
 
 export const fetchTwitchUserInfo = async (accessToken: string): Promise<TwitchUserInfo> => {
   const { clientId } = ensureTwitchOAuthConfig();
-  const response = await request(TWITCH_USER_ENDPOINT, {
+  const response = await trackedTwitchRequest(TWITCH_USER_ENDPOINT, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Client-ID': clientId
     }
-  });
+  }, 'GET /helix/users (OAuth)');
 
   if (response.statusCode >= 400) {
     const text = await response.body.text();

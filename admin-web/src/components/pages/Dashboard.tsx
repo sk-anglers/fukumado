@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, MetricCard, Loader } from '../common';
 import { useMetricsStore } from '../../stores/metricsStore';
 import { useSecurityStore } from '../../stores/securityStore';
+import { getApiStats } from '../../services/apiClient';
 import {
   ResponsiveContainer,
   LineChart,
@@ -17,7 +18,7 @@ import {
 import styles from './Dashboard.module.css';
 
 export const Dashboard: React.FC = () => {
-  const { systemMetrics, twitchRateLimit, youtubeQuota, metricsHistory } = useMetricsStore();
+  const { systemMetrics, twitchRateLimit, youtubeQuota, metricsHistory, apiStatsHistory, setApiStats } = useMetricsStore();
   const { securityMetrics } = useSecurityStore();
 
   if (!systemMetrics) {
@@ -30,8 +31,45 @@ export const Dashboard: React.FC = () => {
     return 'normal';
   };
 
+  // API統計データを定期的に取得
+  useEffect(() => {
+    const fetchApiStats = async () => {
+      try {
+        const statsData = await getApiStats();
+        if (statsData) {
+          setApiStats({
+            totalCalls: statsData.totalCalls || 0,
+            successfulCalls: statsData.successfulCalls || 0,
+            failedCalls: statsData.failedCalls || 0,
+            averageResponseTime: statsData.averageResponseTime || 0
+          });
+        }
+      } catch (error) {
+        console.error('[Dashboard] Failed to fetch API stats:', error);
+      }
+    };
+
+    // 初回実行
+    fetchApiStats();
+
+    // 5秒ごとに更新
+    const interval = setInterval(fetchApiStats, 5000);
+
+    return () => clearInterval(interval);
+  }, [setApiStats]);
+
   // グラフ用のデータを準備（時刻フォーマット）
   const chartData = metricsHistory.map(point => ({
+    ...point,
+    time: new Date(point.timestamp).toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  }));
+
+  // API統計グラフ用のデータを準備
+  const apiStatsChartData = apiStatsHistory.map(point => ({
     ...point,
     time: new Date(point.timestamp).toLocaleTimeString('ja-JP', {
       hour: '2-digit',
@@ -264,6 +302,56 @@ export const Dashboard: React.FC = () => {
                     dataKey="youtubeUsagePercent"
                     name="YouTube API"
                     stroke="#FF0000"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </Card>
+          </section>
+
+          {/* API呼び出し統計グラフ */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>API呼び出し統計（リアルタイム）</h2>
+            <Card>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={apiStatsChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="time"
+                    tick={{ fontSize: 12 }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    label={{ value: '呼び出し数', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="totalCalls"
+                    name="総呼び出し"
+                    stroke="#3B82F6"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="successfulCalls"
+                    name="成功"
+                    stroke="#10B981"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="failedCalls"
+                    name="失敗"
+                    stroke="#EF4444"
                     strokeWidth={2}
                     dot={false}
                     isAnimationActive={false}

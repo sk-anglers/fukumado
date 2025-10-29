@@ -1,5 +1,6 @@
 import { fetch } from 'undici';
 import { env } from '../config/env';
+import { trackedFetch } from '../utils/apiTracker';
 
 interface AppAccessTokenResponse {
   access_token: string;
@@ -22,7 +23,7 @@ export async function getTwitchAppAccessToken(): Promise<string> {
 
   console.log('[Twitch App Auth] Fetching App Access Token...');
 
-  const response = await fetch('https://id.twitch.tv/oauth2/token', {
+  const response = await trackedFetch('https://id.twitch.tv/oauth2/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
@@ -31,7 +32,9 @@ export async function getTwitchAppAccessToken(): Promise<string> {
       client_id: clientId,
       client_secret: clientSecret,
       grant_type: 'client_credentials'
-    })
+    }),
+    service: 'twitch',
+    endpoint: 'POST /oauth2/token (app auth)'
   });
 
   if (!response.ok) {

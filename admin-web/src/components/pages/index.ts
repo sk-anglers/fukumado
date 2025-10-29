@@ -7,3 +7,4 @@ export { Users } from './Users';
 export { Logs } from './Logs';
 export { EventSub } from './EventSub';
 export { Cache } from './Cache';
+export { ApiMonitor } from './ApiMonitor';
