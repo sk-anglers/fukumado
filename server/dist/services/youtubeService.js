@@ -1,18 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchUserSubscriptions = exports.searchChannels = exports.fetchLiveStreams = void 0;
-const undici_1 = require("undici");
 const env_1 = require("../config/env");
+const apiTracker_1 = require("../utils/apiTracker");
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 const maxResultsDefault = 10;
 const buildSearchUrl = (params) => `${YOUTUBE_API_BASE}/search?${params.toString()}`;
-const performRequest = async (url) => {
-    const response = await (0, undici_1.request)(url, {
+const performRequest = async (url, endpoint, quotaCost) => {
+    const response = await (0, apiTracker_1.trackedYouTubeRequest)(url, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         }
-    });
+    }, endpoint, quotaCost);
     if (response.statusCode >= 400) {
         const body = await response.body.text();
         throw new Error(`YouTube API error: ${response.statusCode} - ${body}`);
@@ -48,7 +48,7 @@ const fetchLiveStreams = async (options) => {
                 maxResults: maxResults.toString()
             });
             const url = buildSearchUrl(params);
-            const data = await performRequest(url);
+            const data = await performRequest(url, 'GET /youtube/v3/search (channel)', 100);
             return normalizeSearchItems(data.items);
         }));
         for (const response of responses) {
@@ -67,7 +67,7 @@ const fetchLiveStreams = async (options) => {
             q: options.query
         });
         const url = buildSearchUrl(params);
-        const data = await performRequest(url);
+        const data = await performRequest(url, 'GET /youtube/v3/search (query)', 100);
         results.push(...normalizeSearchItems(data.items));
     }
     else {
@@ -101,7 +101,7 @@ const searchChannels = async (query, maxResults = 10) => {
         q: query
     });
     const url = buildSearchUrl(params);
-    const data = await performRequest(url);
+    const data = await performRequest(url, 'GET /youtube/v3/search (channels)', 100);
     return normalizeChannelItems(data.items);
 };
 exports.searchChannels = searchChannels;
@@ -122,12 +122,12 @@ const fetchUserSubscriptions = async (accessToken) => {
         maxResults: '50',
         order: 'alphabetical'
     });
-    const response = await (0, undici_1.request)(`${YOUTUBE_API_BASE}/subscriptions?${params.toString()}`, {
+    const response = await (0, apiTracker_1.trackedYouTubeRequest)(`${YOUTUBE_API_BASE}/subscriptions?${params.toString()}`, {
         method: 'GET',
         headers: {
             Authorization: `Bearer ${accessToken}`
         }
-    });
+    }, 'GET /youtube/v3/subscriptions', 1);
     if (response.statusCode >= 400) {
         const body = await response.body.text();
         throw new Error(`Failed to fetch subscriptions: ${response.statusCode} - ${body}`);

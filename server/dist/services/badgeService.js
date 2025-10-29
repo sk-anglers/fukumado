@@ -1,10 +1,7 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.badgeService = void 0;
-const node_fetch_1 = __importDefault(require("node-fetch"));
+const apiTracker_1 = require("../utils/apiTracker");
 class BadgeService {
     constructor() {
         this.globalBadges = {};
@@ -22,11 +19,13 @@ class BadgeService {
             return;
         }
         try {
-            const response = await (0, node_fetch_1.default)('https://api.twitch.tv/helix/chat/badges/global', {
+            const response = await (0, apiTracker_1.trackedFetch)('https://api.twitch.tv/helix/chat/badges/global', {
                 headers: {
                     'Client-ID': this.clientId,
                     'Authorization': `Bearer ${this.accessToken}`
-                }
+                },
+                service: 'twitch',
+                endpoint: 'GET /chat/badges/global'
             });
             if (!response.ok) {
                 throw new Error(`Failed to fetch global badges: ${response.status}`);
@@ -57,11 +56,13 @@ class BadgeService {
             return;
         }
         try {
-            const response = await (0, node_fetch_1.default)(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${broadcasterId}`, {
+            const response = await (0, apiTracker_1.trackedFetch)(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${broadcasterId}`, {
                 headers: {
                     'Client-ID': this.clientId,
                     'Authorization': `Bearer ${this.accessToken}`
-                }
+                },
+                service: 'twitch',
+                endpoint: 'GET /chat/badges (channel)'
             });
             if (!response.ok) {
                 throw new Error(`Failed to fetch channel badges: ${response.status}`);

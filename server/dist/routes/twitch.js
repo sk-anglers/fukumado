@@ -10,11 +10,10 @@ const twitchEventSubWebhookService_1 = require("../services/twitchEventSubWebhoo
 const streamSyncService_1 = require("../services/streamSyncService");
 const priorityManager_1 = require("../services/priorityManager");
 const dynamicChannelAllocator_1 = require("../services/dynamicChannelAllocator");
+const followedChannelsCacheService_1 = require("../services/followedChannelsCacheService");
 const env_1 = require("../config/env");
 exports.twitchRouter = (0, express_1.Router)();
-const liveStreamsCache = new Map();
 const channelSearchCache = new Map();
-const CACHE_TTL_MS = 60000; // 60秒
 const SEARCH_CACHE_TTL_MS = 300000; // 5分
 exports.twitchRouter.get('/subscriptions', async (req, res) => {
     try {
@@ -22,6 +21,11 @@ exports.twitchRouter.get('/subscriptions', async (req, res) => {
         const user = req.session.twitchUser;
         if (!accessToken || !user) {
             return res.status(401).json({ error: 'Twitch authentication required' });
+        }
+        // refresh=true の場合はキャッシュを無効化
+        if (req.query.refresh === 'true') {
+            followedChannelsCacheService_1.followedChannelsCacheService.invalidateUser(user.id);
+            console.log('[Twitch Subscriptions] Cache invalidated for user:', user.id);
         }
         // チャットサービスに認証情報を設定（バッジ取得のため）
         twitchChatService_1.twitchChatService.setCredentials(accessToken, user.login);
@@ -49,32 +53,24 @@ exports.twitchRouter.get('/live', async (req, res) => {
             : channelIdsParam
                 ? [String(channelIdsParam)]
                 : [];
-        // キャッシュキーを生成（チャンネルIDをソートして結合）
-        const cacheKey = [...channelIds].sort().join(',');
-        const now = Date.now();
-        // キャッシュチェック
-        const cached = liveStreamsCache.get(cacheKey);
-        if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-            const remainingTtl = Math.ceil((CACHE_TTL_MS - (now - cached.timestamp)) / 1000);
-            console.log(`[Twitch API Cache] キャッシュヒット (TTL残り: ${remainingTtl}秒)`);
-            return res.json(cached.data);
-        }
-        // キャッシュミス - APIから取得
-        console.log('[Twitch API Cache] キャッシュミス - APIから取得します');
-        const streams = await (0, twitchService_1.fetchLiveStreams)(accessToken, channelIds);
-        const responseData = { items: streams };
-        // キャッシュに保存
-        liveStreamsCache.set(cacheKey, {
-            data: responseData,
-            timestamp: now
-        });
-        // 古いキャッシュエントリを削除（メモリリーク対策）
-        for (const [key, entry] of liveStreamsCache.entries()) {
-            if (now - entry.timestamp >= CACHE_TTL_MS) {
-                liveStreamsCache.delete(key);
+        // チャンネルIDが指定されていない場合、StreamSyncServiceのキャッシュから返す
+        if (channelIds.length === 0) {
+            console.log('[Twitch API] No channelId specified, trying cache...');
+            const cached = await streamSyncService_1.streamSyncService.getCachedStreams();
+            if (cached && cached.twitch) {
+                console.log(`[Twitch API] Returning ${cached.twitch.length} cached streams`);
+                return res.json({ items: cached.twitch });
             }
+            // キャッシュがない場合はエラー
+            console.log('[Twitch API] No cache available');
+            return res.status(400).json({
+                error: 'Either "channelId" (can be multiple) must be provided or StreamSync must be running.'
+            });
         }
-        res.json(responseData);
+        // チャンネルIDが指定されている場合は直接API呼び出し
+        console.log('[Twitch API] Fetching from Twitch API...');
+        const streams = await (0, twitchService_1.fetchLiveStreams)(accessToken, channelIds);
+        res.json({ items: streams });
     }
     catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';

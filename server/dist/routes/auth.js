@@ -1,9 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureTwitchAccessToken = exports.ensureGoogleAccessToken = exports.authRouter = void 0;
 const express_1 = require("express");
 const googleOAuth_1 = require("../utils/googleOAuth");
 const twitchOAuth_1 = require("../utils/twitchOAuth");
+const twitchService_1 = require("../services/twitchService");
 exports.authRouter = (0, express_1.Router)();
 // Google OAuth
 exports.authRouter.get('/google', (req, res) => {
@@ -69,8 +103,14 @@ exports.authRouter.post('/logout', (req, res) => {
 exports.authRouter.get('/twitch', (req, res) => {
     console.log('[Twitch Login] Starting OAuth flow');
     console.log('[Twitch Login] Session ID:', req.sessionID);
+    // adminパラメータを検出（管理ダッシュボード用）
+    const isAdminAuth = req.query.admin === 'true';
+    if (isAdminAuth) {
+        console.log('[Twitch Login] Admin authentication detected');
+    }
     const state = (0, googleOAuth_1.createState)();
     req.session.twitchOauthState = state;
+    req.session.isAdminAuth = isAdminAuth; // adminフラグを保存
     const url = (0, twitchOAuth_1.buildTwitchAuthUrl)(state);
     console.log('[Twitch Login] Redirecting to:', url);
     res.redirect(url);
@@ -116,6 +156,46 @@ exports.authRouter.get('/twitch/callback', async (req, res) => {
         console.log('[Twitch Callback] Session data set:', {
             hasTokens: !!req.session.twitchTokens,
             hasUser: !!req.session.twitchUser
+        });
+        // 管理ダッシュボード用の認証の場合
+        const isAdminAuth = req.session.isAdminAuth;
+        req.session.isAdminAuth = undefined; // フラグをクリア
+        if (isAdminAuth) {
+            console.log('[Twitch Callback] Admin authentication - sending credentials to admin dashboard');
+            // トークンをEventSubManagerに送信
+            try {
+                const { fetch } = await Promise.resolve().then(() => __importStar(require('undici')));
+                const response = await fetch('http://localhost:4000/api/admin/eventsub/credentials', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        accessToken: tokenResponse.access_token,
+                        clientId: process.env.TWITCH_CLIENT_ID
+                    })
+                });
+                if (response.ok) {
+                    console.log('[Twitch Callback] Credentials sent to EventSubManager successfully');
+                }
+                else {
+                    console.error('[Twitch Callback] Failed to send credentials:', response.status);
+                }
+            }
+            catch (error) {
+                console.error('[Twitch Callback] Error sending credentials:', error);
+            }
+            // 管理ダッシュボードにリダイレクト
+            return res.redirect(`http://localhost:5174/eventsub?twitch_auth=success&username=${encodeURIComponent(userInfo.login)}`);
+        }
+        // 通常の認証フロー
+        // グローバルエモートを先読み（バックグラウンドで非同期実行）
+        (0, twitchService_1.fetchGlobalEmotes)(tokenResponse.access_token)
+            .then(() => {
+            console.log('[Twitch Callback] Global emotes preloaded successfully');
+        })
+            .catch((error) => {
+            console.error('[Twitch Callback] Failed to preload global emotes:', error.message);
         });
         // セッションを保存してからリダイレクト
         req.session.save((err) => {
@@ -182,8 +262,25 @@ exports.authRouter.get('/success', (_req, res) => {
         </div>
         <script>
           setTimeout(function() {
-            window.location.href = 'http://localhost:5173/';
+            // 別ウィンドウで開かれている場合は閉じる
+            if (window.opener) {
+              window.close();
+            } else {
+              // 同じウィンドウで開かれている場合はリダイレクト
+              window.location.href = 'http://localhost:5173/';
+            }
           }, 3000);
+
+          // ボタンのクリック処理も同様に
+          document.addEventListener('DOMContentLoaded', function() {
+            var link = document.querySelector('a');
+            if (link && window.opener) {
+              link.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.close();
+              });
+            }
+          });
         </script>
       </body>
     </html>

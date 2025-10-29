@@ -13,28 +13,67 @@ const auth_1 = require("./routes/auth");
 const youtube_1 = require("./routes/youtube");
 const twitch_1 = require("./routes/twitch");
 const streams_1 = require("./routes/streams");
+const security_1 = require("./routes/security");
+const consent_1 = require("./routes/consent");
+const legal_1 = require("./routes/legal");
+const maintenance_1 = require("./routes/maintenance");
+const users_1 = require("./routes/users");
+const logs_1 = require("./routes/logs");
+const eventsub_1 = require("./routes/eventsub");
+const cache_1 = require("./routes/cache");
+const adminStreams_1 = require("./routes/adminStreams");
+const admin_1 = require("./routes/admin");
 const twitchChatService_1 = require("./services/twitchChatService");
 const streamSyncService_1 = require("./services/streamSyncService");
+const twitchService_1 = require("./services/twitchService");
 const twitchEventSubManager_1 = require("./services/twitchEventSubManager");
 const twitchEventSubWebhookService_1 = require("./services/twitchEventSubWebhookService");
 const priorityManager_1 = require("./services/priorityManager");
-const security_1 = require("./middleware/security");
+const security_2 = require("./middleware/security");
+const maintenanceMode_1 = require("./middleware/maintenanceMode");
 const websocketSecurity_1 = require("./middleware/websocketSecurity");
+const logging_1 = require("./middleware/logging");
+const anomalyDetection_1 = require("./services/anomalyDetection");
+const metricsCollector_1 = require("./services/metricsCollector");
+const sessionSecurity_1 = require("./middleware/sessionSecurity");
 const app = (0, express_1.default)();
-// CORS設定（モバイル対応）
+// CORS設定（モバイル対応 + 本番環境）
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://192.168.11.18:5173',
+    'http://127.0.0.1:5173'
+];
+// 本番環境の場合は本番URLを追加
+if (process.env.NODE_ENV === 'production') {
+    allowedOrigins.push('https://fukumado.jp', 'https://www.fukumado.jp', 'https://admin.fukumado.jp', 
+    // ベータ環境
+    'https://beta.fukumado.jp', 'https://beta-admin.fukumado.jp');
+}
 app.use((0, cors_1.default)({
-    origin: [
-        'http://localhost:5173',
-        'http://192.168.11.18:5173',
-        'http://127.0.0.1:5173'
-    ],
+    origin: allowedOrigins,
     credentials: true
 }));
 // セキュリティミドルウェア
-app.use(security_1.securityHeaders); // セキュリティヘッダー
-app.use(security_1.checkBlockedIP); // IPブロックチェック
-app.use(security_1.validateRequestSize); // リクエストサイズ検証
-app.use(express_1.default.json({ limit: '10kb' })); // JSONパーサー（サイズ制限付き）;
+app.use(security_2.securityHeaders); // セキュリティヘッダー
+app.use(security_2.checkBlockedIP); // IPブロックチェック
+app.use(security_2.validateRequestSize); // リクエストサイズ検証
+app.use(express_1.default.json({ limit: '10kb' })); // JSONパーサー（サイズ制限付き）
+// ロギングミドルウェア
+app.use(logging_1.requestLogger); // HTTPリクエストログ
+app.use(logging_1.recordAccessStats); // アクセス統計記録
+// 異常検知用のリクエスト記録 & メトリクス収集
+app.use((req, res, next) => {
+    const startTime = Date.now();
+    res.on('finish', () => {
+        const ip = req.ip || req.socket.remoteAddress || 'unknown';
+        const duration = Date.now() - startTime;
+        // 異常検知サービスに記録
+        anomalyDetection_1.anomalyDetectionService.recordRequest(ip, req.path, res.statusCode);
+        // メトリクス収集
+        metricsCollector_1.metricsCollector.recordHttpRequest(req.method, req.path, res.statusCode, duration);
+    });
+    next();
+});
 // セッションミドルウェア（WebSocketでも使用するためexport）
 const sessionMiddleware = (0, express_session_1.default)({
     secret: env_1.env.sessionSecret,
@@ -42,28 +81,45 @@ const sessionMiddleware = (0, express_session_1.default)({
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: false, // ngrok使用時はfalseに設定
+        secure: process.env.NODE_ENV === 'production', // 本番環境ではHTTPSのみ
         sameSite: 'lax',
         maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
     }
 });
 app.use(sessionMiddleware);
+// セッションセキュリティミドルウェア
+app.use(sessionSecurity_1.initializeSession); // セッション初期化
+app.use(sessionSecurity_1.detectSessionHijacking); // セッションハイジャック検出
+app.use((0, sessionSecurity_1.checkSessionTimeout)(30)); // 30分のタイムアウト
+app.use(sessionSecurity_1.includeCSRFToken); // CSRFトークンをレスポンスに含める
+// メンテナンスモードチェック（/healthは除外される）
+app.use(maintenanceMode_1.maintenanceMode);
 app.get('/health', (_, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 // 認証ルーター（厳しいレート制限）
-app.use('/auth', security_1.authRateLimiter, auth_1.authRouter);
+app.use('/auth', security_2.authRateLimiter, auth_1.authRouter);
 // YouTube機能が有効な場合のみルーターを登録
 if (env_1.env.enableYoutube) {
-    app.use('/api/youtube', security_1.apiRateLimiter, youtube_1.youtubeRouter);
+    app.use('/api/youtube', security_2.apiRateLimiter, youtube_1.youtubeRouter);
     console.log('[server] YouTube API enabled');
 }
 else {
     console.log('[server] YouTube API disabled');
 }
 // APIルーター（レート制限付き）
-app.use('/api/twitch', security_1.apiRateLimiter, twitch_1.twitchRouter);
-app.use('/api/streams', security_1.apiRateLimiter, streams_1.streamsRouter);
+app.use('/api/twitch', security_2.apiRateLimiter, twitch_1.twitchRouter);
+app.use('/api/streams', security_2.apiRateLimiter, streams_1.streamsRouter);
+app.use('/api/security', security_2.apiRateLimiter, security_1.securityRouter);
+app.use('/api/consent', security_2.apiRateLimiter, consent_1.consentRouter);
+app.use('/api/legal', security_2.apiRateLimiter, legal_1.legalRouter);
+app.use('/api/admin/maintenance', maintenance_1.maintenanceRouter);
+app.use('/api/admin/users', users_1.usersRouter);
+app.use('/api/admin/logs', logs_1.logsRouter);
+app.use('/api/admin/eventsub', eventsub_1.eventsubRouter);
+app.use('/api/admin/cache', cache_1.cacheRouter);
+app.use('/api/admin/streams', adminStreams_1.adminStreamsRouter);
+app.use('/api/admin', admin_1.adminRouter);
 // HTTPサーバーを作成
 const server = (0, http_1.createServer)(app);
 // WebSocketサーバーを作成
@@ -172,6 +228,7 @@ wss.on('connection', (ws, request) => {
     }
     // 接続を記録
     websocketSecurity_1.wsConnectionManager.registerConnection(clientIP);
+    metricsCollector_1.metricsCollector.recordWebSocketConnection(true); // メトリクス記録
     console.log('[WebSocket] Client connected');
     // ハートビートを開始
     websocketSecurity_1.wsHeartbeat.start(ws);
@@ -232,6 +289,8 @@ wss.on('connection', (ws, request) => {
                 }
                 const payload = JSON.parse(data.toString());
                 console.log('[WebSocket] Received message:', payload);
+                // メトリクス記録
+                metricsCollector_1.metricsCollector.recordWebSocketMessage(payload.type || 'unknown', 'in');
                 // メッセージ検証
                 const validation = (0, websocketSecurity_1.validateWebSocketMessage)(payload);
                 if (!validation.valid) {
@@ -268,6 +327,23 @@ wss.on('connection', (ws, request) => {
                         }
                         clientData.channels = newChannels;
                         console.log('[WebSocket] Client channels updated:', Array.from(clientData.channels));
+                        // チャンネルエモートの先読み（非同期、ノンブロッキング）
+                        if (channelIdMapping && typeof channelIdMapping === 'object') {
+                            const tokens = req.session?.twitchTokens;
+                            if (tokens?.accessToken) {
+                                Object.values(channelIdMapping).forEach((channelId) => {
+                                    if (channelId && typeof channelId === 'string') {
+                                        (0, twitchService_1.fetchChannelEmotes)(tokens.accessToken, channelId)
+                                            .then(() => {
+                                            console.log(`[WebSocket] Channel emotes preloaded for ${channelId}`);
+                                        })
+                                            .catch((error) => {
+                                            console.error(`[WebSocket] Failed to preload emotes for ${channelId}:`, error.message);
+                                        });
+                                    }
+                                });
+                            }
+                        }
                     }
                 }
                 else if (payload.type === 'subscribe_streams') {
@@ -316,6 +392,7 @@ wss.on('connection', (ws, request) => {
             websocketSecurity_1.wsHeartbeat.stop(ws);
             // 接続を解除
             websocketSecurity_1.wsConnectionManager.unregisterConnection(clientIP);
+            metricsCollector_1.metricsCollector.recordWebSocketConnection(false); // メトリクス記録
             // クリーンアップ
             if (clientData.cleanup) {
                 clientData.cleanup();
@@ -346,9 +423,17 @@ wss.on('connection', (ws, request) => {
         });
     }); // sessionMiddlewareコールバックの終了
 });
-server.listen(env_1.env.port, () => {
+server.listen(env_1.env.port, async () => {
     // eslint-disable-next-line no-console
     console.log(`[server] listening on http://localhost:${env_1.env.port}`);
     console.log('[server] StreamSyncService will start automatically when clients connect');
+    // EventSubが有効な場合の通知（接続は管理者ログイン時に実行）
+    if (env_1.env.enableEventSub) {
+        console.log('[server] EventSub is enabled');
+        console.log('[server] EventSub will be initialized when admin authenticates via dashboard');
+    }
+    else {
+        console.log('[server] EventSub is disabled');
+    }
 });
 //# sourceMappingURL=index.js.map

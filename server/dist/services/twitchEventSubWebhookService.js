@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.twitchEventSubWebhookService = void 0;
 const crypto_1 = require("crypto");
-const undici_1 = require("undici");
+const apiTracker_1 = require("../utils/apiTracker");
 class TwitchEventSubWebhookService {
     constructor() {
         this.accessToken = null;
@@ -98,7 +98,7 @@ class TwitchEventSubWebhookService {
         }
     }
     async createSubscription(type, version, condition) {
-        const response = await (0, undici_1.fetch)('https://api.twitch.tv/helix/eventsub/subscriptions', {
+        const response = await (0, apiTracker_1.trackedFetch)('https://api.twitch.tv/helix/eventsub/subscriptions', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${this.accessToken}`,
@@ -114,7 +114,9 @@ class TwitchEventSubWebhookService {
                     callback: this.webhookUrl,
                     secret: this.webhookSecret
                 }
-            })
+            }),
+            service: 'twitch',
+            endpoint: 'POST /eventsub/subscriptions (webhook)'
         });
         if (!response.ok) {
             const errorText = await response.text();
@@ -145,12 +147,14 @@ class TwitchEventSubWebhookService {
         }
     }
     async deleteSubscription(subscriptionId) {
-        const response = await (0, undici_1.fetch)(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${subscriptionId}`, {
+        const response = await (0, apiTracker_1.trackedFetch)(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${subscriptionId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${this.accessToken}`,
                 'Client-Id': this.clientId
-            }
+            },
+            service: 'twitch',
+            endpoint: 'DELETE /eventsub/subscriptions (webhook)'
         });
         if (!response.ok && response.status !== 404) {
             const errorText = await response.text();

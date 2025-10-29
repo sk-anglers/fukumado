@@ -6,10 +6,10 @@ const twitchService_1 = require("./twitchService");
 const cacheService_1 = require("./cacheService");
 const priorityManager_1 = require("./priorityManager");
 // キャッシュTTL（秒）
-// 同期間隔（60秒）より少し長めに設定し、次回同期まで有効なキャッシュを保持
-const CACHE_TTL = 70; // 70秒
+// 同期間隔（90秒）より少し長めに設定し、次回同期まで有効なキャッシュを保持
+const CACHE_TTL = 100; // 100秒
 // 同期間隔（ミリ秒）
-const SYNC_INTERVAL = 60000; // 1分（より頻繁に更新）
+const SYNC_INTERVAL = 90000; // 1.5分（API消費を削減）
 class StreamSyncService {
     constructor() {
         this.intervalId = null;
@@ -271,17 +271,25 @@ class StreamSyncService {
      * キャッシュされた配信リストを取得
      */
     async getCachedStreams() {
-        if (!cacheService_1.cacheService.isConnected()) {
-            console.warn('[StreamSync] Redis not connected');
-            return null;
+        // まずRedisから取得を試みる
+        if (cacheService_1.cacheService.isConnected()) {
+            const [youtube, twitch] = await Promise.all([
+                cacheService_1.cacheService.get('streams:youtube:all'),
+                cacheService_1.cacheService.get('streams:twitch:all')
+            ]);
+            // Redisにデータがある場合はそれを返す
+            if (youtube || twitch) {
+                return {
+                    youtube: youtube || [],
+                    twitch: twitch || []
+                };
+            }
         }
-        const [youtube, twitch] = await Promise.all([
-            cacheService_1.cacheService.get('streams:youtube:all'),
-            cacheService_1.cacheService.get('streams:twitch:all')
-        ]);
+        // Redisが使えないか、データがない場合は、メモリ内のデータをフォールバックとして返す
+        console.log('[StreamSync] Using in-memory stream data as fallback');
         return {
-            youtube: youtube || [],
-            twitch: twitch || []
+            youtube: Array.from(this.previousYouTubeStreams.values()),
+            twitch: Array.from(this.previousTwitchStreams.values())
         };
     }
     /**

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.twitchEventSubManager = exports.TwitchEventSubManager = void 0;
 const twitchEventSubConnection_1 = require("./twitchEventSubConnection");
+const crypto_1 = require("crypto");
 /**
  * Twitch EventSub WebSocketの複数接続を管理するマネージャークラス
  *
@@ -18,12 +19,25 @@ class TwitchEventSubManager {
         this.clientId = null;
         this.maxConnectionCount = 3;
         this.maxSubscriptionsPerConnection = 10000;
+        this.eventHistory = [];
+        this.maxHistorySize = 100; // 最大100件保持
         console.log('[EventSub Manager] Initializing with 3 connections...');
         // 3本の接続を作成
         for (let i = 0; i < this.maxConnectionCount; i++) {
             const connection = new twitchEventSubConnection_1.TwitchEventSubConnection(i);
             // 各接続からのイベントを統合
             connection.onStreamEvent((event) => {
+                // イベント履歴に追加
+                const historyItem = {
+                    ...event,
+                    id: (0, crypto_1.randomUUID)(),
+                    timestamp: new Date().toISOString()
+                };
+                this.eventHistory.unshift(historyItem); // 先頭に追加
+                // 履歴サイズを制限
+                if (this.eventHistory.length > this.maxHistorySize) {
+                    this.eventHistory = this.eventHistory.slice(0, this.maxHistorySize);
+                }
                 // 全てのイベントハンドラーに通知
                 this.eventHandlers.forEach((handler) => {
                     try {
@@ -182,6 +196,28 @@ class TwitchEventSubManager {
         console.log('[EventSub Manager] All connections disconnected');
     }
     /**
+     * 全ての接続を再接続
+     */
+    async reconnectAll() {
+        if (!this.accessToken || !this.clientId) {
+            throw new Error('Credentials not set. Call setCredentials() first.');
+        }
+        console.log('[EventSub Manager] Reconnecting all connections...');
+        // 現在のサブスクリプション情報を保存
+        const subscribedUserIds = Array.from(this.channelToConnectionMap.keys());
+        console.log(`[EventSub Manager] Saving ${subscribedUserIds.length} subscriptions before reconnect`);
+        // 全ての接続を切断
+        this.disconnectAll();
+        // 全ての接続を再接続
+        await this.connectAll();
+        // サブスクリプションを復元
+        if (subscribedUserIds.length > 0) {
+            console.log(`[EventSub Manager] Restoring ${subscribedUserIds.length} subscriptions...`);
+            await this.subscribeToUsers(subscribedUserIds);
+        }
+        console.log('[EventSub Manager] Reconnection completed');
+    }
+    /**
      * 特定のユーザーがサブスクライブ済みか確認
      */
     isSubscribed(userId) {
@@ -234,6 +270,14 @@ class TwitchEventSubManager {
         const available = total - used;
         const percentage = (used / total) * 100;
         return { used, total, available, percentage };
+    }
+    /**
+     * イベント履歴を取得
+     * @param limit 取得件数（デフォルト: 50）
+     */
+    getEventHistory(limit) {
+        const maxLimit = limit || 50;
+        return this.eventHistory.slice(0, Math.min(maxLimit, this.eventHistory.length));
     }
 }
 exports.TwitchEventSubManager = TwitchEventSubManager;

@@ -19,8 +19,9 @@ class TwitchChatService {
     }
     setCredentials(accessToken, username) {
         console.log(`[Twitch Chat Service] Setting credentials for user: ${username}`);
-        // ユーザーが変更された場合のみクライアントをリセット
-        const userChanged = this.username !== null && this.username !== username;
+        // 認証情報が変更された場合、クライアントをリセット
+        const credentialsChanged = this.accessToken !== accessToken ||
+            this.username !== username;
         this.accessToken = accessToken;
         this.username = username;
         // バッジサービスにアクセストークンを設定し、グローバルバッジを取得
@@ -28,9 +29,9 @@ class TwitchChatService {
         badgeService_1.badgeService.fetchGlobalBadges().catch((err) => {
             console.error('[Twitch Chat Service] Failed to fetch global badges:', err);
         });
-        // ユーザーが変更された場合のみクライアントをリセット
-        if (userChanged && this.client) {
-            console.log('[Twitch Chat Service] Resetting client due to user change');
+        // 認証情報が変更された場合、クライアントをリセット
+        if (credentialsChanged && this.client) {
+            console.log('[Twitch Chat Service] Resetting client due to credentials change');
             this.client.disconnect().catch(() => { });
             this.client = null;
             this.connectionPromise = null;

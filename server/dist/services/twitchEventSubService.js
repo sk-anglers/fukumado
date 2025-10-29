@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.twitchEventSubService = void 0;
 const ws_1 = __importDefault(require("ws"));
-const undici_1 = require("undici");
+const apiTracker_1 = require("../utils/apiTracker");
 class TwitchEventSubService {
     constructor() {
         this.ws = null;
@@ -212,7 +212,7 @@ class TwitchEventSubService {
         }
     }
     async createSubscription(type, version, condition) {
-        const response = await (0, undici_1.fetch)('https://api.twitch.tv/helix/eventsub/subscriptions', {
+        const response = await (0, apiTracker_1.trackedFetch)('https://api.twitch.tv/helix/eventsub/subscriptions', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${this.accessToken}`,
@@ -227,7 +227,9 @@ class TwitchEventSubService {
                     method: 'websocket',
                     session_id: this.sessionId
                 }
-            })
+            }),
+            service: 'twitch',
+            endpoint: 'POST /eventsub/subscriptions (websocket)'
         });
         if (!response.ok) {
             const errorText = await response.text();
@@ -258,12 +260,14 @@ class TwitchEventSubService {
         }
     }
     async deleteSubscription(subscriptionId) {
-        const response = await (0, undici_1.fetch)(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${subscriptionId}`, {
+        const response = await (0, apiTracker_1.trackedFetch)(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${subscriptionId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${this.accessToken}`,
                 'Client-Id': this.clientId
-            }
+            },
+            service: 'twitch',
+            endpoint: 'DELETE /eventsub/subscriptions (websocket)'
         });
         if (!response.ok && response.status !== 404) {
             const errorText = await response.text();

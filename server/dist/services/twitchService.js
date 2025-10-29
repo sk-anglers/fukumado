@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchChannelEmotes = exports.fetchGlobalEmotes = exports.searchChannels = exports.fetchLiveStreams = exports.fetchFollowedChannels = void 0;
-const undici_1 = require("undici");
 const env_1 = require("../config/env");
+const emoteCacheService_1 = require("./emoteCacheService");
+const followedChannelsCacheService_1 = require("./followedChannelsCacheService");
+const apiTracker_1 = require("../utils/apiTracker");
 const TWITCH_BASE = 'https://api.twitch.tv/helix';
 const buildHeaders = (accessToken) => {
     const { clientId } = (0, env_1.ensureTwitchOAuthConfig)();
@@ -12,7 +14,13 @@ const buildHeaders = (accessToken) => {
     };
 };
 const fetchFollowedChannels = async (accessToken, userId) => {
-    console.log('[Twitch Service] Fetching followed channels for user:', userId);
+    // キャッシュチェック
+    const cached = followedChannelsCacheService_1.followedChannelsCacheService.getFollowedChannels(userId);
+    if (cached) {
+        console.log('[Twitch Service] Returning cached followed channels for user:', userId);
+        return cached;
+    }
+    console.log('[Twitch Service] Fetching followed channels from API for user:', userId);
     const headers = buildHeaders(accessToken);
     const allChannels = [];
     let cursor = undefined;
@@ -28,10 +36,10 @@ const fetchFollowedChannels = async (accessToken, userId) => {
         }
         const url = `${TWITCH_BASE}/channels/followed?${params.toString()}`;
         console.log(`[Twitch Service] Fetching page ${pageCount}:`, url);
-        const response = await (0, undici_1.request)(url, {
+        const response = await (0, apiTracker_1.trackedTwitchRequest)(url, {
             method: 'GET',
             headers
-        });
+        }, 'GET /helix/channels/followed');
         console.log(`[Twitch Service] Page ${pageCount} response status:`, response.statusCode);
         if (response.statusCode >= 400) {
             const text = await response.body.text();
@@ -61,6 +69,8 @@ const fetchFollowedChannels = async (accessToken, userId) => {
         console.log(`[Twitch Service] Total channels so far: ${allChannels.length}, Next cursor: ${cursor ? 'exists' : 'none'}`);
     } while (cursor);
     console.log(`[Twitch Service] Finished fetching all ${allChannels.length} channels in ${pageCount} pages`);
+    // キャッシュに保存
+    followedChannelsCacheService_1.followedChannelsCacheService.setFollowedChannels(userId, allChannels);
     return allChannels;
 };
 exports.fetchFollowedChannels = fetchFollowedChannels;
@@ -83,10 +93,10 @@ const fetchLiveStreams = async (accessToken, channelIds) => {
         const params = new URLSearchParams();
         batch.forEach((id) => params.append('user_id', id));
         console.log(`[Twitch Service] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} channels)`);
-        const response = await (0, undici_1.request)(`${TWITCH_BASE}/streams?${params.toString()}`, {
+        const response = await (0, apiTracker_1.trackedTwitchRequest)(`${TWITCH_BASE}/streams?${params.toString()}`, {
             method: 'GET',
             headers
-        });
+        }, 'GET /helix/streams');
         if (response.statusCode >= 400) {
             const text = await response.body.text();
             // 429 Rate Limitエラーの特別処理
@@ -127,10 +137,10 @@ const searchChannels = async (accessToken, query, maxResults = 10) => {
         query,
         first: String(Math.min(maxResults, 100))
     });
-    const response = await (0, undici_1.request)(`${TWITCH_BASE}/search/channels?${params.toString()}`, {
+    const response = await (0, apiTracker_1.trackedTwitchRequest)(`${TWITCH_BASE}/search/channels?${params.toString()}`, {
         method: 'GET',
         headers
-    });
+    }, 'GET /helix/search/channels');
     if (response.statusCode >= 400) {
         const text = await response.body.text();
         throw new Error(`Failed to search Twitch channels: ${response.statusCode} - ${text}`);
@@ -146,20 +156,26 @@ const searchChannels = async (accessToken, query, maxResults = 10) => {
 };
 exports.searchChannels = searchChannels;
 const fetchGlobalEmotes = async (accessToken) => {
-    console.log('[Twitch Service] Fetching global emotes');
+    // キャッシュチェック
+    const cached = emoteCacheService_1.emoteCacheService.getGlobalEmotes();
+    if (cached) {
+        console.log('[Twitch Service] Returning cached global emotes');
+        return cached;
+    }
+    console.log('[Twitch Service] Fetching global emotes from API');
     const headers = buildHeaders(accessToken);
-    const response = await (0, undici_1.request)(`${TWITCH_BASE}/chat/emotes/global`, {
+    const response = await (0, apiTracker_1.trackedTwitchRequest)(`${TWITCH_BASE}/chat/emotes/global`, {
         method: 'GET',
         headers
-    });
+    }, 'GET /helix/chat/emotes/global');
     if (response.statusCode >= 400) {
         const text = await response.body.text();
         console.error('[Twitch Service] Error fetching global emotes:', text);
         throw new Error(`Failed to fetch global emotes: ${response.statusCode} - ${text}`);
     }
     const data = (await response.body.json());
-    console.log(`[Twitch Service] Fetched ${data.data.length} global emotes`);
-    return data.data.map((item) => ({
+    console.log(`[Twitch Service] Fetched ${data.data.length} global emotes from API`);
+    const emotes = data.data.map((item) => ({
         id: item.id,
         name: item.name,
         imageUrl: item.images.url_1x,
@@ -167,26 +183,35 @@ const fetchGlobalEmotes = async (accessToken) => {
         emoteSetId: item.emote_set_id,
         ownerId: item.owner_id
     }));
+    // キャッシュに保存
+    emoteCacheService_1.emoteCacheService.setGlobalEmotes(emotes);
+    return emotes;
 };
 exports.fetchGlobalEmotes = fetchGlobalEmotes;
 const fetchChannelEmotes = async (accessToken, broadcasterId) => {
-    console.log('[Twitch Service] Fetching channel emotes for broadcaster:', broadcasterId);
+    // キャッシュチェック
+    const cached = emoteCacheService_1.emoteCacheService.getChannelEmotes(broadcasterId);
+    if (cached) {
+        console.log('[Twitch Service] Returning cached channel emotes for broadcaster:', broadcasterId);
+        return cached;
+    }
+    console.log('[Twitch Service] Fetching channel emotes from API for broadcaster:', broadcasterId);
     const headers = buildHeaders(accessToken);
     const params = new URLSearchParams({
         broadcaster_id: broadcasterId
     });
-    const response = await (0, undici_1.request)(`${TWITCH_BASE}/chat/emotes?${params.toString()}`, {
+    const response = await (0, apiTracker_1.trackedTwitchRequest)(`${TWITCH_BASE}/chat/emotes?${params.toString()}`, {
         method: 'GET',
         headers
-    });
+    }, 'GET /helix/chat/emotes');
     if (response.statusCode >= 400) {
         const text = await response.body.text();
         console.error('[Twitch Service] Error fetching channel emotes:', text);
         throw new Error(`Failed to fetch channel emotes: ${response.statusCode} - ${text}`);
     }
     const data = (await response.body.json());
-    console.log(`[Twitch Service] Fetched ${data.data.length} channel emotes`);
-    return data.data.map((item) => ({
+    console.log(`[Twitch Service] Fetched ${data.data.length} channel emotes from API`);
+    const emotes = data.data.map((item) => ({
         id: item.id,
         name: item.name,
         imageUrl: item.images.url_1x,
@@ -194,6 +219,9 @@ const fetchChannelEmotes = async (accessToken, broadcasterId) => {
         emoteSetId: item.emote_set_id,
         ownerId: item.owner_id
     }));
+    // キャッシュに保存
+    emoteCacheService_1.emoteCacheService.setChannelEmotes(broadcasterId, emotes);
+    return emotes;
 };
 exports.fetchChannelEmotes = fetchChannelEmotes;
 //# sourceMappingURL=twitchService.js.map

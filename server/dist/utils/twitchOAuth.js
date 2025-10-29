@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchTwitchUserInfo = exports.refreshTwitchAccessToken = exports.exchangeTwitchCodeForTokens = exports.buildTwitchAuthUrl = void 0;
-const undici_1 = require("undici");
 const env_1 = require("../config/env");
+const apiTracker_1 = require("./apiTracker");
 const TWITCH_AUTH_BASE = 'https://id.twitch.tv/oauth2/authorize';
 const TWITCH_TOKEN_ENDPOINT = 'https://id.twitch.tv/oauth2/token';
 const TWITCH_USER_ENDPOINT = 'https://api.twitch.tv/helix/users';
@@ -37,13 +37,13 @@ const exchangeTwitchCodeForTokens = async (code) => {
         grant_type: 'authorization_code',
         redirect_uri: redirectUri
     });
-    const response = await (0, undici_1.request)(TWITCH_TOKEN_ENDPOINT, {
+    const response = await (0, apiTracker_1.trackedTwitchRequest)(TWITCH_TOKEN_ENDPOINT, {
         method: 'POST',
         body,
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-    });
+    }, 'POST /oauth2/token (code exchange)');
     if (response.statusCode >= 400) {
         const text = await response.body.text();
         console.error('[Twitch OAuth Error] Token exchange failed:');
@@ -62,13 +62,13 @@ const refreshTwitchAccessToken = async (refreshToken) => {
         refresh_token: refreshToken,
         grant_type: 'refresh_token'
     });
-    const response = await (0, undici_1.request)(TWITCH_TOKEN_ENDPOINT, {
+    const response = await (0, apiTracker_1.trackedTwitchRequest)(TWITCH_TOKEN_ENDPOINT, {
         method: 'POST',
         body,
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-    });
+    }, 'POST /oauth2/token (refresh)');
     if (response.statusCode >= 400) {
         const text = await response.body.text();
         throw new Error(`Failed to refresh Twitch token: ${response.statusCode} - ${text}`);
@@ -78,13 +78,13 @@ const refreshTwitchAccessToken = async (refreshToken) => {
 exports.refreshTwitchAccessToken = refreshTwitchAccessToken;
 const fetchTwitchUserInfo = async (accessToken) => {
     const { clientId } = (0, env_1.ensureTwitchOAuthConfig)();
-    const response = await (0, undici_1.request)(TWITCH_USER_ENDPOINT, {
+    const response = await (0, apiTracker_1.trackedTwitchRequest)(TWITCH_USER_ENDPOINT, {
         method: 'GET',
         headers: {
             Authorization: `Bearer ${accessToken}`,
             'Client-ID': clientId
         }
-    });
+    }, 'GET /helix/users (OAuth)');
     if (response.statusCode >= 400) {
         const text = await response.body.text();
         throw new Error(`Failed to fetch Twitch user info: ${response.statusCode} - ${text}`);
