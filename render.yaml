@@ -44,8 +44,6 @@ services:
         sync: false
       - key: TWITCH_REDIRECT_URI
         value: https://api.fukumado.jp/auth/twitch/callback
-    domains:
-      - api.fukumado.jp
 
   # ===================================
   # 管理ダッシュボードバックエンドAPI
@@ -73,8 +71,6 @@ services:
           type: web
           name: fukumado-server
           property: host
-    domains:
-      - admin-api.fukumado.jp
 
   # ===================================
   # クライアントフロントエンド（静的サイト）
@@ -92,9 +88,6 @@ services:
           type: web
           name: fukumado-server
           property: host
-    domains:
-      - fukumado.jp
-      - www.fukumado.jp
 
   # ===================================
   # 管理ダッシュボードフロントエンド（静的サイト）
@@ -114,8 +107,6 @@ services:
           property: host
       - key: VITE_ADMIN_WS_URL
         value: wss://admin-api.fukumado.jp
-    domains:
-      - admin.fukumado.jp
 
   # ===================================
   # ベータ環境 (BETA ENVIRONMENT)
@@ -163,8 +154,6 @@ services:
         sync: false
       - key: TWITCH_REDIRECT_URI
         value: https://beta-api.fukumado.jp/auth/twitch/callback
-    domains:
-      - beta-api.fukumado.jp
 
   # ===================================
   # ベータ管理ダッシュボードバックエンドAPI
@@ -192,8 +181,6 @@ services:
           type: web
           name: fukumado-server-beta
           property: host
-    domains:
-      - beta-admin-api.fukumado.jp
 
   # ===================================
   # ベータクライアントフロントエンド（静的サイト）
@@ -211,8 +198,6 @@ services:
           type: web
           name: fukumado-server-beta
           property: host
-    domains:
-      - beta.fukumado.jp
 
   # ===================================
   # ベータ管理ダッシュボードフロントエンド（静的サイト）
@@ -232,5 +217,3 @@ services:
           property: host
       - key: VITE_ADMIN_WS_URL
         value: wss://beta-admin-api.fukumado.jp
-    domains:
-      - beta-admin.fukumado.jp
