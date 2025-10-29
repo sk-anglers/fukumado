@@ -29,9 +29,7 @@ services:
       - key: SESSION_SECRET
         generateValue: true # 自動生成
       - key: REDIS_URL
-        fromDatabase:
-          name: fukumado-redis
-          property: connectionString
+        sync: false # Renderダッシュボードで手動設定
       - key: YOUTUBE_API_KEY
         sync: false # Renderダッシュボードで手動設定
       - key: YOUTUBE_CLIENT_ID
@@ -69,9 +67,7 @@ services:
       - key: ADMIN_PASSWORD
         sync: false # Renderダッシュボードで手動設定（強力なパスワード）
       - key: REDIS_URL
-        fromDatabase:
-          name: fukumado-redis
-          property: connectionString
+        sync: false # Renderダッシュボードで手動設定
       - key: MAIN_BACKEND_URL
         fromService:
           type: web
@@ -152,9 +148,7 @@ services:
       - key: SESSION_SECRET
         generateValue: true # 自動生成
       - key: REDIS_URL
-        fromDatabase:
-          name: fukumado-redis-beta
-          property: connectionString
+        sync: false # Renderダッシュボードで手動設定
       - key: YOUTUBE_API_KEY
         sync: false # Renderダッシュボードで手動設定
       - key: YOUTUBE_CLIENT_ID
@@ -192,9 +186,7 @@ services:
       - key: ADMIN_PASSWORD
         sync: false # Renderダッシュボードで手動設定（強力なパスワード）
       - key: REDIS_URL
-        fromDatabase:
-          name: fukumado-redis-beta
-          property: connectionString
+        sync: false # Renderダッシュボードで手動設定
       - key: MAIN_BACKEND_URL
         fromService:
           type: web
