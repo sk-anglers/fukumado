@@ -111,10 +111,10 @@ export const ChatPanel = (): JSX.Element => {
   // 送信先が未選択または無効な場合、最初の視聴中配信を選択
   useEffect(() => {
     if (!selectedChannelId && watchingStreams.length > 0) {
-      setSelectedChannelId(watchingStreams[0].channelId);
+      setSelectedChannelId(watchingStreams[0].channelId || null);
     } else if (selectedChannelId && !watchingStreams.find((s) => s.channelId === selectedChannelId)) {
       // 選択中のチャンネルが視聴中配信に含まれない場合、最初の配信を選択
-      setSelectedChannelId(watchingStreams.length > 0 ? watchingStreams[0].channelId : null);
+      setSelectedChannelId(watchingStreams.length > 0 ? watchingStreams[0].channelId || null : null);
     }
   }, [watchingStreams, selectedChannelId, setSelectedChannelId]);
 

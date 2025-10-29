@@ -15,7 +15,7 @@ class WebSocketService {
   private openHandlers: Set<ConnectionHandler> = new Set();
   private closeHandlers: Set<ConnectionHandler> = new Set();
   private errorHandlers: Set<ErrorHandler> = new Set();
-  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectTimer: number | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private isIntentionallyClosed = false;

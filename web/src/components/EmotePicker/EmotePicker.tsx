@@ -118,7 +118,7 @@ export const EmotePicker = ({ onSelectEmote }: EmotePickerProps): JSX.Element =>
   // カテゴリ変更時にチャンネルエモートを取得
   useEffect(() => {
     if (category === 'channel' && watchingStreams.length > 0 && channelEmotes.length === 0) {
-      const broadcasterIds = watchingStreams.map(stream => stream.channelId);
+      const broadcasterIds = watchingStreams.map(stream => stream.channelId).filter((id): id is string => !!id);
       fetchChannelEmotes(broadcasterIds);
     }
   }, [category, watchingStreams]);

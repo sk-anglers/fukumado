@@ -386,7 +386,7 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                     .filter((channel) => {
                       // プラットフォームが無効な場合は除外
                       if (channel.platform === 'youtube' && !config.enableYoutube) return false;
-                      if (channel.platform === 'niconico' && !config.enableNiconico) return false;
+                      // niconicoはChannelSearchResultでサポートされていないため、チェック不要
                       return true;
                     })
                     .map((channel) => {

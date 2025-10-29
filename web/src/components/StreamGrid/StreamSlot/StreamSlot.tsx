@@ -210,7 +210,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
           if (!isMounted || !playerContainerRef.current) return;
 
           // embedUrlから "channel=チャンネル名" を抽出
-          const channelMatch = assignedStream.embedUrl.match(/channel=([^&]+)/);
+          const channelMatch = assignedStream.embedUrl?.match(/channel=([^&]+)/);
           const channelName = channelMatch ? channelMatch[1] : assignedStream.id;
 
           // 既存のTwitchプレイヤーがある場合、setChannel()でチャンネル切り替え
@@ -346,10 +346,10 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
               modestbranding: 1,
               playsinline: 1,
               mute: slot.muted ? 1 : 0,
-              vq: slot.quality !== 'auto' ? youtubeQuality : undefined
-            },
+              ...(slot.quality !== 'auto' ? { vq: youtubeQuality } : {})
+            } as any,
             events: {
-              onReady: (event) => {
+              onReady: (event: any) => {
                 if (!isMounted) return;
                 setPlayerReady(true);
 
@@ -365,7 +365,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                   event.target.setPlaybackQuality(youtubeQuality);
                 }
               },
-              onError: (event) => {
+              onError: (event: any) => {
                 console.error('[YouTube] プレイヤーエラー:', {
                   code: event.data,
                   message: event.data === 2 ? '無効なパラメータ'
@@ -376,7 +376,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                 });
                 setPlayerReady(false);
               }
-            }
+            } as any
           });
         } catch (error) {
           console.error('[YouTube] プレイヤー初期化失敗:', error);

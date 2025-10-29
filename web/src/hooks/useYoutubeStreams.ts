@@ -61,7 +61,7 @@ export const useYoutubeStreams = (channelIds: string[] = [], fallbackQuery: stri
 
   useEffect(() => {
     let cancelled = false;
-    let intervalId: NodeJS.Timeout | null = null;
+    let intervalId: number | null = null;
 
     const showNoStreams = (): void => {
       setAvailableStreamsForPlatform('youtube', []);

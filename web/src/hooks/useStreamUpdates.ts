@@ -124,7 +124,7 @@ export const useStreamUpdates = (
             addNotification({
               type: 'stream_started',
               platform: message.platform,
-              channelId: stream.channelId,
+              channelId: stream.channelId || '',
               channelName: stream.displayName,
               streamId: stream.id,
               streamTitle: stream.title,

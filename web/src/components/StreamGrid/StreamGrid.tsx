@@ -100,9 +100,9 @@ export const StreamGrid = (): JSX.Element => {
   // 送信先が未選択または無効な場合、最初の視聴中配信を選択
   useEffect(() => {
     if (!selectedChannelId && watchingStreams.length > 0) {
-      setSelectedChannelId(watchingStreams[0].channelId);
+      setSelectedChannelId(watchingStreams[0].channelId || null);
     } else if (selectedChannelId && !watchingStreams.find((s) => s.channelId === selectedChannelId)) {
-      setSelectedChannelId(watchingStreams.length > 0 ? watchingStreams[0].channelId : null);
+      setSelectedChannelId(watchingStreams.length > 0 ? watchingStreams[0].channelId || null : null);
     }
   }, [watchingStreams, selectedChannelId]);
 

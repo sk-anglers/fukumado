@@ -29,13 +29,22 @@ export interface TwitchPlayer {
   getQualities(): TwitchQuality[];
   setQuality(quality: string): void;
   getQuality(): string;
-  addEventListener(event: string, callback: () => void): void;
-  removeEventListener(event: string, callback: () => void): void;
+  getCurrentTime(): number;
+  seek(timestamp: number): void;
+  addEventListener(event: string, callback: (event?: any) => void): void;
+  removeEventListener(event: string, callback: (event?: any) => void): void;
   destroy(): void;
 }
 
+export interface TwitchPlayerConstructor {
+  new (elementId: string | HTMLElement, options: TwitchPlayerOptions): TwitchPlayer;
+  READY: string;
+  OFFLINE: string;
+  ERROR: string;
+}
+
 export interface TwitchEmbedAPI {
-  Player: new (elementId: string | HTMLElement, options: TwitchPlayerOptions) => TwitchPlayer;
+  Player: TwitchPlayerConstructor;
 }
 
 declare global {
