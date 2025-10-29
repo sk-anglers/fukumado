@@ -76,7 +76,7 @@ export const StreamGrid = (): JSX.Element => {
     isModalOpen: state.isModalOpen
   }), shallow);
 
-  const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoHideTimerRef = useRef<number | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
