@@ -51,7 +51,7 @@ interface MetricsState {
   clearMetrics: () => void;
 }
 
-export const useMetricsStore = create<MetricsState>((set, get) => ({
+export const useMetricsStore = create<MetricsState>((set) => ({
   // 初期状態
   systemMetrics: null,
   twitchRateLimit: null,

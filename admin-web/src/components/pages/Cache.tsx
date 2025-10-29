@@ -10,7 +10,6 @@ import {
 import {
   CacheInfoResponse,
   CacheKeysResponse,
-  CacheKey,
   CacheKeyValueResponse
 } from '../../types';
 import styles from './Cache.module.css';

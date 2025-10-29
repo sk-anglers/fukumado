@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import {
   SecurityMetrics,
-  BlockedIP,
-  SuspiciousActivity,
   Alert,
   MainServiceSecurityStats,
   MainServiceHealthCheck,
@@ -31,8 +29,6 @@ interface SecurityState {
 
   // アクション
   setSecurityMetrics: (metrics: SecurityMetrics) => void;
-  addBlockedIP: (ip: BlockedIP) => void;
-  removeBlockedIP: (ip: string) => void;
   addAlert: (alert: Alert) => void;
   markAlertAsRead: (alertId: string) => void;
   markAllAlertsAsRead: () => void;
@@ -74,33 +70,6 @@ export const useSecurityStore = create<SecurityState>((set) => ({
       error: null
     }),
 
-  addBlockedIP: (ip) =>
-    set((state) => {
-      if (!state.securityMetrics) return state;
-
-      return {
-        securityMetrics: {
-          ...state.securityMetrics,
-          blockedIPs: [ip, ...state.securityMetrics.blockedIPs],
-          totalBlockedToday: state.securityMetrics.totalBlockedToday + 1
-        }
-      };
-    }),
-
-  removeBlockedIP: (ip) =>
-    set((state) => {
-      if (!state.securityMetrics) return state;
-
-      return {
-        securityMetrics: {
-          ...state.securityMetrics,
-          blockedIPs: state.securityMetrics.blockedIPs.filter(
-            (blocked) => blocked.ip !== ip
-          )
-        }
-      };
-    }),
-
   addAlert: (alert) =>
     set((state) => {
       if (!state.securityMetrics) return state;
@@ -108,8 +77,7 @@ export const useSecurityStore = create<SecurityState>((set) => ({
       return {
         securityMetrics: {
           ...state.securityMetrics,
-          recentAlerts: [alert, ...state.securityMetrics.recentAlerts],
-          totalAlertsToday: state.securityMetrics.totalAlertsToday + 1
+          recentAlerts: [alert, ...state.securityMetrics.recentAlerts]
         },
         unreadAlertCount: state.unreadAlertCount + 1
       };

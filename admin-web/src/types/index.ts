@@ -75,6 +75,7 @@ export interface Alert {
   message: string;
   timestamp: string;        // ISO 8601形式
   details?: Record<string, any>;
+  read?: boolean;           // 既読フラグ
 }
 
 /**
@@ -148,11 +149,6 @@ export interface WebSocketMessage {
   data: any;
   timestamp: string;
 }
-
-/**
- * 接続状態
- */
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 /**
  * ナビゲーションアイテム

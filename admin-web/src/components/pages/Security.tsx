@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Loader, MetricCard } from '../common';
+import { Card, MetricCard } from '../common';
 import { useSecurityStore } from '../../stores/securityStore';
 import {
   getMainServiceStats,
@@ -18,9 +18,7 @@ export const Security: React.FC = () => {
     mainServiceHealth,
     mainServiceAlerts,
     mainServiceSessions,
-    mainServiceWebSocket,
     mainServiceSummary,
-    setError,
     setMainServiceStats,
     setMainServiceHealth,
     setMainServiceAlerts,

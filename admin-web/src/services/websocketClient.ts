@@ -8,7 +8,7 @@ type StatusHandler = (status: ConnectionStatus) => void;
  */
 class WebSocketClient {
   private ws: WebSocket | null = null;
-  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectTimer: number | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
   private reconnectDelay = 3000; // 3秒
