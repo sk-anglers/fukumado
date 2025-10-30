@@ -46,8 +46,7 @@ export const Dashboard: React.FC = () => {
     return 'normal';
   };
 
-  // API統計データを定期的に取得 - TEMPORARILY DISABLED FOR DEBUGGING
-  /*
+  // API統計データを定期的に取得
   useEffect(() => {
     console.log('[DEBUG] Dashboard: API stats useEffect RUNNING');
     const fetchApiStats = async () => {
@@ -78,7 +77,6 @@ export const Dashboard: React.FC = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  */
 
   // グラフ用のデータを準備（時刻フォーマット）
   const chartData = metricsHistory.map(point => ({
