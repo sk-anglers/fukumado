@@ -3,7 +3,8 @@
  * React Strict Modeの影響を受けないグローバル管理
  */
 
-const WS_URL = 'ws://localhost:4000/chat';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const WS_URL = API_URL.replace(/^http/, 'ws') + '/chat';
 
 type MessageHandler = (data: any) => void;
 type ConnectionHandler = () => void;

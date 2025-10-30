@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './TermsAndPrivacyModal.css';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 interface LegalDocument {
   version: string;
   effectiveDate: string;
@@ -33,7 +35,7 @@ export const TermsAndPrivacyModal: React.FC<TermsAndPrivacyModalProps> = ({ isOp
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:4000/api/legal/all', {
+      const response = await fetch(`${API_URL}/api/legal/all`, {
         credentials: 'include'
       });
       const data = await response.json();

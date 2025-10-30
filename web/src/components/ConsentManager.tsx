@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { TermsAndPrivacyModal } from './TermsAndPrivacyModal';
 import { CookieConsentBanner } from './CookieConsentBanner';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 interface ConsentStatus {
   hasAcceptedTerms: boolean;
   hasAcceptedPrivacy: boolean;
@@ -33,7 +35,7 @@ export const ConsentManager: React.FC = () => {
   const checkConsentStatus = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:4000/api/consent/status', {
+      const response = await fetch(`${API_URL}/api/consent/status`, {
         credentials: 'include'
       });
       const data = await response.json();
@@ -57,7 +59,7 @@ export const ConsentManager: React.FC = () => {
   const handleTermsAccept = async () => {
     try {
       // 利用規約とプライバシーポリシーの同意を記録
-      const response = await fetch('http://localhost:4000/api/consent', {
+      const response = await fetch(`${API_URL}/api/consent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -92,7 +94,7 @@ export const ConsentManager: React.FC = () => {
   }) => {
     try {
       // クッキー同意を記録
-      const response = await fetch('http://localhost:4000/api/consent', {
+      const response = await fetch(`${API_URL}/api/consent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

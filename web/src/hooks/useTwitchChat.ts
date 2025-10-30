@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
 
-const WS_URL = 'ws://localhost:4000/chat';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const WS_URL = API_URL.replace(/^http/, 'ws') + '/chat';
 
 interface TwitchChannel {
   login: string;
