@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import { apiFetch } from '../../utils/api';
 import styles from './EmotePicker.module.css';
 
 interface Emote {
@@ -44,9 +45,7 @@ export const EmotePicker = ({ onSelectEmote }: EmotePickerProps): JSX.Element =>
   const fetchGlobalEmotes = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/twitch/emotes/global', {
-        credentials: 'include'
-      });
+      const response = await apiFetch('/api/twitch/emotes/global');
 
       if (!response.ok) {
         throw new Error('Failed to fetch global emotes');
@@ -74,9 +73,7 @@ export const EmotePicker = ({ onSelectEmote }: EmotePickerProps): JSX.Element =>
       // 全てのチャンネルのエモートを並列で取得
       const requests = broadcasterIds.map(async (broadcasterId) => {
         try {
-          const response = await fetch(`/api/twitch/emotes/channel?broadcasterId=${broadcasterId}`, {
-            credentials: 'include'
-          });
+          const response = await apiFetch(`/api/twitch/emotes/channel?broadcasterId=${broadcasterId}`);
 
           if (!response.ok) {
             console.error(`[EmotePicker] Failed to fetch emotes for channel ${broadcasterId}`);

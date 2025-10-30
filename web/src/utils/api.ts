@@ -10,7 +10,7 @@ export const apiUrl = (path: string): string => {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
   }
-  if (path.startsWith('/auth')) {
+  if (path.startsWith('/auth') || path.startsWith('/api/')) {
     return `${backendOrigin}${path}`;
   }
   return path;

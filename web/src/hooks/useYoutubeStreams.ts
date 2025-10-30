@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLayoutStore } from '../stores/layoutStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useSyncStore } from '../stores/syncStore';
+import { apiFetch } from '../utils/api';
 import type { Streamer } from '../types';
 
 interface YouTubeApiResponseItem {
@@ -38,7 +39,7 @@ const buildChannelQuery = (channelIds: string[]): string =>
   channelIds.map((id) => `channelId=${id}`).join('&');
 
 const fetchStreamResponse = async (endpoint: string): Promise<YouTubeApiResponse> => {
-  const response = await fetch(endpoint, { credentials: 'include' });
+  const response = await apiFetch(endpoint);
   if (!response.ok) {
     throw new Error(`Failed to fetch YouTube streams: ${response.status}`);
   }

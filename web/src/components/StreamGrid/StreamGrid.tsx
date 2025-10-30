@@ -5,6 +5,7 @@ import { shallow } from 'zustand/shallow';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useChatStore } from '../../stores/chatStore';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import { apiFetch } from '../../utils/api';
 import type { ChatMessage } from '../../types';
 import styles from './StreamGrid.module.css';
 import { StreamSlotCard } from './StreamSlot/StreamSlot';
@@ -194,7 +195,7 @@ export const StreamGrid = (): JSX.Element => {
         }
       }
 
-      const response = await fetch(`/api/${selectedStream.platform}/chat/send`, {
+      const response = await apiFetch(`/api/${selectedStream.platform}/chat/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

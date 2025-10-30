@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useLayoutStore } from '../stores/layoutStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useSyncStore } from '../stores/syncStore';
+import { apiFetch } from '../utils/api';
 import type { Streamer } from '../types';
 
 interface TwitchApiResponseItem {
@@ -39,7 +40,7 @@ const buildChannelQuery = (channelIds: string[]): string =>
   channelIds.map((id) => `channelId=${id}`).join('&');
 
 const fetchStreamResponse = async (endpoint: string): Promise<TwitchApiResponse> => {
-  const response = await fetch(endpoint, { credentials: 'include' });
+  const response = await apiFetch(endpoint);
   if (!response.ok) {
     throw new Error(`Failed to fetch Twitch streams: ${response.status}`);
   }

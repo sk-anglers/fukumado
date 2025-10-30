@@ -6,6 +6,7 @@ import { useLayoutStore } from '../../stores/layoutStore';
 import { useMobileMenuStore } from '../../stores/mobileMenuStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { config } from '../../config';
+import { apiFetch } from '../../utils/api';
 import type { Platform, ChatMessage, TwitchEmote } from '../../types';
 import { EmotePicker } from '../EmotePicker/EmotePicker';
 import styles from './ChatPanel.module.css';
@@ -148,7 +149,7 @@ export const ChatPanel = (): JSX.Element => {
         }
       }
 
-      const response = await fetch(`/api/${selectedStream.platform}/chat/send`, {
+      const response = await apiFetch(`/api/${selectedStream.platform}/chat/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
