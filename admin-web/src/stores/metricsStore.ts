@@ -93,19 +93,24 @@ export const useMetricsStore = create<MetricsState>((set) => ({
     console.log('[DEBUG] metricsStore: setSystemMetrics completed');
   },
 
-  setTwitchRateLimit: (rateLimit) =>
+  setTwitchRateLimit: (rateLimit) => {
+    console.log('[DEBUG] metricsStore: setTwitchRateLimit called');
     set({
       twitchRateLimit: rateLimit,
       error: null
-    }),
+    });
+  },
 
-  setYoutubeQuota: (quota) =>
+  setYoutubeQuota: (quota) => {
+    console.log('[DEBUG] metricsStore: setYoutubeQuota called');
     set({
       youtubeQuota: quota,
       error: null
-    }),
+    });
+  },
 
-  setApiStats: (stats) =>
+  setApiStats: (stats) => {
+    console.log('[DEBUG] metricsStore: setApiStats called');
     set((state) => {
       const { apiStatsHistory } = state;
 
@@ -125,13 +130,18 @@ export const useMetricsStore = create<MetricsState>((set) => ({
         apiStatsHistory: newHistory,
         error: null
       };
-    }),
+    });
+  },
 
-  setConnectionStatus: (status) =>
-    set({ connectionStatus: status }),
+  setConnectionStatus: (status) => {
+    console.log('[DEBUG] metricsStore: setConnectionStatus called', status);
+    set({ connectionStatus: status });
+  },
 
-  setError: (error) =>
-    set({ error }),
+  setError: (error) => {
+    console.log('[DEBUG] metricsStore: setError called', error);
+    set({ error });
+  },
 
   clearMetrics: () =>
     set({
