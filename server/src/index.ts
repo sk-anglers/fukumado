@@ -1,6 +1,6 @@
 import express from 'express';
 import session from 'express-session';
-import ConnectRedis from 'connect-redis';
+import RedisStore from 'connect-redis';
 import Redis from 'ioredis';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -68,9 +68,6 @@ redisClient.on('error', (err) => console.error('[Redis] Client Error:', err));
 redisClient.on('connect', () => console.log('[Redis] Client Connected'));
 redisClient.on('ready', () => console.log('[Redis] Client Ready'));
 redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...'));
-
-// RedisStoreを初期化（connect-redis v7）
-const RedisStore = ConnectRedis(session);
 
 // CORS設定（モバイル対応 + 本番環境）
 const allowedOrigins = [
