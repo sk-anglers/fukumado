@@ -13,7 +13,7 @@ databases:
 
   # Redis（ベータ環境）
   - name: fukumado-redis-beta
-    databaseName: fukumado-beta
+    databaseName: fukumado_beta
     plan: starter
     ipAllowList: []
 
