@@ -56,10 +56,12 @@ const LoginPage: React.FC<{ onLogin: (username: string, password: string) => voi
 };
 
 function App() {
+  console.log('[DEBUG] App: Rendering');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // ローカルストレージから認証情報を復元
   useEffect(() => {
+    console.log('[DEBUG] App: Auth restore useEffect RUNNING');
     const savedUsername = localStorage.getItem('admin_username');
     const savedPassword = localStorage.getItem('admin_password');
 
@@ -71,6 +73,7 @@ function App() {
 
   // 認証エラーをリッスンして自動ログアウト
   useEffect(() => {
+    console.log('[DEBUG] App: Auth error listener useEffect RUNNING');
     const handleAuthError = () => {
       console.warn('[Auth] Authentication failed, logging out...');
       setIsAuthenticated(false);
@@ -81,6 +84,7 @@ function App() {
     window.addEventListener('auth-error', handleAuthError);
 
     return () => {
+      console.log('[DEBUG] App: Auth error listener useEffect CLEANUP');
       window.removeEventListener('auth-error', handleAuthError);
     };
   }, []);

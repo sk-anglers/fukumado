@@ -18,6 +18,8 @@ import {
 import styles from './Dashboard.module.css';
 
 export const Dashboard: React.FC = () => {
+  console.log('[DEBUG] Dashboard: Rendering START');
+
   // 値だけ取得（表示用）
   const systemMetrics = useMetricsStore(state => state.systemMetrics);
   const twitchRateLimit = useMetricsStore(state => state.twitchRateLimit);
@@ -29,9 +31,14 @@ export const Dashboard: React.FC = () => {
   // setter関数だけ取得（useEffectで使用）
   const setApiStats = useMetricsStore(state => state.setApiStats);
 
+  console.log('[DEBUG] Dashboard: systemMetrics =', systemMetrics ? 'exists' : 'null');
+
   if (!systemMetrics) {
+    console.log('[DEBUG] Dashboard: Showing Loader (systemMetrics is null)');
     return <Loader text="データを読み込んでいます..." />;
   }
+
+  console.log('[DEBUG] Dashboard: Rendering main content');
 
   const getAPIStatus = (usagePercent: number) => {
     if (usagePercent >= 90) return 'critical';
