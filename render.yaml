@@ -1,6 +1,22 @@
 # Render Blueprint for Fukumado (ふくまど)
 # すべてのサービスを一括デプロイ
 
+# ===================================
+# データベース
+# ===================================
+databases:
+  # Redis（本番環境）
+  - name: fukumado-redis
+    databaseName: fukumado
+    plan: starter # 無料プラン（25MB）
+    ipAllowList: [] # 空 = すべてのIPを許可（Render内部接続）
+
+  # Redis（ベータ環境）
+  - name: fukumado-redis-beta
+    databaseName: fukumado-beta
+    plan: starter
+    ipAllowList: []
+
 services:
   # ===================================
   # メインバックエンドAPI
@@ -20,7 +36,9 @@ services:
       - key: SESSION_SECRET
         generateValue: true # 自動生成
       - key: REDIS_URL
-        sync: false # Renderダッシュボードで手動設定
+        fromDatabase:
+          name: fukumado-redis
+          property: connectionString
       - key: YOUTUBE_API_KEY
         sync: false # Renderダッシュボードで手動設定
       - key: YOUTUBE_CLIENT_ID
@@ -56,7 +74,9 @@ services:
       - key: ADMIN_PASSWORD
         sync: false # Renderダッシュボードで手動設定（強力なパスワード）
       - key: REDIS_URL
-        sync: false # Renderダッシュボードで手動設定
+        fromDatabase:
+          name: fukumado-redis
+          property: connectionString
       - key: MAIN_BACKEND_URL
         fromService:
           type: web
@@ -121,7 +141,9 @@ services:
       - key: SESSION_SECRET
         generateValue: true # 自動生成
       - key: REDIS_URL
-        sync: false # Renderダッシュボードで手動設定
+        fromDatabase:
+          name: fukumado-redis-beta
+          property: connectionString
       - key: YOUTUBE_API_KEY
         sync: false # Renderダッシュボードで手動設定
       - key: YOUTUBE_CLIENT_ID
@@ -157,7 +179,9 @@ services:
       - key: ADMIN_PASSWORD
         sync: false # Renderダッシュボードで手動設定（強力なパスワード）
       - key: REDIS_URL
-        sync: false # Renderダッシュボードで手動設定
+        fromDatabase:
+          name: fukumado-redis-beta
+          property: connectionString
       - key: MAIN_BACKEND_URL
         fromService:
           type: web

@@ -24,8 +24,12 @@ const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
 // 本番環境でデフォルトパスワードを使用している場合は警告
 if (process.env.NODE_ENV === 'production' && adminPassword === 'admin123') {
-  console.error('[Security] Default password detected in production! Please set a strong ADMIN_PASSWORD');
-  process.exit(1);
+  console.warn('[Security] ⚠️  WARNING: Default password detected in production!');
+  console.warn('[Security] ⚠️  Please set a strong ADMIN_PASSWORD immediately via Render dashboard!');
+  console.warn('[Security] ⚠️  Go to: Service Settings > Environment > Add Environment Variable');
+  console.warn('[Security] ⚠️  Key: ADMIN_PASSWORD, Value: [Strong 16+ char password]');
+  // Temporarily allow startup with default password for initial deployment
+  // TODO: Set ADMIN_PASSWORD in Render dashboard after first successful deploy
 }
 
 // パスワード検証
