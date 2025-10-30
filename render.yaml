@@ -90,7 +90,7 @@ services:
     name: fukumado-web
     runtime: static
     rootDir: web
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
       # Vite環境変数（ビルド時に使用）
@@ -107,7 +107,7 @@ services:
     name: fukumado-admin-web
     runtime: static
     rootDir: admin-web
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
       # Vite環境変数（ビルド時に使用）
@@ -195,7 +195,7 @@ services:
     name: fukumado-web-beta
     runtime: static
     rootDir: web
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
       # Vite環境変数（ビルド時に使用）
@@ -212,7 +212,7 @@ services:
     name: fukumado-admin-web-beta
     runtime: static
     rootDir: admin-web
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
       # Vite環境変数（ビルド時に使用）
