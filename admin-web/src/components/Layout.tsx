@@ -101,14 +101,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
 
     loadInitialData();
-  }, [
-    setSystemMetrics,
-    setTwitchRateLimit,
-    setYoutubeQuota,
-    setSecurityMetrics,
-    setMetricsError,
-    setSecurityError
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className={styles.layout}>

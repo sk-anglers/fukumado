@@ -56,7 +56,8 @@ export const Dashboard: React.FC = () => {
     const interval = setInterval(fetchApiStats, 5000);
 
     return () => clearInterval(interval);
-  }, [setApiStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // グラフ用のデータを準備（時刻フォーマット）
   const chartData = metricsHistory.map(point => ({
