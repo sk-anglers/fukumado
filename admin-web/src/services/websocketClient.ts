@@ -20,6 +20,12 @@ class WebSocketClient {
    * WebSocket接続を開始
    */
   connect() {
+    // 既に接続中または接続済みの場合は何もしない
+    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+      console.log('[WebSocket] Already connected or connecting, skipping...');
+      return;
+    }
+
     this.isIntentionallyClosed = false;
     this.createConnection();
   }
