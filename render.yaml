@@ -102,10 +102,7 @@ services:
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: fukumado-server
-          property: host
+        value: https://api.fukumado.jp
 
   # ===================================
   # 管理ダッシュボードフロントエンド（静的サイト）
@@ -121,10 +118,7 @@ services:
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
-        fromService:
-          type: web
-          name: fukumado-admin-server
-          property: host
+        value: https://admin-api.fukumado.jp
       - key: VITE_ADMIN_WS_URL
         value: wss://admin-api.fukumado.jp
 
@@ -215,10 +209,7 @@ services:
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: fukumado-server-beta
-          property: host
+        value: https://beta-api.fukumado.jp
 
   # ===================================
   # ベータ管理ダッシュボードフロントエンド（静的サイト）
@@ -234,9 +225,6 @@ services:
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
-        fromService:
-          type: web
-          name: fukumado-admin-server-beta
-          property: host
+        value: https://beta-admin-api.fukumado.jp
       - key: VITE_ADMIN_WS_URL
         value: wss://beta-admin-api.fukumado.jp
