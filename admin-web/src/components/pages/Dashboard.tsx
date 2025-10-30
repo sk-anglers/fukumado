@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Card, MetricCard, Loader } from '../common';
 import { useMetricsStore } from '../../stores/metricsStore';
 import { useSecurityStore } from '../../stores/securityStore';
@@ -78,25 +78,31 @@ export const Dashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // グラフ用のデータを準備（時刻フォーマット）
-  const chartData = metricsHistory.map(point => ({
-    ...point,
-    time: new Date(point.timestamp).toLocaleTimeString('ja-JP', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  }));
+  // グラフ用のデータを準備（時刻フォーマット） - useMemoでメモ化
+  const chartData = useMemo(() => {
+    console.log('[DEBUG] Dashboard: Calculating chartData');
+    return metricsHistory.map(point => ({
+      ...point,
+      time: new Date(point.timestamp).toLocaleTimeString('ja-JP', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    }));
+  }, [metricsHistory]);
 
-  // API統計グラフ用のデータを準備
-  const apiStatsChartData = apiStatsHistory.map(point => ({
-    ...point,
-    time: new Date(point.timestamp).toLocaleTimeString('ja-JP', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  }));
+  // API統計グラフ用のデータを準備 - useMemoでメモ化
+  const apiStatsChartData = useMemo(() => {
+    console.log('[DEBUG] Dashboard: Calculating apiStatsChartData');
+    return apiStatsHistory.map(point => ({
+      ...point,
+      time: new Date(point.timestamp).toLocaleTimeString('ja-JP', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    }));
+  }, [apiStatsHistory]);
 
   return (
     <div className={styles.dashboard}>
