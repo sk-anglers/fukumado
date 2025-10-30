@@ -1,22 +1,6 @@
 # Render Blueprint for Fukumado (ふくまど)
 # すべてのサービスを一括デプロイ
 
-# ===================================
-# データベース
-# ===================================
-databases:
-  # Redis（本番環境）
-  - name: fukumado-redis
-    databaseName: fukumado
-    plan: starter # 無料プラン（25MB）
-    ipAllowList: [] # 空 = すべてのIPを許可（Render内部接続）
-
-  # Redis（ベータ環境）
-  - name: fukumado-redis-beta
-    databaseName: fukumado_beta
-    plan: starter
-    ipAllowList: []
-
 services:
   # ===================================
   # メインバックエンドAPI
