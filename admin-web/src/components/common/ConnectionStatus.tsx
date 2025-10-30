@@ -1,16 +1,11 @@
 import React from 'react';
-import { ConnectionStatus as Status } from '../../types';
+import { useMetricsStore } from '../../stores/metricsStore';
 import styles from './ConnectionStatus.module.css';
 
-interface ConnectionStatusProps {
-  status: Status;
-  lastUpdate?: string | null;
-}
-
-export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
-  status,
-  lastUpdate
-}) => {
+export const ConnectionStatus: React.FC = () => {
+  // storeから直接取得して、このコンポーネントのみが再レンダリングされる
+  const status = useMetricsStore(state => state.connectionStatus);
+  const lastUpdate = useMetricsStore(state => state.lastUpdate);
   const getStatusText = () => {
     switch (status) {
       case 'connected':

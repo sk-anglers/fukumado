@@ -33,9 +33,7 @@ const navItems: NavItem[] = [
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
 
-  // 値だけ取得（表示用）
-  const connectionStatus = useMetricsStore(state => state.connectionStatus);
-  const lastUpdate = useMetricsStore(state => state.lastUpdate);
+  // 値だけ取得（表示用） - ConnectionStatusは内部でサブスクライブするので不要
   const unreadAlertCount = useSecurityStore(state => state.unreadAlertCount);
 
   // setter関数だけ取得（useEffectで使用）
@@ -114,7 +112,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className={styles.headerContent}>
           <h1 className={styles.logo}>ふくまど！管理ダッシュボード</h1>
           <div className={styles.headerRight}>
-            <ConnectionStatus status={connectionStatus} lastUpdate={lastUpdate} />
+            <ConnectionStatus />
           </div>
         </div>
       </header>
