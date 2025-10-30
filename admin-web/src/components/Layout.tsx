@@ -121,7 +121,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className={styles.headerContent}>
           <h1 className={styles.logo}>ふくまど！管理ダッシュボード</h1>
           <div className={styles.headerRight}>
-            <ConnectionStatus />
+            {/* TEMPORARILY DISABLED FOR DEBUGGING */}
+            {/* <ConnectionStatus /> */}
+            <span>接続状態: 確認中</span>
           </div>
         </div>
       </header>
