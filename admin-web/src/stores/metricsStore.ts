@@ -63,7 +63,8 @@ export const useMetricsStore = create<MetricsState>((set) => ({
   error: null,
 
   // アクション
-  setSystemMetrics: (metrics) =>
+  setSystemMetrics: (metrics) => {
+    console.log('[DEBUG] metricsStore: setSystemMetrics called');
     set((state) => {
       const { twitchRateLimit, youtubeQuota, metricsHistory } = state;
 
@@ -81,13 +82,16 @@ export const useMetricsStore = create<MetricsState>((set) => ({
       // 最大60ポイントまで保持（5分間分）
       const newHistory = [...metricsHistory, historyPoint].slice(-60);
 
+      console.log('[DEBUG] metricsStore: setSystemMetrics updating state');
       return {
         systemMetrics: metrics,
         metricsHistory: newHistory,
         lastUpdate: new Date().toISOString(),
         error: null
       };
-    }),
+    });
+    console.log('[DEBUG] metricsStore: setSystemMetrics completed');
+  },
 
   setTwitchRateLimit: (rateLimit) =>
     set({

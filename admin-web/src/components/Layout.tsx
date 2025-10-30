@@ -33,6 +33,8 @@ const navItems: NavItem[] = [
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
 
+  console.log('[DEBUG] Layout: Rendering');
+
   // 値だけ取得（表示用） - ConnectionStatusは内部でサブスクライブするので不要
   const unreadAlertCount = useSecurityStore(state => state.unreadAlertCount);
 
@@ -58,8 +60,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     // メッセージハンドラー
     const messageHandler = (message: any) => {
+      console.log('[DEBUG] Layout: WebSocket message received', message.type);
       if (message.type === 'metrics_update') {
         if (message.data.system) {
+          console.log('[DEBUG] Layout: Calling setSystemMetrics');
           setSystemMetrics(message.data.system);
         }
       }

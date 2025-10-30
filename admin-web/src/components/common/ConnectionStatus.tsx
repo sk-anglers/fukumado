@@ -6,6 +6,8 @@ export const ConnectionStatus: React.FC = () => {
   // storeから直接取得して、このコンポーネントのみが再レンダリングされる
   const status = useMetricsStore(state => state.connectionStatus);
   const lastUpdate = useMetricsStore(state => state.lastUpdate);
+
+  console.log('[DEBUG] ConnectionStatus: Rendering');
   const getStatusText = () => {
     switch (status) {
       case 'connected':
