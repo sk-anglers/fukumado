@@ -73,7 +73,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       websocketClient.offMessage(messageHandler);
       websocketClient.disconnect();
     };
-  }, [setConnectionStatus, setSystemMetrics]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 初期データ読み込み
   useEffect(() => {

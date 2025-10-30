@@ -58,7 +58,8 @@ export const Security: React.FC = () => {
     // 30秒ごとに更新
     const interval = setInterval(fetchMainServiceData, 30000);
     return () => clearInterval(interval);
-  }, [setMainServiceStats, setMainServiceHealth, setMainServiceAlerts, setMainServiceSessions, setMainServiceWebSocket, setMainServiceSummary]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // データがない場合はデフォルト値を使用
   const metrics = securityMetrics || {
