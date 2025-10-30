@@ -32,18 +32,20 @@ const navItems: NavItem[] = [
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
-  const {
-    connectionStatus,
-    lastUpdate,
-    setSystemMetrics,
-    setTwitchRateLimit,
-    setYoutubeQuota,
-    setConnectionStatus,
-    setError: setMetricsError
-  } = useMetricsStore();
 
-  const { setSecurityMetrics, setError: setSecurityError, unreadAlertCount } =
-    useSecurityStore();
+  // 値だけ取得（表示用）
+  const connectionStatus = useMetricsStore(state => state.connectionStatus);
+  const lastUpdate = useMetricsStore(state => state.lastUpdate);
+  const unreadAlertCount = useSecurityStore(state => state.unreadAlertCount);
+
+  // setter関数だけ取得（useEffectで使用）
+  const setSystemMetrics = useMetricsStore(state => state.setSystemMetrics);
+  const setTwitchRateLimit = useMetricsStore(state => state.setTwitchRateLimit);
+  const setYoutubeQuota = useMetricsStore(state => state.setYoutubeQuota);
+  const setConnectionStatus = useMetricsStore(state => state.setConnectionStatus);
+  const setMetricsError = useMetricsStore(state => state.setError);
+  const setSecurityMetrics = useSecurityStore(state => state.setSecurityMetrics);
+  const setSecurityError = useSecurityStore(state => state.setError);
 
   // WebSocket接続とメッセージ処理
   useEffect(() => {

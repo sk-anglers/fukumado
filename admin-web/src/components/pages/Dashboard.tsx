@@ -18,8 +18,16 @@ import {
 import styles from './Dashboard.module.css';
 
 export const Dashboard: React.FC = () => {
-  const { systemMetrics, twitchRateLimit, youtubeQuota, metricsHistory, apiStatsHistory, setApiStats } = useMetricsStore();
-  const { securityMetrics } = useSecurityStore();
+  // 値だけ取得（表示用）
+  const systemMetrics = useMetricsStore(state => state.systemMetrics);
+  const twitchRateLimit = useMetricsStore(state => state.twitchRateLimit);
+  const youtubeQuota = useMetricsStore(state => state.youtubeQuota);
+  const metricsHistory = useMetricsStore(state => state.metricsHistory);
+  const apiStatsHistory = useMetricsStore(state => state.apiStatsHistory);
+  const securityMetrics = useSecurityStore(state => state.securityMetrics);
+
+  // setter関数だけ取得（useEffectで使用）
+  const setApiStats = useMetricsStore(state => state.setApiStats);
 
   if (!systemMetrics) {
     return <Loader text="データを読み込んでいます..." />;

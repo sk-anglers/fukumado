@@ -12,20 +12,21 @@ import {
 import styles from './Security.module.css';
 
 export const Security: React.FC = () => {
-  const {
-    securityMetrics,
-    mainServiceStats,
-    mainServiceHealth,
-    mainServiceAlerts,
-    mainServiceSessions,
-    mainServiceSummary,
-    setMainServiceStats,
-    setMainServiceHealth,
-    setMainServiceAlerts,
-    setMainServiceSessions,
-    setMainServiceWebSocket,
-    setMainServiceSummary
-  } = useSecurityStore();
+  // 値だけ取得（表示用）
+  const securityMetrics = useSecurityStore(state => state.securityMetrics);
+  const mainServiceStats = useSecurityStore(state => state.mainServiceStats);
+  const mainServiceHealth = useSecurityStore(state => state.mainServiceHealth);
+  const mainServiceAlerts = useSecurityStore(state => state.mainServiceAlerts);
+  const mainServiceSessions = useSecurityStore(state => state.mainServiceSessions);
+  const mainServiceSummary = useSecurityStore(state => state.mainServiceSummary);
+
+  // setter関数だけ取得（useEffectで使用）
+  const setMainServiceStats = useSecurityStore(state => state.setMainServiceStats);
+  const setMainServiceHealth = useSecurityStore(state => state.setMainServiceHealth);
+  const setMainServiceAlerts = useSecurityStore(state => state.setMainServiceAlerts);
+  const setMainServiceSessions = useSecurityStore(state => state.setMainServiceSessions);
+  const setMainServiceWebSocket = useSecurityStore(state => state.setMainServiceWebSocket);
+  const setMainServiceSummary = useSecurityStore(state => state.setMainServiceSummary);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'main-service'>('dashboard');
 
