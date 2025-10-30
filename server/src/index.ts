@@ -124,7 +124,7 @@ app.use((req, res, next) => {
 
 // セッションミドルウェア（WebSocketでも使用するためexport）
 const sessionMiddleware = session({
-  store: new RedisStore({ client: redisClient }),
+  store: RedisStore({ client: redisClient }),
   secret: env.sessionSecret,
   resave: false,
   saveUninitialized: false,
