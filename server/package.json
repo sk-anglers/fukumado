@@ -22,7 +22,7 @@
     "@types/node-fetch": "^2.6.13",
     "@types/tmi.js": "^1.8.6",
     "@types/ws": "^8.18.1",
-    "connect-redis": "^9.0.0",
+    "connect-redis": "^7.1.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
