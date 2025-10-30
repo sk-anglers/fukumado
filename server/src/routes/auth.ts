@@ -14,6 +14,7 @@ import {
   refreshTwitchAccessToken
 } from '../utils/twitchOAuth';
 import { fetchGlobalEmotes } from '../services/twitchService';
+import { env } from '../config/env';
 
 export const authRouter = Router();
 
@@ -159,7 +160,7 @@ authRouter.get('/twitch/callback', async (req, res) => {
       // トークンをEventSubManagerに送信
       try {
         const { fetch } = await import('undici');
-        const response = await fetch('http://localhost:4000/api/admin/eventsub/credentials', {
+        const response = await fetch(`${env.apiUrl}/api/admin/eventsub/credentials`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -180,7 +181,7 @@ authRouter.get('/twitch/callback', async (req, res) => {
       }
 
       // 管理ダッシュボードにリダイレクト
-      return res.redirect(`http://localhost:5174/eventsub?twitch_auth=success&username=${encodeURIComponent(userInfo.login)}`);
+      return res.redirect(`${env.adminFrontendUrl}/eventsub?twitch_auth=success&username=${encodeURIComponent(userInfo.login)}`);
     }
 
     // 通常の認証フロー
@@ -256,7 +257,7 @@ authRouter.get('/success', (_req, res) => {
             3秒後に自動的にアプリに戻ります...<br>
             戻らない場合は下のボタンを押してください。
           </p>
-          <a href="http://localhost:5173/" style="display: inline-block; padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; text-decoration: none; font-size: 1.1rem; font-weight: 600; min-height: 44px; line-height: 1.5;">
+          <a href="${env.frontendUrl}/" style="display: inline-block; padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; text-decoration: none; font-size: 1.1rem; font-weight: 600; min-height: 44px; line-height: 1.5;">
             アプリに戻る
           </a>
         </div>
@@ -267,7 +268,7 @@ authRouter.get('/success', (_req, res) => {
               window.close();
             } else {
               // 同じウィンドウで開かれている場合はリダイレクト
-              window.location.href = 'http://localhost:5173/';
+              window.location.href = '${env.frontendUrl}/';
             }
           }, 3000);
 
