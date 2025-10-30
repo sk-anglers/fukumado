@@ -78,8 +78,7 @@ export const Dashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // グラフ用のデータを準備（時刻フォーマット） - TEMPORARILY DISABLED
-  /*
+  // グラフ用のデータを準備（時刻フォーマット）
   const chartData = metricsHistory.map(point => ({
     ...point,
     time: new Date(point.timestamp).toLocaleTimeString('ja-JP', {
@@ -98,7 +97,6 @@ export const Dashboard: React.FC = () => {
       second: '2-digit'
     })
   }));
-  */
 
   return (
     <div className={styles.dashboard}>
@@ -195,7 +193,7 @@ export const Dashboard: React.FC = () => {
       </section>
 
       {/* リアルタイムグラフ - TEMPORARILY DISABLED FOR DEBUGGING */}
-      {/* {chartData.length > 0 && (
+      {false && chartData.length > 0 && (
         <>
           {/* CPU/メモリ使用率グラフ */}
           <section className={styles.section}>
@@ -383,7 +381,7 @@ export const Dashboard: React.FC = () => {
             </Card>
           </section>
         </>
-      )} */}
+      )}
 
       {/* セキュリティ概要 */}
       {securityMetrics && (
