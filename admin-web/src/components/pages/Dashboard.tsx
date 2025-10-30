@@ -39,6 +39,10 @@ export const Dashboard: React.FC = () => {
   }
 
   console.log('[DEBUG] Dashboard: Rendering main content');
+  console.log('[DEBUG] Dashboard: metricsHistory length =', metricsHistory.length);
+  console.log('[DEBUG] Dashboard: metricsHistory data =', JSON.stringify(metricsHistory));
+  console.log('[DEBUG] Dashboard: apiStatsHistory length =', apiStatsHistory.length);
+  console.log('[DEBUG] Dashboard: apiStatsHistory data =', JSON.stringify(apiStatsHistory));
 
   const getAPIStatus = (usagePercent: number) => {
     if (usagePercent >= 90) return 'critical';
@@ -80,15 +84,18 @@ export const Dashboard: React.FC = () => {
 
   // グラフ用のデータを準備（時刻フォーマット） - useMemoでメモ化
   const chartData = useMemo(() => {
-    console.log('[DEBUG] Dashboard: Calculating chartData');
-    return metricsHistory.map(point => ({
-      ...point,
-      time: new Date(point.timestamp).toLocaleTimeString('ja-JP', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      })
-    }));
+    console.log('[DEBUG] Dashboard: Calculating chartData, metricsHistory =', metricsHistory);
+    return metricsHistory.map((point, index) => {
+      console.log(`[DEBUG] Dashboard: Processing point ${index}:`, point);
+      return {
+        ...point,
+        time: new Date(point.timestamp).toLocaleTimeString('ja-JP', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      };
+    });
   }, [metricsHistory]);
 
   // API統計グラフ用のデータを準備 - useMemoでメモ化
