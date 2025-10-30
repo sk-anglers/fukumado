@@ -21,6 +21,12 @@ services:
         generateValue: true # 自動生成
       - key: REDIS_URL
         sync: false # Renderダッシュボードで手動設定
+      - key: FRONTEND_URL
+        value: https://fukumado.jp
+      - key: ADMIN_FRONTEND_URL
+        value: https://admin.fukumado.jp
+      - key: API_URL
+        value: https://api.fukumado.jp
       - key: YOUTUBE_API_KEY
         sync: false # Renderダッシュボードで手動設定
       - key: YOUTUBE_CLIENT_ID
@@ -58,10 +64,17 @@ services:
       - key: REDIS_URL
         sync: false # Renderダッシュボードで手動設定
       - key: MAIN_BACKEND_URL
-        fromService:
-          type: web
-          name: fukumado-server
-          property: host
+        value: https://api.fukumado.jp
+      - key: ADMIN_FRONTEND_URL
+        value: https://admin.fukumado.jp
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TWITCH_CLIENT_ID
+        sync: false
+      - key: TWITCH_CLIENT_SECRET
+        sync: false
+      - key: TWITCH_REDIRECT_URI
+        value: https://admin-api.fukumado.jp/auth/twitch/callback
 
   # ===================================
   # クライアントフロントエンド（静的サイト）
@@ -116,6 +129,12 @@ services:
         generateValue: true # 自動生成
       - key: REDIS_URL
         sync: false # Renderダッシュボードで手動設定
+      - key: FRONTEND_URL
+        value: https://beta.fukumado.jp
+      - key: ADMIN_FRONTEND_URL
+        value: https://beta-admin.fukumado.jp
+      - key: API_URL
+        value: https://beta-api.fukumado.jp
       - key: YOUTUBE_API_KEY
         sync: false # Renderダッシュボードで手動設定
       - key: YOUTUBE_CLIENT_ID
@@ -153,10 +172,17 @@ services:
       - key: REDIS_URL
         sync: false # Renderダッシュボードで手動設定
       - key: MAIN_BACKEND_URL
-        fromService:
-          type: web
-          name: fukumado-server-beta
-          property: host
+        value: https://beta-api.fukumado.jp
+      - key: ADMIN_FRONTEND_URL
+        value: https://beta-admin.fukumado.jp
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TWITCH_CLIENT_ID
+        sync: false
+      - key: TWITCH_CLIENT_SECRET
+        sync: false
+      - key: TWITCH_REDIRECT_URI
+        value: https://beta-admin-api.fukumado.jp/auth/twitch/callback
 
   # ===================================
   # ベータクライアントフロントエンド（静的サイト）
