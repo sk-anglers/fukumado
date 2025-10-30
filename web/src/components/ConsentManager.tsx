@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TermsAndPrivacyModal } from './TermsAndPrivacyModal';
 import { CookieConsentBanner } from './CookieConsentBanner';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { apiFetch } from '../utils/api';
 
 interface ConsentStatus {
   hasAcceptedTerms: boolean;
@@ -35,9 +34,7 @@ export const ConsentManager: React.FC = () => {
   const checkConsentStatus = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/consent/status`, {
-        credentials: 'include'
-      });
+      const response = await apiFetch('/api/consent/status');
       const data = await response.json();
 
       setConsentStatus(data.status);
@@ -59,12 +56,11 @@ export const ConsentManager: React.FC = () => {
   const handleTermsAccept = async () => {
     try {
       // 利用規約とプライバシーポリシーの同意を記録
-      const response = await fetch(`${API_URL}/api/consent`, {
+      const response = await apiFetch('/api/consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({
           consents: [
             { type: 'terms', granted: true },
@@ -94,12 +90,11 @@ export const ConsentManager: React.FC = () => {
   }) => {
     try {
       // クッキー同意を記録
-      const response = await fetch(`${API_URL}/api/consent`, {
+      const response = await apiFetch('/api/consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({
           consents: [
             { type: 'essential_cookies', granted: cookieConsents.essential_cookies },
