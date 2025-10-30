@@ -82,7 +82,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 初期データ読み込み
+  // 初期データ読み込み - TEMPORARILY DISABLED FOR DEBUGGING
+  /*
   useEffect(() => {
     console.log('[DEBUG] Layout: Initial data load useEffect RUNNING');
     const loadInitialData = async () => {
@@ -111,6 +112,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     loadInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  */
 
   return (
     <div className={styles.layout}>
