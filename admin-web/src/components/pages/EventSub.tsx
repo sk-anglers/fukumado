@@ -71,7 +71,8 @@ export const EventSub: React.FC = () => {
 
   const handleTwitchLogin = () => {
     // 本サービス経由で認証（admin=trueパラメータを付与）
-    window.location.href = 'http://localhost:4000/auth/twitch?admin=true';
+    const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    window.location.href = `${apiUrl}/auth/twitch?admin=true`;
   };
 
   useEffect(() => {

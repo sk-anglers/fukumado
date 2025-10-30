@@ -1,7 +1,8 @@
 import { Router } from 'express';
+import { env } from '../config/env';
 
 // serverのAPIエンドポイントURL
-const SERVER_API_BASE = process.env.SERVER_API_URL || 'http://localhost:4000/api/admin';
+const SERVER_API_BASE = `${env.mainBackendUrl}/api/admin`;
 
 export const apiMonitorRouter = Router();
 

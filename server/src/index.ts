@@ -71,8 +71,8 @@ redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...
 
 // CORS設定（モバイル対応 + 本番環境）
 const allowedOrigins = [
-  'http://localhost:5173',
-  'http://192.168.11.18:5173',
+  env.frontendUrl,  // 環境変数から取得（デフォルト: localhost:5173）
+  'http://192.168.11.18:5173',  // モバイル開発用（ローカルネットワーク）
   'http://127.0.0.1:5173'
 ];
 

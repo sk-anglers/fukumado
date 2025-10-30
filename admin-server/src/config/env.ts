@@ -57,6 +57,9 @@ export const env = {
   // メインバックエンドURL
   mainBackendUrl: process.env.MAIN_BACKEND_URL || 'http://localhost:4000',
 
+  // 管理フロントエンドURL
+  adminFrontendUrl: process.env.ADMIN_FRONTEND_URL || 'http://localhost:5174',
+
   // IP制限（オプション）
   allowedIPs: process.env.ADMIN_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || [],
 

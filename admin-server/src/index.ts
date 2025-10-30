@@ -24,10 +24,10 @@ const app = express();
 
 // CORS設定
 const allowedOrigins = [
-  'http://localhost:5174'  // ローカル開発
+  env.adminFrontendUrl  // 環境変数から取得（デフォルト: localhost:5174）
 ];
 
-// 本番環境の場合は本番URLを追加
+// 本番環境の場合は本番URLも追加
 if (env.nodeEnv === 'production') {
   allowedOrigins.push(
     'https://admin.fukumado.jp',

@@ -117,7 +117,7 @@ authRouter.get('/twitch/callback', async (req: Request, res: Response) => {
     }
 
     // 成功ページにリダイレクト（トークンをクエリパラメータで渡す）
-    res.redirect(`http://localhost:5174/?twitch_auth=success&username=${encodeURIComponent(user.login)}`);
+    res.redirect(`${env.adminFrontendUrl}/?twitch_auth=success&username=${encodeURIComponent(user.login)}`);
   } catch (error) {
     console.error('[Twitch Auth] OAuth error:', error);
     res.status(500).json({ error: 'Authentication failed' });
