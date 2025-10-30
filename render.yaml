@@ -28,8 +28,6 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
-    customDomains:
-      - domain: api.fukumado.jp
     envVars:
       - key: PORT
         value: 4000
@@ -66,8 +64,6 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
-    customDomains:
-      - domain: admin-api.fukumado.jp
     envVars:
       - key: PORT
         value: 4001
@@ -96,9 +92,6 @@ services:
     rootDir: web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
-    customDomains:
-      - domain: fukumado.jp
-      - domain: www.fukumado.jp
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_API_URL
@@ -113,8 +106,6 @@ services:
     rootDir: admin-web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
-    customDomains:
-      - domain: admin.fukumado.jp
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
@@ -136,8 +127,6 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
-    customDomains:
-      - domain: beta-api.fukumado.jp
     envVars:
       - key: PORT
         value: 4000
@@ -174,8 +163,6 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
-    customDomains:
-      - domain: beta-admin-api.fukumado.jp
     envVars:
       - key: PORT
         value: 4001
@@ -204,8 +191,6 @@ services:
     rootDir: web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
-    customDomains:
-      - domain: beta.fukumado.jp
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_API_URL
@@ -220,8 +205,6 @@ services:
     rootDir: admin-web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
-    customDomains:
-      - domain: beta-admin.fukumado.jp
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
