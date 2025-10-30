@@ -111,21 +111,31 @@ class MetricsCollector {
    */
   private async getStreamSyncCount(): Promise<number> {
     try {
-      // 本サービスの /api/streams/status から配信数を取得
-      const response = await fetch(`${env.mainBackendUrl}/api/streams/status`);
+      // 本サービスの /api/admin/streams から配信数を取得
+      const response = await fetch(`${env.mainBackendUrl}/api/admin/streams`);
 
       if (!response.ok) {
+        console.warn('[MetricsCollector] Failed to fetch streams:', response.status);
         return 0;
       }
 
-      const data = await response.json() as {
-        isRunning: boolean;
-        userCount: number;
-        youtubeStreamCount: number;
-        twitchStreamCount: number;
+      const result = await response.json() as {
+        success: boolean;
+        data: {
+          stats: {
+            isRunning: boolean;
+            userCount: number;
+            youtubeStreamCount: number;
+            twitchStreamCount: number;
+          };
+        };
       };
 
-      return data.youtubeStreamCount + data.twitchStreamCount;
+      if (!result.success || !result.data.stats) {
+        return 0;
+      }
+
+      return result.data.stats.youtubeStreamCount + result.data.stats.twitchStreamCount;
     } catch (error) {
       console.error('[MetricsCollector] Error getting stream sync count:', error);
       return 0;
