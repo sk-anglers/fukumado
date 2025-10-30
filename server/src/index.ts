@@ -1,7 +1,7 @@
 import express from 'express';
 import session from 'express-session';
 import RedisStore from 'connect-redis';
-import { createClient } from 'redis';
+import Redis from 'ioredis';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -52,17 +52,15 @@ const app = express();
 // Renderのリバースプロキシを信頼
 app.set('trust proxy', true);
 
-// Redisクライアントの作成
-const redisClient = createClient({
-  url: env.redisUrl,
-  socket: {
-    reconnectStrategy: (retries) => {
-      if (retries > 10) {
-        console.error('[Redis] Max reconnection attempts reached');
-        return new Error('Max reconnection attempts reached');
-      }
-      return Math.min(retries * 100, 3000);
+// Redisクライアントの作成（ioredis）
+const redisClient = new Redis(env.redisUrl, {
+  maxRetriesPerRequest: null,
+  retryStrategy: (times) => {
+    if (times > 10) {
+      console.error('[Redis] Max reconnection attempts reached');
+      return null;
     }
+    return Math.min(times * 100, 3000);
   }
 });
 
@@ -70,9 +68,6 @@ redisClient.on('error', (err) => console.error('[Redis] Client Error:', err));
 redisClient.on('connect', () => console.log('[Redis] Client Connected'));
 redisClient.on('ready', () => console.log('[Redis] Client Ready'));
 redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...'));
-
-// Redisに接続
-redisClient.connect().catch(console.error);
 
 // CORS設定（モバイル対応 + 本番環境）
 const allowedOrigins = [
