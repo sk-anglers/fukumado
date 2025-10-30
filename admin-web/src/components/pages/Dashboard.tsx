@@ -31,26 +31,7 @@ export const Dashboard: React.FC = () => {
   // setter関数だけ取得（useEffectで使用）
   const setApiStats = useMetricsStore(state => state.setApiStats);
 
-  console.log('[DEBUG] Dashboard: systemMetrics =', systemMetrics ? 'exists' : 'null');
-
-  if (!systemMetrics) {
-    console.log('[DEBUG] Dashboard: Showing Loader (systemMetrics is null)');
-    return <Loader text="データを読み込んでいます..." />;
-  }
-
-  console.log('[DEBUG] Dashboard: Rendering main content');
-  console.log('[DEBUG] Dashboard: metricsHistory length =', metricsHistory.length);
-  console.log('[DEBUG] Dashboard: metricsHistory data =', JSON.stringify(metricsHistory));
-  console.log('[DEBUG] Dashboard: apiStatsHistory length =', apiStatsHistory.length);
-  console.log('[DEBUG] Dashboard: apiStatsHistory data =', JSON.stringify(apiStatsHistory));
-
-  const getAPIStatus = (usagePercent: number) => {
-    if (usagePercent >= 90) return 'critical';
-    if (usagePercent >= 70) return 'warning';
-    return 'normal';
-  };
-
-  // API統計データを定期的に取得
+  // API統計データを定期的に取得 - useEffectは条件分岐の前に配置
   useEffect(() => {
     console.log('[DEBUG] Dashboard: API stats useEffect RUNNING');
     const fetchApiStats = async () => {
@@ -82,7 +63,7 @@ export const Dashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // グラフ用のデータを準備（時刻フォーマット） - useMemoでメモ化
+  // グラフ用のデータを準備（時刻フォーマット） - useMemoも条件分岐の前に配置
   const chartData = useMemo(() => {
     console.log('[DEBUG] Dashboard: Calculating chartData, metricsHistory =', metricsHistory);
     return metricsHistory.map((point, index) => {
@@ -98,7 +79,7 @@ export const Dashboard: React.FC = () => {
     });
   }, [metricsHistory]);
 
-  // API統計グラフ用のデータを準備 - useMemoでメモ化
+  // API統計グラフ用のデータを準備 - useMemoも条件分岐の前に配置
   const apiStatsChartData = useMemo(() => {
     console.log('[DEBUG] Dashboard: Calculating apiStatsChartData');
     return apiStatsHistory.map(point => ({
@@ -110,6 +91,25 @@ export const Dashboard: React.FC = () => {
       })
     }));
   }, [apiStatsHistory]);
+
+  console.log('[DEBUG] Dashboard: systemMetrics =', systemMetrics ? 'exists' : 'null');
+
+  if (!systemMetrics) {
+    console.log('[DEBUG] Dashboard: Showing Loader (systemMetrics is null)');
+    return <Loader text="データを読み込んでいます..." />;
+  }
+
+  console.log('[DEBUG] Dashboard: Rendering main content');
+  console.log('[DEBUG] Dashboard: metricsHistory length =', metricsHistory.length);
+  console.log('[DEBUG] Dashboard: metricsHistory data =', JSON.stringify(metricsHistory));
+  console.log('[DEBUG] Dashboard: apiStatsHistory length =', apiStatsHistory.length);
+  console.log('[DEBUG] Dashboard: apiStatsHistory data =', JSON.stringify(apiStatsHistory));
+
+  const getAPIStatus = (usagePercent: number) => {
+    if (usagePercent >= 90) return 'critical';
+    if (usagePercent >= 70) return 'warning';
+    return 'normal';
+  };
 
   return (
     <div className={styles.dashboard}>
@@ -205,8 +205,8 @@ export const Dashboard: React.FC = () => {
         </div>
       </section>
 
-      {/* リアルタイムグラフ - TEMPORARILY DISABLED FOR DEBUGGING */}
-      {false && chartData.length > 0 && (
+      {/* リアルタイムグラフ */}
+      {chartData.length > 0 && (
         <>
           {/* CPU/メモリ使用率グラフ */}
           <section className={styles.section}>
