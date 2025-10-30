@@ -107,8 +107,8 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // 本番環境ではHTTPSのみ
-    sameSite: 'lax',
+    secure: true, // sameSite=noneの場合は必須
+    sameSite: 'none', // クロスサイトでCookieを送信可能に
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
 });
