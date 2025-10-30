@@ -1,6 +1,6 @@
 import { useMaintenanceStore } from '../stores/maintenanceStore';
 
-const backendOrigin =
+export const backendOrigin =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   (window.location.origin.includes('5173')
     ? window.location.origin.replace('5173', '4000')
