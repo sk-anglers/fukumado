@@ -41,6 +41,7 @@ export const Dashboard: React.FC = () => {
 
   // API統計データを定期的に取得
   useEffect(() => {
+    console.log('[DEBUG] Dashboard: API stats useEffect RUNNING');
     const fetchApiStats = async () => {
       try {
         const statsData = await getApiStats();
@@ -63,7 +64,10 @@ export const Dashboard: React.FC = () => {
     // 5秒ごとに更新
     const interval = setInterval(fetchApiStats, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      console.log('[DEBUG] Dashboard: API stats useEffect CLEANUP');
+      clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

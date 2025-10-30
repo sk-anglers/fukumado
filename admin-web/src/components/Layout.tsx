@@ -47,6 +47,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // WebSocket接続とメッセージ処理
   useEffect(() => {
+    console.log('[DEBUG] Layout: WebSocket useEffect RUNNING');
     // WebSocket接続
     websocketClient.connect();
 
@@ -69,6 +70,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     // クリーンアップ
     return () => {
+      console.log('[DEBUG] Layout: WebSocket useEffect CLEANUP');
       websocketClient.offStatusChange(statusHandler);
       websocketClient.offMessage(messageHandler);
       websocketClient.disconnect();
@@ -78,6 +80,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // 初期データ読み込み
   useEffect(() => {
+    console.log('[DEBUG] Layout: Initial data load useEffect RUNNING');
     const loadInitialData = async () => {
       try {
         const [systemMetrics, twitchRate, youtubeQuota, securityMetrics] =

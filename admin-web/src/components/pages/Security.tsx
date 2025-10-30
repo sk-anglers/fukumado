@@ -32,6 +32,7 @@ export const Security: React.FC = () => {
 
   // 本サービスのセキュリティデータを取得
   useEffect(() => {
+    console.log('[DEBUG] Security: Main service data useEffect RUNNING');
     const fetchMainServiceData = async () => {
       try {
         const [stats, health, alerts, sessions, websocket, summary] = await Promise.all([
@@ -58,7 +59,10 @@ export const Security: React.FC = () => {
 
     // 30秒ごとに更新
     const interval = setInterval(fetchMainServiceData, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      console.log('[DEBUG] Security: Main service data useEffect CLEANUP');
+      clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
