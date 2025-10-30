@@ -73,8 +73,8 @@ async function fetchAPI<T>(
     ...(options.headers as Record<string, string> | undefined)
   };
 
-  // ヘルスチェック以外はBasic認証を付与
-  if (!endpoint.includes('/health')) {
+  // ルート直下の/healthエンドポイント以外はBasic認証を付与
+  if (endpoint !== '/health') {
     headers['Authorization'] = getAuthHeader();
   }
 
