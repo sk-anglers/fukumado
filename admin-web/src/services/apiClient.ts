@@ -25,7 +25,8 @@ import {
   StreamsResponse,
   CacheInfoResponse,
   CacheKeysResponse,
-  CacheKeyValueResponse
+  CacheKeyValueResponse,
+  PVStats
 } from '../types';
 
 /**
@@ -573,5 +574,61 @@ export const clearApiLogs = async (service?: 'twitch' | 'youtube' | 'other'): Pr
 
   await fetchAPI(`/api-monitor/logs?${params.toString()}`, {
     method: 'DELETE'
+  });
+};
+
+// ========================================
+// PV統計API
+// ========================================
+
+/**
+ * PV統計を取得
+ */
+export const getPVStats = async (): Promise<PVStats | null> => {
+  try {
+    const response = await fetchAPI<ApiResponse<PVStats>>('/pv/stats');
+    return response.data || null;
+  } catch (error) {
+    console.error('[API] Failed to fetch PV stats:', error);
+    return null;
+  }
+};
+
+/**
+ * PV統計をエクスポート（ダウンロード）
+ */
+export const exportPVStats = async (format: 'json' | 'csv' = 'json'): Promise<void> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/pv/export?format=${format}`, {
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status}`);
+    }
+
+    // ファイルをダウンロード
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const date = new Date().toISOString().split('T')[0];
+    a.download = `pv-stats-${date}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error('[API] Failed to export PV stats:', error);
+    throw error;
+  }
+};
+
+/**
+ * PV統計を手動でバックアップ
+ */
+export const backupPVStats = async (): Promise<void> => {
+  await fetchAPI('/pv/backup', {
+    method: 'POST'
   });
 };

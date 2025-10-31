@@ -49,6 +49,8 @@ import { requestLogger, recordAccessStats, SecurityLogger } from './middleware/l
 import { anomalyDetectionService } from './services/anomalyDetection';
 import { metricsCollector } from './services/metricsCollector';
 import { initializeSession, detectSessionHijacking, checkSessionTimeout, includeCSRFToken } from './middleware/sessionSecurity';
+import { PVTracker } from './services/pvTracker';
+import { createPVCounterMiddleware } from './middleware/pvCounter';
 
 const app = express();
 
@@ -71,6 +73,10 @@ redisClient.on('error', (err) => console.error('[Redis] Client Error:', err));
 redisClient.on('connect', () => console.log('[Redis] Client Connected'));
 redisClient.on('ready', () => console.log('[Redis] Client Ready'));
 redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...'));
+
+// PV計測サービスの初期化
+export const pvTracker = new PVTracker(redisClient);
+console.log('[PVTracker] PV tracking service initialized');
 
 // CORS設定（モバイル対応 + 本番環境）
 const allowedOrigins = [
@@ -150,6 +156,9 @@ app.use(includeCSRFToken); // CSRFトークンをレスポンスに含める
 
 // メンテナンスモードチェック（/healthは除外される）
 app.use(maintenanceMode);
+
+// PVカウントミドルウェア（ボット除外、API除外）
+app.use(createPVCounterMiddleware(pvTracker));
 
 app.get('/health', (_, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

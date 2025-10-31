@@ -670,3 +670,43 @@ export interface StreamsResponse {
     cacheAvailable: boolean;
   };
 }
+
+// ========================================
+// PV統計型定義
+// ========================================
+
+/**
+ * PV統計（日次）
+ */
+export interface PVDailyStats {
+  date: string;            // YYYY-MM-DD
+  pv: number;             // ページビュー数
+  uniqueUsers: number;    // ユニークユーザー数
+}
+
+/**
+ * PV統計（月次）
+ */
+export interface PVMonthlyStats {
+  month: string;          // YYYY-MM
+  pv: number;             // ページビュー数
+  uniqueUsers: number;    // ユニークユーザー数
+}
+
+/**
+ * PV統計（全体）
+ */
+export interface PVStats {
+  today: {
+    pv: number;
+    uniqueUsers: number;
+  };
+  month: {
+    pv: number;
+    uniqueUsers: number;
+  };
+  total: number;          // 累計PV
+  daily: PVDailyStats[];  // 過去30日分
+  monthly: PVMonthlyStats[]; // 過去12ヶ月分
+  timestamp: string;      // ISO 8601形式
+}

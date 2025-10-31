@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { followedChannelsCacheService } from '../services/followedChannelsCacheService';
 import { emoteCacheService } from '../services/emoteCacheService';
 import { apiLogStore } from '../utils/apiLogStore';
-import { getWebSocketStats } from '../index';
+import { getWebSocketStats, pvTracker } from '../index';
 
 export const adminRouter = Router();
 
@@ -270,6 +270,95 @@ adminRouter.get('/websocket/stats', (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[Admin] Error getting WebSocket stats:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/pv/stats
+ * PV統計を取得
+ */
+adminRouter.get('/pv/stats', async (req: Request, res: Response) => {
+  try {
+    const stats = await pvTracker.getAllStats();
+
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting PV stats:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/pv/export
+ * PV統計をエクスポート（JSON/CSV）
+ */
+adminRouter.get('/pv/export', async (req: Request, res: Response) => {
+  try {
+    const format = req.query.format as string || 'json';
+    const stats = await pvTracker.getAllStats();
+
+    if (format === 'csv') {
+      // CSV形式でエクスポート
+      let csv = 'Date,PV,Unique Users\n';
+
+      // 日次データ
+      stats.daily.forEach((day) => {
+        csv += `${day.date},${day.pv},${day.uniqueUsers}\n`;
+      });
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="pv-stats-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csv);
+    } else {
+      // JSON形式でエクスポート
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="pv-stats-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(stats);
+    }
+  } catch (error) {
+    console.error('[Admin] Error exporting PV stats:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/pv/backup
+ * PV統計を手動でバックアップ
+ */
+adminRouter.post('/pv/backup', async (req: Request, res: Response) => {
+  try {
+    const filepath = await pvTracker.backupToFile();
+
+    res.json({
+      success: true,
+      data: {
+        filepath,
+        message: 'Backup completed successfully'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error backing up PV stats:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       success: false,
