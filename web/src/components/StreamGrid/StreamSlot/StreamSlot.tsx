@@ -622,7 +622,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
         isFocused && styles.focused
       )}
       style={{
-        borderColor: isActive ? accentColor : 'transparent',
+        borderColor: 'transparent',
         cursor: 'pointer',
         order: isFocused ? -1 : 0
       }}
