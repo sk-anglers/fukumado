@@ -1,6 +1,16 @@
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
+
+/**
+ * Nonce生成ミドルウェア
+ * リクエストごとに一意のnonceを生成し、res.localsに保存
+ */
+export const generateNonce = (req: Request, res: Response, next: NextFunction): void => {
+  res.locals.nonce = crypto.randomBytes(16).toString('base64');
+  next();
+};
 
 /**
  * セキュリティヘッダーミドルウェア（Helmet）
@@ -10,7 +20,7 @@ export const securityHeaders = helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`],
       imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'", 'https://api.twitch.tv', 'https://id.twitch.tv', 'wss://eventsub.wss.twitch.tv'],
       fontSrc: ["'self'"],

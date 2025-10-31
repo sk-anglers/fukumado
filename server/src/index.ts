@@ -30,6 +30,7 @@ import { twitchEventSubWebhookService } from './services/twitchEventSubWebhookSe
 import { priorityManager } from './services/priorityManager';
 import { dynamicChannelAllocator } from './services/dynamicChannelAllocator';
 import {
+  generateNonce,
   securityHeaders,
   apiRateLimiter,
   authRateLimiter,
@@ -97,6 +98,7 @@ app.use(
 );
 
 // セキュリティミドルウェア
+app.use(generateNonce); // Nonce生成（CSP用）
 app.use(securityHeaders); // セキュリティヘッダー
 app.use(checkBlockedIP); // IPブロックチェック
 app.use(validateRequestSize); // リクエストサイズ検証

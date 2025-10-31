@@ -242,6 +242,7 @@ authRouter.get('/twitch/logout', (req, res) => {
 });
 
 authRouter.get('/success', (_req, res) => {
+  const nonce = res.locals.nonce || '';
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -262,9 +263,13 @@ authRouter.get('/success', (_req, res) => {
             アプリに戻る
           </a>
         </div>
-        <script>
+        <script nonce="${nonce}">
           // 即座に実行（IIFE）
           (function() {
+            console.log('[Auth Success] Script started');
+            console.log('[Auth Success] window.opener:', window.opener);
+            console.log('[Auth Success] window.opener type:', typeof window.opener);
+
             var link = document.getElementById('backButton');
 
             // window.opener がある場合（ポップアップで開かれた場合）
@@ -273,11 +278,13 @@ authRouter.get('/success', (_req, res) => {
 
               // 親ウィンドウに認証完了を通知（postMessage）
               try {
+                var targetOrigin = '${env.frontendUrl}';
+                console.log('[Auth Success] Target origin:', targetOrigin);
                 window.opener.postMessage(
                   { type: 'AUTH_SUCCESS', platform: 'oauth' },
-                  '${env.frontendUrl}'
+                  targetOrigin
                 );
-                console.log('[Auth Success] postMessage sent to:', '${env.frontendUrl}');
+                console.log('[Auth Success] postMessage sent successfully');
               } catch (error) {
                 console.error('[Auth Success] postMessage error:', error);
               }
@@ -297,13 +304,17 @@ authRouter.get('/success', (_req, res) => {
             } else {
               // window.opener がない場合（通常のウィンドウで開かれた場合）
               console.log('[Auth Success] Normal window detected, redirecting');
+              console.log('[Auth Success] window.opener is null or closed');
               link.href = '${env.frontendUrl}/';
 
               // 3秒後にリダイレクト
               setTimeout(function() {
+                console.log('[Auth Success] Redirecting to:', '${env.frontendUrl}/');
                 window.location.href = '${env.frontendUrl}/';
               }, 3000);
             }
+
+            console.log('[Auth Success] Script completed');
           })();
         </script>
       </body>

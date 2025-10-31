@@ -221,14 +221,19 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
 
     // postMessage イベントリスナー
     const messageHandler = (event: MessageEvent) => {
+      console.log('[Google Auth] Message received from origin:', event.origin);
+      console.log('[Google Auth] Message data:', event.data);
+
       // オリジン検証（セキュリティ必須）
       const expectedOrigin = new URL(apiUrl('/')).origin;
+      console.log('[Google Auth] Expected origin:', expectedOrigin);
+
       if (event.origin !== expectedOrigin) {
-        console.warn('[Google Auth] Invalid origin:', event.origin, 'Expected:', expectedOrigin);
+        console.warn('[Google Auth] ❌ Invalid origin. Received:', event.origin, 'Expected:', expectedOrigin);
         return;
       }
 
-      console.log('[Google Auth] Received message:', event.data);
+      console.log('[Google Auth] ✅ Origin validated successfully');
 
       // 認証完了メッセージを受信
       if (event.data?.type === 'AUTH_SUCCESS') {
@@ -245,7 +250,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
     };
 
     window.addEventListener('message', messageHandler);
-    console.log('[Google Auth] postMessage listener added');
+    console.log('[Google Auth] ✅ postMessage listener added');
+    console.log('[Google Auth] Waiting for message from:', new URL(apiUrl('/')).origin);
 
     // バックアップ: ポーリング（postMessageが失敗した場合の保険）
     const timer = window.setInterval(async () => {
@@ -354,14 +360,19 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
 
     // postMessage イベントリスナー
     const messageHandler = (event: MessageEvent) => {
+      console.log('[Twitch Auth] Message received from origin:', event.origin);
+      console.log('[Twitch Auth] Message data:', event.data);
+
       // オリジン検証（セキュリティ必須）
       const expectedOrigin = new URL(apiUrl('/')).origin;
+      console.log('[Twitch Auth] Expected origin:', expectedOrigin);
+
       if (event.origin !== expectedOrigin) {
-        console.warn('[Twitch Auth] Invalid origin:', event.origin, 'Expected:', expectedOrigin);
+        console.warn('[Twitch Auth] ❌ Invalid origin. Received:', event.origin, 'Expected:', expectedOrigin);
         return;
       }
 
-      console.log('[Twitch Auth] Received message:', event.data);
+      console.log('[Twitch Auth] ✅ Origin validated successfully');
 
       // 認証完了メッセージを受信
       if (event.data?.type === 'AUTH_SUCCESS') {
@@ -378,7 +389,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
     };
 
     window.addEventListener('message', messageHandler);
-    console.log('[Twitch Auth] postMessage listener added');
+    console.log('[Twitch Auth] ✅ postMessage listener added');
+    console.log('[Twitch Auth] Waiting for message from:', new URL(apiUrl('/')).origin);
 
     // バックアップ: ポーリング（postMessageが失敗した場合の保険）
     const timer = window.setInterval(async () => {
