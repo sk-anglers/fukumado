@@ -123,6 +123,7 @@ function App(): JSX.Element {
 
   const hasSyncedSubscriptions = useRef(false);
   const hasSyncedTwitchSubscriptions = useRef(false);
+  const prevTwitchAuthenticated = useRef(false);
 
   // リロード時にsyncフラグをリセット（最優先で実行）
   useEffect(() => {
@@ -204,6 +205,16 @@ function App(): JSX.Element {
       hasSyncedSubscriptions.current = false;
     }
   }, [authenticated]);
+
+  // Twitch認証状態の変化を検知（Safari対策）
+  useEffect(() => {
+    // false → true に変わった時（新規ログイン時）
+    if (twitchAuthenticated && !prevTwitchAuthenticated.current) {
+      console.log('[App] Twitch authentication status changed to true, resetting sync flag');
+      hasSyncedTwitchSubscriptions.current = false;
+    }
+    prevTwitchAuthenticated.current = twitchAuthenticated;
+  }, [twitchAuthenticated]);
 
   useEffect(() => {
     const syncTwitchSubscriptions = async (): Promise<void> => {
