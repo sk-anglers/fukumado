@@ -103,6 +103,7 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   const setSlotQuality = useLayoutStore((state) => state.setSlotQuality);
   const setAutoQualityEnabled = useLayoutStore((state) => state.setAutoQualityEnabled);
   const masterSlotId = useLayoutStore((state) => state.masterSlotId);
+  const clearSlot = useLayoutStore((state) => state.clearSlot);
 
   const totalBytes = useDataUsageStore((state) => state.totalBytes);
   const sessionStartTime = useDataUsageStore((state) => state.sessionStartTime);
@@ -225,9 +226,29 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
     const timer = window.setInterval(async () => {
       // ウィンドウが閉じられた場合
       if (authWindow.closed) {
-        console.log('[Google Auth] Popup closed, checking authentication status');
+        console.log('[Google Auth] Popup closed, retrying authentication check');
         window.clearInterval(timer);
-        await refreshAuthStatus();
+
+        // リトライロジック: 最大5回（2.5秒間）認証状態をチェック
+        let retryCount = 0;
+        const maxRetries = 5;
+        const retryInterval = 500;
+
+        const retryTimer = window.setInterval(async () => {
+          retryCount++;
+          console.log(`[Google Auth] Retry ${retryCount}/${maxRetries}`);
+
+          await refreshAuthStatus();
+
+          if (useAuthStore.getState().authenticated) {
+            console.log('[Google Auth] Authentication successful after retry');
+            window.clearInterval(retryTimer);
+          } else if (retryCount >= maxRetries) {
+            console.log('[Google Auth] Max retries reached, authentication may have failed');
+            window.clearInterval(retryTimer);
+          }
+        }, retryInterval);
+
         return;
       }
 
@@ -255,6 +276,10 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       setAuthStatus({ authenticated: false, user: undefined, error: undefined });
       // ユーザーIDをクリアしてフォローチャンネルを非表示に
       setCurrentYoutubeUser(null);
+      // スロット情報をクリア
+      for (let i = 0; i < activeSlotsCount; i++) {
+        clearSlot(slots[i].id);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setAuthError(message);
@@ -339,9 +364,29 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
     const timer = window.setInterval(async () => {
       // ウィンドウが閉じられた場合
       if (authWindow.closed) {
-        console.log('[Twitch Auth] Popup closed, checking authentication status');
+        console.log('[Twitch Auth] Popup closed, retrying authentication check');
         window.clearInterval(timer);
-        await refreshTwitchAuthStatus();
+
+        // リトライロジック: 最大5回（2.5秒間）認証状態をチェック
+        let retryCount = 0;
+        const maxRetries = 5;
+        const retryInterval = 500;
+
+        const retryTimer = window.setInterval(async () => {
+          retryCount++;
+          console.log(`[Twitch Auth] Retry ${retryCount}/${maxRetries}`);
+
+          await refreshTwitchAuthStatus();
+
+          if (useAuthStore.getState().twitchAuthenticated) {
+            console.log('[Twitch Auth] Authentication successful after retry');
+            window.clearInterval(retryTimer);
+          } else if (retryCount >= maxRetries) {
+            console.log('[Twitch Auth] Max retries reached, authentication may have failed');
+            window.clearInterval(retryTimer);
+          }
+        }, retryInterval);
+
         return;
       }
 
@@ -369,6 +414,10 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       setTwitchStatus({ authenticated: false, user: undefined, error: undefined });
       // ユーザーIDをクリアしてフォローチャンネルを非表示に
       setCurrentTwitchUser(null);
+      // スロット情報をクリア
+      for (let i = 0; i < activeSlotsCount; i++) {
+        clearSlot(slots[i].id);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setTwitchError(message);
