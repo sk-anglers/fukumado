@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { twitchEventSubManager } from '../services/twitchEventSubManager';
 import { dynamicChannelAllocator } from '../services/dynamicChannelAllocator';
 import { metricsCollector } from '../services/metricsCollector';
+import { priorityManager } from '../services/priorityManager';
 
 export const eventsubRouter = Router();
 
@@ -50,12 +51,13 @@ eventsubRouter.get('/stats', async (req, res) => {
 
 /**
  * GET /api/admin/eventsub/subscriptions
- * 購読チャンネル一覧取得
+ * 購読チャンネル一覧取得（優先度情報も含む）
  */
 eventsubRouter.get('/subscriptions', async (req, res) => {
   try {
     const channelIds = twitchEventSubManager.getSubscribedUserIds();
     const stats = twitchEventSubManager.getStats();
+    const allocationStats = dynamicChannelAllocator.getStats();
 
     // 各接続の購読チャンネル情報を収集
     const subscriptions = stats.connections.map((conn) => ({
@@ -66,12 +68,39 @@ eventsubRouter.get('/subscriptions', async (req, res) => {
       subscribedUserIds: conn.subscribedUserIds
     }));
 
+    // PriorityManagerから全チャンネル情報を取得
+    const allPriorities = priorityManager.calculatePriorities();
+    const priorityStats = priorityManager.getStats();
+
+    // Twitchチャンネルのみをフィルタリング
+    const twitchChannels = allPriorities.filter(p => p.platform === 'twitch');
+
+    // 優先度別に分類
+    const realtimeChannels = twitchChannels.filter(p => p.priority === 'realtime');
+    const delayedChannels = twitchChannels.filter(p => p.priority === 'delayed');
+
     res.json({
       success: true,
       data: {
         totalChannels: channelIds.length,
         channelIds,
-        subscriptions
+        subscriptions,
+        allChannels: {
+          total: twitchChannels.length,
+          realtime: realtimeChannels.map(p => ({
+            channelId: p.channelId,
+            userCount: p.userCount,
+            priority: p.priority,
+            method: 'eventsub'
+          })),
+          delayed: delayedChannels.map(p => ({
+            channelId: p.channelId,
+            userCount: p.userCount,
+            priority: p.priority,
+            method: 'polling'
+          }))
+        },
+        priorityStats
       },
       timestamp: new Date().toISOString()
     });

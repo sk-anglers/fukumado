@@ -225,7 +225,62 @@
   font-family: monospace;
 }
 
-/* 購読チャンネル */
+/* 監視チャンネル */
+/* 優先度統計 */
+.priorityStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #F9F9F9;
+  border: 1px solid #edebe9;
+  border-radius: 6px;
+}
+
+.priorityStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.priorityLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #605e5c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.priorityValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #323130;
+}
+
+/* チャンネルセクション */
+.channelSection {
+  margin-bottom: 32px;
+}
+
+.channelSection:last-child {
+  margin-bottom: 0;
+}
+
+.channelSectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0 0 8px 0;
+}
+
+.channelSectionDesc {
+  font-size: 13px;
+  color: #605e5c;
+  margin: 0 0 16px 0;
+}
+
+/* チャンネルリスト */
 .channelList {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -247,11 +302,44 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
+.channelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
 .channelId {
   font-family: monospace;
   font-size: 14px;
   font-weight: 500;
   color: #323130;
+}
+
+.channelMeta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.channelBadge {
+  padding: 4px 8px;
+  background: #3498DB;
+  color: white;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.channelMethod {
+  padding: 4px 8px;
+  background: #EEEEEE;
+  color: #605e5c;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .unsubscribeButton {

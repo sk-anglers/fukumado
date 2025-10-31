@@ -207,16 +207,100 @@ export const EventSub: React.FC = () => {
         </section>
       )}
 
-      {/* 購読チャンネル */}
+      {/* 監視チャンネル */}
       {subsData && (
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>
-            購読チャンネル ({subsData.totalChannels})
-          </h2>
+          <h2 className={styles.sectionTitle}>監視チャンネル</h2>
 
-          {subsData.totalChannels === 0 ? (
-            <div className={styles.noData}>購読チャンネルはありません</div>
-          ) : (
+          {/* 優先度統計 */}
+          {subsData.priorityStats && (
+            <div className={styles.priorityStats}>
+              <div className={styles.priorityStat}>
+                <span className={styles.priorityLabel}>総ユーザー数:</span>
+                <span className={styles.priorityValue}>{subsData.priorityStats.totalUsers}</span>
+              </div>
+              <div className={styles.priorityStat}>
+                <span className={styles.priorityLabel}>総チャンネル数:</span>
+                <span className={styles.priorityValue}>{subsData.priorityStats.totalChannels}</span>
+              </div>
+              <div className={styles.priorityStat}>
+                <span className={styles.priorityLabel}>EventSub監視:</span>
+                <span className={styles.priorityValue}>{subsData.priorityStats.realtimeChannels}</span>
+              </div>
+              <div className={styles.priorityStat}>
+                <span className={styles.priorityLabel}>ポーリング監視:</span>
+                <span className={styles.priorityValue}>{subsData.priorityStats.delayedChannels}</span>
+              </div>
+            </div>
+          )}
+
+          {/* EventSub監視中のチャンネル */}
+          {subsData.allChannels && (
+            <>
+              <div className={styles.channelSection}>
+                <h3 className={styles.channelSectionTitle}>
+                  🔴 EventSub監視中 ({subsData.allChannels.realtime.length})
+                </h3>
+                <p className={styles.channelSectionDesc}>
+                  2人以上が視聴中のチャンネル（リアルタイム監視）
+                </p>
+
+                {subsData.allChannels.realtime.length === 0 ? (
+                  <div className={styles.noData}>EventSub監視中のチャンネルはありません</div>
+                ) : (
+                  <div className={styles.channelList}>
+                    {subsData.allChannels.realtime.map((channel) => (
+                      <div key={channel.channelId} className={styles.channelCard}>
+                        <div className={styles.channelInfo}>
+                          <div className={styles.channelId}>{channel.channelId}</div>
+                          <div className={styles.channelMeta}>
+                            <span className={styles.channelBadge}>👥 {channel.userCount}人</span>
+                            <span className={styles.channelMethod}>{channel.method}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleUnsubscribe(channel.channelId)}
+                          className={styles.unsubscribeButton}
+                        >
+                          購読解除
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.channelSection}>
+                <h3 className={styles.channelSectionTitle}>
+                  🟡 ポーリング監視中 ({subsData.allChannels.delayed.length})
+                </h3>
+                <p className={styles.channelSectionDesc}>
+                  1人のみが視聴中のチャンネル（60秒間隔でポーリング）
+                </p>
+
+                {subsData.allChannels.delayed.length === 0 ? (
+                  <div className={styles.noData}>ポーリング監視中のチャンネルはありません</div>
+                ) : (
+                  <div className={styles.channelList}>
+                    {subsData.allChannels.delayed.map((channel) => (
+                      <div key={channel.channelId} className={styles.channelCard}>
+                        <div className={styles.channelInfo}>
+                          <div className={styles.channelId}>{channel.channelId}</div>
+                          <div className={styles.channelMeta}>
+                            <span className={styles.channelBadge}>👥 {channel.userCount}人</span>
+                            <span className={styles.channelMethod}>{channel.method}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* 旧形式との互換性（allChannelsがない場合） */}
+          {!subsData.allChannels && subsData.totalChannels > 0 && (
             <div className={styles.channelList}>
               {subsData.channelIds.map((userId) => (
                 <div key={userId} className={styles.channelCard}>

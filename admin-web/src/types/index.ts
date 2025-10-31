@@ -520,12 +520,33 @@ export interface EventSubSubscription {
 }
 
 /**
+ * チャンネル情報
+ */
+export interface ChannelInfo {
+  channelId: string;
+  userCount: number;
+  priority: 'realtime' | 'delayed';
+  method: 'eventsub' | 'polling' | 'webhook';
+}
+
+/**
  * EventSub購読一覧レスポンス
  */
 export interface EventSubSubscriptionsResponse {
   totalChannels: number;
   channelIds: string[];
   subscriptions: EventSubSubscription[];
+  allChannels?: {
+    total: number;
+    realtime: ChannelInfo[];
+    delayed: ChannelInfo[];
+  };
+  priorityStats?: {
+    totalUsers: number;
+    totalChannels: number;
+    realtimeChannels: number;
+    delayedChannels: number;
+  };
 }
 
 // ========================================
