@@ -14,7 +14,7 @@
 .title {
   font-size: 28px;
   font-weight: 700;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0;
 }
 
@@ -47,11 +47,11 @@
 .twitchStatus {
   padding: 10px 20px;
   background: #f0f0f0;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
-  color: #323130;
+  color: #e2e8f0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -79,7 +79,7 @@
   padding: 60px 20px;
   text-align: center;
   font-size: 16px;
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 .error {
@@ -95,8 +95,8 @@
 }
 
 .statCard {
-  background: #FFFFFF;
-  border: 1px solid #edebe9;
+  background: #1e293b;
+  border: 1px solid #334155;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -105,7 +105,7 @@
 .statLabel {
   font-size: 13px;
   font-weight: 500;
-  color: #605e5c;
+  color: #94a3b8;
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -114,7 +114,7 @@
 .statValue {
   font-size: 32px;
   font-weight: 700;
-  color: #323130;
+  color: #e2e8f0;
   margin-bottom: 4px;
 }
 
@@ -125,8 +125,8 @@
 
 /* セクション */
 .section {
-  background: #FFFFFF;
-  border: 1px solid #edebe9;
+  background: #1e293b;
+  border: 1px solid #334155;
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
@@ -136,7 +136,7 @@
 .sectionTitle {
   font-size: 18px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0 0 16px 0;
 }
 
@@ -149,7 +149,7 @@
 
 .connectionCard {
   background: #F9F9F9;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 6px;
   padding: 16px;
 }
@@ -160,13 +160,13 @@
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #edebe9;
+  border-bottom: 1px solid #334155;
 }
 
 .connectionIndex {
   font-size: 14px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .connectionStatus {
@@ -221,7 +221,7 @@
 }
 
 .connectionValue {
-  color: #323130;
+  color: #e2e8f0;
   font-family: monospace;
 }
 
@@ -234,7 +234,7 @@
   margin-bottom: 24px;
   padding: 16px;
   background: #F9F9F9;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 6px;
 }
 
@@ -247,7 +247,7 @@
 .priorityLabel {
   font-size: 12px;
   font-weight: 500;
-  color: #605e5c;
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -255,7 +255,7 @@
 .priorityValue {
   font-size: 24px;
   font-weight: 700;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 /* チャンネルセクション */
@@ -270,13 +270,13 @@
 .channelSectionTitle {
   font-size: 16px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0 0 8px 0;
 }
 
 .channelSectionDesc {
   font-size: 13px;
-  color: #605e5c;
+  color: #94a3b8;
   margin: 0 0 16px 0;
 }
 
@@ -292,7 +292,7 @@
 
 .channelCard {
   background: #F9F9F9;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 6px;
   padding: 16px;
   display: flex;
@@ -315,7 +315,7 @@
 .channelName {
   font-size: 16px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin-bottom: 4px;
 }
 
@@ -343,8 +343,8 @@
 
 .channelMethod {
   padding: 4px 8px;
-  background: #EEEEEE;
-  color: #605e5c;
+  background: #0f172a;
+  color: #94a3b8;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
@@ -377,7 +377,7 @@
 
 .eventCard {
   background: #F9F9F9;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 6px;
   padding: 16px;
   transition: box-shadow 0.2s;
@@ -393,7 +393,7 @@
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #edebe9;
+  border-bottom: 1px solid #334155;
 }
 
 .eventType {
@@ -427,7 +427,7 @@
 
 .eventBroadcaster {
   font-size: 14px;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .eventId {

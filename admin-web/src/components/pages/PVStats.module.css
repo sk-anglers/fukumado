@@ -7,7 +7,7 @@
 .pageTitle {
   font-size: 28px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin-bottom: 30px;
 }
 
@@ -18,10 +18,10 @@
 .sectionTitle {
   font-size: 20px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin-bottom: 20px;
   padding-bottom: 10px;
-  border-bottom: 2px solid #EEEEEE;
+  border-bottom: 2px solid #334155;
 }
 
 .metricsGrid {
@@ -71,14 +71,14 @@
 }
 
 .hint {
-  color: #605e5c;
+  color: #94a3b8;
   font-size: 14px;
   margin-top: 10px;
   line-height: 1.6;
 }
 
 .updateInfo {
-  color: #323130;
+  color: #e2e8f0;
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 10px;

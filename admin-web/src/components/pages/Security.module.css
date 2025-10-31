@@ -7,7 +7,7 @@
 .pageTitle {
   font-size: 28px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0 0 24px 0;
 }
 
@@ -18,7 +18,7 @@
 .sectionTitle {
   font-size: 20px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0 0 16px 0;
   padding-bottom: 8px;
   border-bottom: 2px solid #3498DB;
@@ -38,11 +38,11 @@
 
 .input {
   padding: 10px 12px;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
-  color: #323130;
+  color: #e2e8f0;
   outline: none;
 }
 
@@ -56,7 +56,7 @@
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #323130;
+  color: #e2e8f0;
   cursor: pointer;
   user-select: none;
 }
@@ -73,7 +73,7 @@
 
 .emptyMessage {
   text-align: center;
-  color: #605e5c;
+  color: #94a3b8;
   padding: 20px;
   margin: 0;
 }
@@ -89,21 +89,21 @@
 }
 
 .table thead {
-  background: #EEEEEE;
+  background: #0f172a;
 }
 
 .table th {
   padding: 12px;
   text-align: left;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   border-bottom: 2px solid #edebe9;
 }
 
 .table td {
   padding: 12px;
-  border-bottom: 1px solid #edebe9;
-  color: #605e5c;
+  border-bottom: 1px solid #334155;
+  color: #94a3b8;
 }
 
 .table tbody tr:hover {
@@ -113,7 +113,7 @@
 .ipCell {
   font-family: 'Courier New', monospace;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .badge {
@@ -171,18 +171,18 @@
 .alertLevel {
   font-size: 13px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .alertTime {
   font-size: 12px;
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 .alertMessage {
   margin: 0;
   font-size: 14px;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 /* タブナビゲーション */
@@ -201,12 +201,12 @@
   cursor: pointer;
   font-size: 16px;
   font-weight: 500;
-  color: #605e5c;
+  color: #94a3b8;
   transition: all 0.2s;
 }
 
 .tab:hover {
-  color: #323130;
+  color: #e2e8f0;
   background-color: #f3f2f1;
 }
 
@@ -265,7 +265,7 @@
 .timestamp {
   margin: 4px 0 0 0;
   font-size: 12px;
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 /* 異常検知アラート */
@@ -285,7 +285,7 @@
 }
 
 .alertType {
-  color: #605e5c;
+  color: #94a3b8;
   font-size: 12px;
   text-transform: uppercase;
   font-weight: 600;
@@ -294,7 +294,7 @@
 .alertMeta {
   margin-top: 12px;
   font-size: 12px;
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 /* WebSocket統計 */
@@ -315,11 +315,11 @@
 
 .statItem label {
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .statItem span {
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 /* 統計グリッド */
@@ -357,14 +357,14 @@
 
 .summaryItem label {
   font-size: 12px;
-  color: #605e5c;
+  color: #94a3b8;
   font-weight: 600;
 }
 
 .summaryItem span {
   font-size: 24px;
   font-weight: 700;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .threats,
@@ -378,7 +378,7 @@
 .recommendations h4 {
   margin-top: 0;
   margin-bottom: 12px;
-  color: #323130;
+  color: #e2e8f0;
   font-size: 16px;
 }
 
@@ -391,5 +391,5 @@
 .threats li,
 .recommendations li {
   margin-bottom: 8px;
-  color: #323130;
+  color: #e2e8f0;
 }

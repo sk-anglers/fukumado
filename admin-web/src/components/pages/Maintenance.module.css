@@ -7,7 +7,7 @@
 .pageTitle {
   font-size: 28px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0 0 24px 0;
 }
 
@@ -18,7 +18,7 @@
 .sectionTitle {
   font-size: 20px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0 0 16px 0;
   padding-bottom: 8px;
   border-bottom: 2px solid #3498DB;
@@ -35,7 +35,7 @@
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: #EEEEEE;
+  background: #0f172a;
   border-radius: 8px;
 }
 
@@ -58,7 +58,7 @@
 .statusText {
   font-size: 20px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .currentMessage {
@@ -71,13 +71,13 @@
 .currentMessage h4 {
   margin: 0 0 8px 0;
   font-size: 14px;
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 .currentMessage p {
   margin: 0;
   font-size: 16px;
-  color: #323130;
+  color: #e2e8f0;
   white-space: pre-wrap;
 }
 
@@ -88,12 +88,12 @@
 }
 
 .label {
-  color: #605e5c;
+  color: #94a3b8;
   font-weight: 500;
 }
 
 .value {
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .bypassInfo {
@@ -106,7 +106,7 @@
 .bypassInfo h4 {
   margin: 0 0 12px 0;
   font-size: 14px;
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 .tokenContainer {
@@ -120,23 +120,23 @@
   flex: 1;
   padding: 10px 12px;
   background: white;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 4px;
   font-family: 'Courier New', monospace;
   font-size: 13px;
-  color: #323130;
+  color: #e2e8f0;
   word-break: break-all;
 }
 
 .expiryNote {
   margin: 0;
   font-size: 12px;
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 .description {
   margin: 0 0 20px 0;
-  color: #605e5c;
+  color: #94a3b8;
   line-height: 1.6;
 }
 
@@ -155,16 +155,16 @@
 .formLabel {
   font-size: 14px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .textarea {
   padding: 10px 12px;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
-  color: #323130;
+  color: #e2e8f0;
   resize: vertical;
   outline: none;
 }
@@ -176,11 +176,11 @@
 
 .select {
   padding: 10px 12px;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
-  color: #323130;
+  color: #e2e8f0;
   background: white;
   cursor: pointer;
   outline: none;
@@ -196,7 +196,7 @@
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #323130;
+  color: #e2e8f0;
   cursor: pointer;
   user-select: none;
 }
@@ -228,28 +228,28 @@
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .info p {
   margin: 0;
-  color: #605e5c;
+  color: #94a3b8;
   line-height: 1.6;
 }
 
 .example {
   padding: 10px 12px;
-  background: #EEEEEE;
+  background: #0f172a;
   border-radius: 4px;
   font-family: 'Courier New', monospace;
   font-size: 13px;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .notesList {
   margin: 0;
   padding-left: 20px;
-  color: #605e5c;
+  color: #94a3b8;
   line-height: 1.8;
 }
 

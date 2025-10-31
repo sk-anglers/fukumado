@@ -3,15 +3,16 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #3498DB 0%, #0078C4 100%);
+  background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
   padding: 20px;
 }
 
 .loginCard {
-  background: white;
+  background: #1e293b;
   padding: 40px;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border: 1px solid #334155;
   width: 100%;
   max-width: 400px;
 }
@@ -20,14 +21,14 @@
   margin: 0 0 8px 0;
   font-size: 24px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   text-align: center;
 }
 
 .loginSubtitle {
   margin: 0 0 32px 0;
   font-size: 14px;
-  color: #605e5c;
+  color: #94a3b8;
   text-align: center;
 }
 
@@ -46,23 +47,24 @@
 .formGroup label {
   font-size: 14px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .formGroup input {
   padding: 12px;
-  border: 1px solid #edebe9;
+  border: 1px solid #475569;
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
-  color: #323130;
+  color: #e2e8f0;
+  background: #0f172a;
   outline: none;
   transition: border-color 0.2s ease;
 }
 
 .formGroup input:focus {
   border-color: #3498DB;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
 .loginButton {

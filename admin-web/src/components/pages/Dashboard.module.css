@@ -7,7 +7,7 @@
 .pageTitle {
   font-size: 28px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0 0 24px 0;
 }
 
@@ -18,7 +18,7 @@
 .sectionTitle {
   font-size: 20px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0 0 16px 0;
   padding-bottom: 8px;
   border-bottom: 2px solid #3498DB;
@@ -44,14 +44,15 @@
 
 .apiDetail {
   padding: 12px;
-  background: #EEEEEE;
+  background: #0f172a;
+  border: 1px solid #334155;
   border-radius: 4px;
 }
 
 .apiDetail p {
   margin: 4px 0;
   font-size: 14px;
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 .securityGrid {

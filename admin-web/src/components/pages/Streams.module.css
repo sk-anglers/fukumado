@@ -14,7 +14,7 @@
 .pageTitle {
   font-size: 28px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0;
 }
 
@@ -25,7 +25,7 @@
 .sectionTitle {
   font-size: 20px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0 0 16px 0;
   padding-bottom: 8px;
   border-bottom: 2px solid #3498DB;
@@ -55,14 +55,14 @@
 
 .statLabel {
   font-size: 14px;
-  color: #605e5c;
+  color: #94a3b8;
   margin-bottom: 4px;
 }
 
 .statValue {
   font-size: 24px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 /* タブ */
@@ -70,7 +70,7 @@
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
-  border-bottom: 1px solid #edebe9;
+  border-bottom: 1px solid #334155;
 }
 
 .tab {
@@ -78,7 +78,7 @@
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #605e5c;
+  color: #94a3b8;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -86,7 +86,7 @@
 }
 
 .tab:hover {
-  color: #323130;
+  color: #e2e8f0;
   background: #f3f2f1;
 }
 
@@ -132,7 +132,7 @@
 .streamTitle {
   font-size: 18px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0;
   line-height: 1.4;
 }
@@ -152,7 +152,7 @@
 
 .streamId {
   font-size: 13px;
-  color: #605e5c;
+  color: #94a3b8;
   font-family: 'Courier New', monospace;
 }
 
@@ -165,7 +165,7 @@
 
 .metaItem {
   font-size: 14px;
-  color: #605e5c;
+  color: #94a3b8;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -174,7 +174,7 @@
 .streamDescription {
   padding: 0 16px 16px 16px;
   font-size: 14px;
-  color: #605e5c;
+  color: #94a3b8;
   line-height: 1.6;
   border-top: 1px solid #edebe9;
   padding-top: 12px;
@@ -183,7 +183,7 @@
 
 .emptyMessage {
   text-align: center;
-  color: #605e5c;
+  color: #94a3b8;
   padding: 40px 20px;
   margin: 0;
 }
@@ -191,7 +191,7 @@
 .lastUpdate {
   text-align: right;
   font-size: 12px;
-  color: #605e5c;
+  color: #94a3b8;
   margin-top: 16px;
 }
 

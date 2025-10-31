@@ -1,6 +1,6 @@
 .metricCard {
-  background: #FFFFFF;
-  border: 1px solid #edebe9;
+  background: #1e293b;
+  border: 1px solid #334155;
   border-radius: 8px;
   padding: 16px;
   min-width: 180px;
@@ -8,7 +8,7 @@
 }
 
 .metricCard:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 /* Status variants */
@@ -18,12 +18,12 @@
 
 .warning {
   border-left: 4px solid #ffb900;
-  background: #fff8e1;
+  background: rgba(255, 185, 0, 0.1);
 }
 
 .critical {
   border-left: 4px solid #d13438;
-  background: #ffebee;
+  background: rgba(209, 52, 56, 0.1);
 }
 
 .header {
@@ -39,7 +39,7 @@
 
 .label {
   font-size: 13px;
-  color: #605e5c;
+  color: #94a3b8;
   font-weight: 500;
 }
 
@@ -52,13 +52,13 @@
 .value {
   font-size: 28px;
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   line-height: 1;
 }
 
 .unit {
   font-size: 14px;
-  color: #605e5c;
+  color: #94a3b8;
 }
 
 .trend {
@@ -75,5 +75,5 @@
 }
 
 .trend-neutral {
-  color: #605e5c;
+  color: #94a3b8;
 }

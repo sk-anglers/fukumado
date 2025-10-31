@@ -24,13 +24,13 @@
 }
 
 .secondary {
-  background: #EEEEEE;
-  color: #323130;
-  border: 1px solid #edebe9;
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
 }
 
 .secondary:hover:not(:disabled) {
-  background: #e1dfdd;
+  background: #475569;
 }
 
 .danger {

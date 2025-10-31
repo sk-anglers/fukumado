@@ -3,8 +3,8 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #FFFFFF;
-  border: 1px solid #edebe9;
+  background: #0f172a;
+  border: 1px solid #334155;
   border-radius: 4px;
   font-size: 13px;
 }
@@ -35,12 +35,12 @@
 }
 
 .text {
-  color: #323130;
+  color: #e2e8f0;
   font-weight: 500;
 }
 
 .lastUpdate {
-  color: #605e5c;
+  color: #94a3b8;
   font-size: 12px;
   margin-left: 4px;
 }

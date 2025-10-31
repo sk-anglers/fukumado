@@ -2,13 +2,13 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #EEEEEE;
+  background: transparent;
 }
 
 .header {
-  background: #FFFFFF;
-  border-bottom: 1px solid #edebe9;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -46,8 +46,8 @@
 
 .sidebar {
   width: 240px;
-  background: #FFFFFF;
-  border-right: 1px solid #edebe9;
+  background: #1e293b;
+  border-right: 1px solid #334155;
   padding: 20px 0;
   position: sticky;
   top: 68px;
@@ -66,19 +66,19 @@
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
-  color: #605e5c;
+  color: #94a3b8;
   text-decoration: none;
   transition: all 0.2s ease;
   position: relative;
 }
 
 .navItem:hover {
-  background: #e1dfdd;
-  color: #323130;
+  background: #334155;
+  color: #e2e8f0;
 }
 
 .navItem.active {
-  background: #e3f2fd;
+  background: rgba(52, 152, 219, 0.15);
   color: #3498DB;
   font-weight: 600;
   border-left: 4px solid #3498DB;
@@ -121,7 +121,7 @@
     height: auto;
     position: static;
     border-right: none;
-    border-bottom: 1px solid #edebe9;
+    border-bottom: 1px solid #334155;
   }
 
   .nav {
