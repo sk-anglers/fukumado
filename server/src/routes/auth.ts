@@ -268,11 +268,11 @@ authRouter.get('/success', (_req, res) => {
           (function() {
             console.log('[Auth Success] Authentication completed');
 
-            // 1秒後にウィンドウを閉じる試行
+            // 2秒後にウィンドウを閉じる試行（セッション確立を待つ）
             setTimeout(function() {
               console.log('[Auth Success] Attempting to close window');
               window.close();
-            }, 1000);
+            }, 2000);
           })();
         </script>
       </body>
