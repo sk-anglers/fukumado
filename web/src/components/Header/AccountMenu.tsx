@@ -97,6 +97,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   const canFollowChannelSync = useSyncStore((state) => state.canFollowChannelSync);
   const getFollowChannelRemainingCooldown = useSyncStore((state) => state.getFollowChannelRemainingCooldown);
 
+  const slots = useLayoutStore((state) => state.slots);
+  const activeSlotsCount = useLayoutStore((state) => state.activeSlotsCount);
   const autoQualityEnabled = useLayoutStore((state) => state.autoQualityEnabled);
   const setSlotQuality = useLayoutStore((state) => state.setSlotQuality);
   const setAutoQualityEnabled = useLayoutStore((state) => state.setAutoQualityEnabled);
