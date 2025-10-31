@@ -64,14 +64,19 @@
   grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
-/* 3スロット: 上1下2レイアウト */
+/* 3スロット: 上1下2レイアウト（通常時は上下均等） */
 .count3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: 2fr 1fr;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
 .count3 > *:first-child {
   grid-column: 1 / -1;
+}
+
+/* 3スロット フォーカス時: 上を大きく、下を小さく */
+.count3.focus {
+  grid-template-rows: 2fr 1fr;
 }
 
 /* 3スロット フォーカス時: フォーカスされたスロットを1行目全幅に固定 */
