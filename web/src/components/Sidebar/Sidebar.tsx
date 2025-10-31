@@ -8,7 +8,7 @@ import { useAuthStore } from "../../stores/authStore";
 import { useIsMobile } from "../../hooks/useMediaQuery";
 import { SlotSelectionModal } from "../SlotSelectionModal/SlotSelectionModal";
 import { config } from "../../config";
-import { apiUrl } from "../../utils/api";
+import { apiUrl, apiFetch } from "../../utils/api";
 import styles from "./Sidebar.module.css";
 
 interface SidebarProps {
@@ -66,9 +66,31 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
   const twitchAuthenticated = useAuthStore((state) => state.twitchAuthenticated);
   const twitchUser = useAuthStore((state) => state.twitchUser);
   const twitchLoading = useAuthStore((state) => state.twitchLoading);
+  const setTwitchStatus = useAuthStore((state) => state.setTwitchStatus);
+  const setTwitchLoading = useAuthStore((state) => state.setTwitchLoading);
+  const setTwitchError = useAuthStore((state) => state.setTwitchError);
 
   const isMobile = useIsMobile();
   const setSidebarOpen = useMobileMenuStore((state) => state.setSidebarOpen);
+
+  const refreshTwitchAuthStatus = async (): Promise<void> => {
+    setTwitchLoading(true);
+    setTwitchError(undefined);
+    try {
+      const response = await apiFetch('/auth/twitch/status');
+      if (!response.ok) {
+        throw new Error(`Twitchステータス取得に失敗しました (${response.status})`);
+      }
+      const data = await response.json();
+      setTwitchStatus({ authenticated: Boolean(data.authenticated), user: data.user, error: undefined });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '不明なエラー';
+      setTwitchError(message);
+      setTwitchStatus({ authenticated: false, user: undefined, error: message });
+    } finally {
+      setTwitchLoading(false);
+    }
+  };
 
   const handleTwitchLogin = (): void => {
     const authWindow = window.open(
@@ -77,8 +99,52 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
       'width=500,height=650,menubar=no,toolbar=no'
     );
     if (!authWindow) {
+      void refreshTwitchAuthStatus();
       return;
     }
+
+    console.log('[Twitch Auth] OAuth popup opened, starting polling');
+
+    // ポーリング: 500msごとに認証状態を確認
+    const timer = window.setInterval(async () => {
+      // ウィンドウが閉じられた場合
+      if (authWindow.closed) {
+        console.log('[Twitch Auth] Popup closed, retrying authentication check');
+        window.clearInterval(timer);
+
+        // リトライロジック: 最大5回（2.5秒間）認証状態をチェック
+        let retryCount = 0;
+        const maxRetries = 5;
+        const retryInterval = 500;
+
+        const retryTimer = window.setInterval(async () => {
+          retryCount++;
+          console.log(`[Twitch Auth] Retry ${retryCount}/${maxRetries}`);
+
+          await refreshTwitchAuthStatus();
+
+          if (useAuthStore.getState().twitchAuthenticated) {
+            console.log('[Twitch Auth] Authentication successful after retry');
+            window.clearInterval(retryTimer);
+          } else if (retryCount >= maxRetries) {
+            console.log('[Twitch Auth] Max retries reached, authentication may have failed');
+            window.clearInterval(retryTimer);
+          }
+        }, retryInterval);
+
+        return;
+      }
+
+      // 認証状態を定期的に確認
+      await refreshTwitchAuthStatus();
+
+      // 認証成功したらポップアップを閉じる
+      if (useAuthStore.getState().twitchAuthenticated) {
+        console.log('[Twitch Auth] Authentication successful, closing popup');
+        window.clearInterval(timer);
+        authWindow.close();
+      }
+    }, 500);
   };
 
   const filteredStreams = useMemo(() => {
