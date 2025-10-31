@@ -119,8 +119,8 @@
   gap: 12px;
   margin-bottom: 24px;
   padding: 16px;
-  background: #f0fdf4;
-  border: 1px solid #86efac;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
   border-radius: 6px;
 }
 
@@ -131,7 +131,7 @@
 .connectedText {
   font-size: 16px;
   font-weight: 600;
-  color: #16a34a;
+  color: #10b981;
 }
 
 /* 統計カード */
@@ -142,7 +142,7 @@
 }
 
 .statCard {
-  background: #F9F9F9;
+  background: #0f172a;
   border: 1px solid #334155;
   border-radius: 6px;
   padding: 20px;
@@ -180,8 +180,10 @@
   flex: 1;
   padding: 10px 16px;
   font-size: 14px;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 6px;
+  background: #0f172a;
+  color: #e2e8f0;
   outline: none;
   transition: border-color 0.2s;
 }
@@ -216,7 +218,8 @@
   color: #94a3b8;
   margin-bottom: 12px;
   padding: 8px 12px;
-  background: #F9F9F9;
+  background: #0f172a;
+  border: 1px solid #334155;
   border-radius: 4px;
 }
 
@@ -228,7 +231,7 @@
 }
 
 .keyCard {
-  background: #F9F9F9;
+  background: #0f172a;
   border: 1px solid #334155;
   border-radius: 6px;
   padding: 16px;
@@ -237,13 +240,14 @@
 }
 
 .keyCard:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   border-color: #3498DB;
+  background: #1e293b;
 }
 
 .keyCardSelected {
   border-color: #3498DB;
-  background: #e6f3ff;
+  background: rgba(52, 152, 219, 0.15);
 }
 
 .keyHeader {
@@ -302,7 +306,8 @@
   gap: 24px;
   margin-bottom: 16px;
   padding: 12px;
-  background: #F9F9F9;
+  background: #0f172a;
+  border: 1px solid #334155;
   border-radius: 6px;
 }
 
@@ -325,7 +330,7 @@
 }
 
 .valueDisplay {
-  background: #F9F9F9;
+  background: #0f172a;
   border: 1px solid #334155;
   border-radius: 6px;
   padding: 16px;
