@@ -163,14 +163,6 @@ function App(): JSX.Element {
         }
         const data = await response.json();
 
-        // SessionIDを保存
-        if (data.sessionId) {
-          console.log('[App] Setting YouTube sessionId:', data.sessionId);
-          setSessionId(data.sessionId);
-        } else {
-          console.warn('[App] No sessionId in YouTube subscriptions response');
-        }
-
         if (Array.isArray(data.items)) {
           // フォロー情報を追加する前に、現在のユーザーIDを設定
           const currentYoutubeUser = useAuthStore.getState().user;
@@ -186,6 +178,14 @@ function App(): JSX.Element {
           console.log('[App] Adding YouTube subscribed channels:', channels.length);
           addFollowedChannels(channels);
           hasSyncedSubscriptions.current = true;
+
+          // フォローチャンネル設定後にSessionIDを保存（useStreamUpdatesをトリガー）
+          if (data.sessionId) {
+            console.log('[App] Setting YouTube sessionId:', data.sessionId);
+            setSessionId(data.sessionId);
+          } else {
+            console.warn('[App] No sessionId in YouTube subscriptions response');
+          }
 
           // 購読チャンネル同期完了後、配信取得を強制的に実行
           console.log('[App] Triggering manual sync after YouTube subscriptions');
@@ -222,14 +222,6 @@ function App(): JSX.Element {
         }
         const data = await response.json();
 
-        // SessionIDを保存
-        if (data.sessionId) {
-          console.log('[App] Setting Twitch sessionId:', data.sessionId);
-          setSessionId(data.sessionId);
-        } else {
-          console.warn('[App] No sessionId in Twitch subscriptions response');
-        }
-
         if (Array.isArray(data.items)) {
           // フォロー情報を追加する前に、現在のユーザーIDを設定
           const currentTwitchUser = useAuthStore.getState().twitchUser;
@@ -245,6 +237,14 @@ function App(): JSX.Element {
           console.log('[App] Adding Twitch followed channels:', channels.length);
           addFollowedChannels(channels);
           hasSyncedTwitchSubscriptions.current = true;
+
+          // フォローチャンネル設定後にSessionIDを保存（useStreamUpdatesをトリガー）
+          if (data.sessionId) {
+            console.log('[App] Setting Twitch sessionId:', data.sessionId);
+            setSessionId(data.sessionId);
+          } else {
+            console.warn('[App] No sessionId in Twitch subscriptions response');
+          }
 
           // フォローチャンネル同期完了後、配信取得を強制的に実行
           console.log('[App] Triggering manual sync after Twitch subscriptions');
