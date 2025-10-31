@@ -261,8 +261,8 @@ export function PrivacyPolicy(): JSX.Element {
         <p>本ポリシーに関するお問い合わせは、以下の連絡先までお願いいたします。</p>
         <ul>
           <li>サービス名: ふくまど！</li>
-          <li>運営者: [運営者名を記載]</li>
-          <li>メールアドレス: [メールアドレスを記載]</li>
+          <li>運営者: ふくまど！公式運営チーム</li>
+          <li>メールアドレス: fukumado_admin@fukumado.jp</li>
           <li>住所: [住所を記載]（特定商取引法に基づく表記と同じ）</li>
         </ul>
       </section>

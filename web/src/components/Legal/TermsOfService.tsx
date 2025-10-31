@@ -207,8 +207,8 @@ export function TermsOfService(): JSX.Element {
         <p>本規約に関するお問い合わせは、以下の連絡先までお願いいたします。</p>
         <ul>
           <li>サービス名: ふくまど！</li>
-          <li>運営者: [運営者名を記載]</li>
-          <li>連絡先: [メールアドレスを記載]</li>
+          <li>運営者: ふくまど！公式運営チーム</li>
+          <li>連絡先: fukumado_admin@fukumado.jp</li>
         </ul>
       </section>
     </div>
