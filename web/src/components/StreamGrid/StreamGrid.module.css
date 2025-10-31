@@ -67,11 +67,17 @@
 /* 3スロット: 上1下2レイアウト */
 .count3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 2fr 1fr;
 }
 
 .count3 > *:first-child {
   grid-column: 1 / -1;
+}
+
+/* 3スロット フォーカス時: フォーカスされたスロットを1行目全幅に固定 */
+.count3.focus .focused {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
 }
 
 /* 2スロット: 上下配置 */
