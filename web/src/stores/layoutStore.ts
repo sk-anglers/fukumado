@@ -276,13 +276,22 @@ export const useLayoutStore = create<LayoutState>()(
         }
       },
       setActiveSlotsCount: (count) => {
-        set((state) => {
-          const maxCount = TOTAL_SLOT_CAPACITY;
-          const nextCount = Math.min(Math.max(count, 1), maxCount);
-          if (nextCount === state.activeSlotsCount) {
-            return state;
-          }
+        const state = get();
+        const maxCount = TOTAL_SLOT_CAPACITY;
+        const nextCount = Math.min(Math.max(count, 1), maxCount);
+        if (nextCount === state.activeSlotsCount) {
+          return;
+        }
 
+        // スロット数が減少する場合、範囲外になるスロットをクリア
+        if (nextCount < state.activeSlotsCount) {
+          const slotsToRemove = state.slots.slice(nextCount, state.activeSlotsCount);
+          slotsToRemove.forEach((slot) => {
+            state.clearSlot(slot.id);
+          });
+        }
+
+        set((state) => {
           let nextSelectedId = state.selectedSlotId;
           if (nextSelectedId) {
             const selectedIndex = state.slots.findIndex((slot) => slot.id === nextSelectedId);
