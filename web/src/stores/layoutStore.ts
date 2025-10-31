@@ -283,17 +283,29 @@ export const useLayoutStore = create<LayoutState>()(
             return state;
           }
 
+          // 範囲外になるスロットをクリア
+          const nextSlots = state.slots.slice();
+          if (nextCount < state.activeSlotsCount) {
+            for (let i = nextCount; i < state.activeSlotsCount; i++) {
+              nextSlots[i] = {
+                ...nextSlots[i],
+                assignedStream: undefined
+              };
+            }
+          }
+
           let nextSelectedId = state.selectedSlotId;
           if (nextSelectedId) {
             const selectedIndex = state.slots.findIndex((slot) => slot.id === nextSelectedId);
             if (selectedIndex >= nextCount) {
-              nextSelectedId = state.slots[nextCount - 1]?.id ?? null;
+              nextSelectedId = nextSlots[nextCount - 1]?.id ?? null;
             }
           }
 
           return {
             activeSlotsCount: nextCount,
-            selectedSlotId: nextSelectedId
+            selectedSlotId: nextSelectedId,
+            slots: nextSlots
           };
         });
         get().ensureSelection();
