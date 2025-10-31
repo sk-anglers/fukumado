@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, MetricCard, Loader } from '../common';
 import { useMetricsStore } from '../../stores/metricsStore';
 import { useSecurityStore } from '../../stores/securityStore';
-import { getApiStats } from '../../services/apiClient';
+import { usePVStore } from '../../stores/pvStore';
+import { getApiStats, getPVStats, exportPVStats } from '../../services/apiClient';
 import {
   ResponsiveContainer,
   LineChart,
@@ -27,9 +28,14 @@ export const Dashboard: React.FC = () => {
   const metricsHistory = useMetricsStore(state => state.metricsHistory);
   const apiStatsHistory = useMetricsStore(state => state.apiStatsHistory);
   const securityMetrics = useSecurityStore(state => state.securityMetrics);
+  const pvStats = usePVStore(state => state.pvStats);
+  const pvLoading = usePVStore(state => state.loading);
 
   // setter関数だけ取得（useEffectで使用）
   const setApiStats = useMetricsStore(state => state.setApiStats);
+  const setPVStats = usePVStore(state => state.setPVStats);
+  const setPVLoading = usePVStore(state => state.setLoading);
+  const [exportingPV, setExportingPV] = useState(false);
 
   // API統計データを定期的に取得 - useEffectは条件分岐の前に配置
   useEffect(() => {
@@ -58,6 +64,36 @@ export const Dashboard: React.FC = () => {
 
     return () => {
       console.log('[DEBUG] Dashboard: API stats useEffect CLEANUP');
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // PV統計データを定期的に取得
+  useEffect(() => {
+    console.log('[DEBUG] Dashboard: PV stats useEffect RUNNING');
+    const fetchPVStats = async () => {
+      try {
+        setPVLoading(true);
+        const stats = await getPVStats();
+        if (stats) {
+          setPVStats(stats);
+        }
+      } catch (error) {
+        console.error('[Dashboard] Failed to fetch PV stats:', error);
+      } finally {
+        setPVLoading(false);
+      }
+    };
+
+    // 初回実行
+    fetchPVStats();
+
+    // 30秒ごとに更新
+    const interval = setInterval(fetchPVStats, 30000);
+
+    return () => {
+      console.log('[DEBUG] Dashboard: PV stats useEffect CLEANUP');
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -443,6 +479,144 @@ export const Dashboard: React.FC = () => {
           </div>
         </section>
       )}
+
+      {/* PV統計 */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>PV統計（広告掲載用）</h2>
+        {pvLoading && <Loader text="PV統計を読み込んでいます..." />}
+        {!pvLoading && pvStats && (
+          <>
+            {/* 主要メトリクス */}
+            <div className={styles.metricsGrid}>
+              <MetricCard
+                icon="📊"
+                label="今日のPV"
+                value={pvStats.today.pv.toLocaleString()}
+                unit="PV"
+                status="normal"
+              />
+              <MetricCard
+                icon="👥"
+                label="今日のユニーク"
+                value={pvStats.today.uniqueUsers.toLocaleString()}
+                unit="人"
+                status="normal"
+              />
+              <MetricCard
+                icon="📈"
+                label="今月のPV"
+                value={pvStats.month.pv.toLocaleString()}
+                unit="PV"
+                status="normal"
+              />
+              <MetricCard
+                icon="🎯"
+                label="今月のユニーク"
+                value={pvStats.month.uniqueUsers.toLocaleString()}
+                unit="人"
+                status="normal"
+              />
+              <MetricCard
+                icon="🏆"
+                label="累計PV"
+                value={pvStats.total.toLocaleString()}
+                unit="PV"
+                status="normal"
+              />
+            </div>
+
+            {/* 過去30日のPV推移グラフ */}
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>過去30日のPV推移</h2>
+              <Card>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={pvStats.daily}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 12 }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="pv"
+                      name="ページビュー"
+                      stroke="#3498DB"
+                      strokeWidth={2}
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="uniqueUsers"
+                      name="ユニークユーザー"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Card>
+            </section>
+
+            {/* エクスポートボタン */}
+            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+              <button
+                onClick={async () => {
+                  setExportingPV(true);
+                  try {
+                    await exportPVStats('csv');
+                  } catch (error) {
+                    console.error('Export failed:', error);
+                  } finally {
+                    setExportingPV(false);
+                  }
+                }}
+                disabled={exportingPV}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#3498DB',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: exportingPV ? 'not-allowed' : 'pointer',
+                  opacity: exportingPV ? 0.5 : 1
+                }}
+              >
+                {exportingPV ? 'エクスポート中...' : 'CSV エクスポート'}
+              </button>
+              <button
+                onClick={async () => {
+                  setExportingPV(true);
+                  try {
+                    await exportPVStats('json');
+                  } catch (error) {
+                    console.error('Export failed:', error);
+                  } finally {
+                    setExportingPV(false);
+                  }
+                }}
+                disabled={exportingPV}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: exportingPV ? 'not-allowed' : 'pointer',
+                  opacity: exportingPV ? 0.5 : 1
+                }}
+              >
+                {exportingPV ? 'エクスポート中...' : 'JSON エクスポート'}
+              </button>
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 };
