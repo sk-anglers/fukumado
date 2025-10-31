@@ -57,11 +57,15 @@ class MetricsCollector {
       // CPU使用率を計算（簡易的な方法）
       const cpuPercent = (cpuUsage.user + cpuUsage.system) / 1000000; // マイクロ秒→秒
 
+      // WebSocket統計を取得
+      const wsStats = await this.getWebSocketStats();
+
       const metrics: SystemMetrics = {
         cpu: Math.round(cpuPercent * 100) / 100, // 小数点2桁
         memory: Math.round(memoryUsage.heapUsed / 1024 / 1024 * 100) / 100, // バイト→MB
         uptime: Math.round(process.uptime()),
-        wsConnections: this.wsConnectionsCount,
+        wsConnections: wsStats.totalConnections,
+        activeWsConnections: wsStats.activeConnections,
         streamSyncCount: await this.getStreamSyncCount(),
         timestamp: new Date().toISOString()
       };
@@ -143,6 +147,45 @@ class MetricsCollector {
     } catch (error) {
       console.error('[MetricsCollector] Error getting stream sync count:', error);
       return 0;
+    }
+  }
+
+  /**
+   * WebSocket統計を取得（本サービスのAPIから）
+   */
+  private async getWebSocketStats(): Promise<{ totalConnections: number; activeConnections: number }> {
+    try {
+      const response = await fetch(`${env.mainBackendUrl}/api/admin/websocket/stats`, {
+        headers: {
+          'X-Admin-API-Key': env.mainApiKey
+        }
+      });
+
+      if (!response.ok) {
+        console.warn('[MetricsCollector] Failed to fetch WebSocket stats:', response.status);
+        return { totalConnections: 0, activeConnections: 0 };
+      }
+
+      const result = await response.json() as {
+        success: boolean;
+        data: {
+          totalConnections: number;
+          activeConnections: number;
+          zombieConnections: number;
+        };
+      };
+
+      if (!result.success || !result.data) {
+        return { totalConnections: 0, activeConnections: 0 };
+      }
+
+      return {
+        totalConnections: result.data.totalConnections,
+        activeConnections: result.data.activeConnections
+      };
+    } catch (error) {
+      console.error('[MetricsCollector] Error getting WebSocket stats:', error);
+      return { totalConnections: 0, activeConnections: 0 };
     }
   }
 

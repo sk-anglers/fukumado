@@ -602,6 +602,29 @@ wss.on('connection', (ws, request) => {
   }); // sessionMiddlewareコールバックの終了
 });
 
+/**
+ * WebSocket統計を取得（管理API用）
+ */
+export function getWebSocketStats() {
+  const now = Date.now();
+  const CLIENT_TIMEOUT_MS = 60 * 1000; // 60秒
+
+  let activeConnections = 0;
+
+  clients.forEach((clientData) => {
+    const timeSinceLastMessage = now - clientData.lastMessageAt;
+    if (timeSinceLastMessage <= CLIENT_TIMEOUT_MS) {
+      activeConnections++;
+    }
+  });
+
+  return {
+    totalConnections: clients.size,
+    activeConnections: activeConnections,
+    zombieConnections: clients.size - activeConnections
+  };
+}
+
 server.listen(env.port, async () => {
   // eslint-disable-next-line no-console
   console.log(`[server] listening on http://localhost:${env.port}`);

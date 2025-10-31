@@ -142,11 +142,20 @@ export const Dashboard: React.FC = () => {
           />
           <MetricCard
             icon="🔌"
-            label="WebSocket接続"
+            label="WebSocket接続（総）"
             value={systemMetrics.wsConnections}
             unit="件"
             status="normal"
           />
+          {systemMetrics.activeWsConnections !== undefined && (
+            <MetricCard
+              icon="✅"
+              label="WebSocket接続（アクティブ）"
+              value={systemMetrics.activeWsConnections}
+              unit="件"
+              status="normal"
+            />
+          )}
           <MetricCard
             icon="📺"
             label="配信同期数"
@@ -265,8 +274,17 @@ export const Dashboard: React.FC = () => {
                     <Line
                       type="monotone"
                       dataKey="wsConnections"
-                      name="接続数"
+                      name="総接続数"
                       stroke="#3498DB"
+                      strokeWidth={2}
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="activeWsConnections"
+                      name="アクティブ接続数"
+                      stroke="#10b981"
                       strokeWidth={2}
                       dot={false}
                       isAnimationActive={false}

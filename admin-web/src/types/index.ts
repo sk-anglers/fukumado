@@ -12,12 +12,13 @@ export interface ApiResponse<T = any> {
  * システムメトリクス
  */
 export interface SystemMetrics {
-  cpu: number;              // CPU使用率（%）
-  memory: number;           // メモリ使用量（MB）
-  uptime: number;           // 稼働時間（秒）
-  wsConnections: number;    // WebSocket接続数
-  streamSyncCount: number;  // 配信同期数
-  timestamp: string;        // ISO 8601形式
+  cpu: number;                   // CPU使用率（%）
+  memory: number;                // メモリ使用量（MB）
+  uptime: number;                // 稼働時間（秒）
+  wsConnections: number;         // WebSocket総接続数
+  activeWsConnections?: number;  // WebSocketアクティブ接続数（オプション）
+  streamSyncCount: number;       // 配信同期数
+  timestamp: string;             // ISO 8601形式
 }
 
 /**

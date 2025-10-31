@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { followedChannelsCacheService } from '../services/followedChannelsCacheService';
 import { emoteCacheService } from '../services/emoteCacheService';
 import { apiLogStore } from '../utils/apiLogStore';
+import { getWebSocketStats } from '../index';
 
 export const adminRouter = Router();
 
@@ -245,6 +246,30 @@ adminRouter.get('/api-monitor/stats', (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[Admin] Error getting API stats:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/websocket/stats
+ * WebSocket接続統計を取得
+ */
+adminRouter.get('/websocket/stats', (req: Request, res: Response) => {
+  try {
+    const stats = getWebSocketStats();
+
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting WebSocket stats:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       success: false,
