@@ -111,8 +111,12 @@ class MetricsCollector {
    */
   private async getStreamSyncCount(): Promise<number> {
     try {
-      // 本サービスの /api/admin/streams から配信数を取得
-      const response = await fetch(`${env.mainBackendUrl}/api/admin/streams`);
+      // 本サービスの /api/admin/streams から配信数を取得（APIキー認証付き）
+      const response = await fetch(`${env.mainBackendUrl}/api/admin/streams`, {
+        headers: {
+          'X-Admin-API-Key': env.mainApiKey
+        }
+      });
 
       if (!response.ok) {
         console.warn('[MetricsCollector] Failed to fetch streams:', response.status);

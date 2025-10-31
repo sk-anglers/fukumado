@@ -38,7 +38,9 @@ class WebSocketClient {
     let wsUrl: string;
     if (import.meta.env.VITE_ADMIN_API_URL) {
       // 環境変数からWebSocket URLを生成（https://admin-api.fukumado.jp → wss://admin-api.fukumado.jp）
-      wsUrl = import.meta.env.VITE_ADMIN_API_URL.replace(/^http/, 'ws') + '/admin/ws';
+      wsUrl = import.meta.env.VITE_ADMIN_API_URL.replace(/^https?:/, (match) =>
+        match.replace('http', 'ws')
+      ) + '/admin/ws';
     } else {
       // ローカル開発環境
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

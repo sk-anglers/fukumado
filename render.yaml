@@ -41,6 +41,8 @@ services:
         sync: false
       - key: TWITCH_REDIRECT_URI
         value: https://api.fukumado.jp/auth/twitch/callback
+      - key: ADMIN_API_KEY
+        generateValue: true # 自動生成（管理API認証用）
 
   # ===================================
   # 管理ダッシュボードバックエンドAPI
@@ -75,6 +77,8 @@ services:
         sync: false
       - key: TWITCH_REDIRECT_URI
         value: https://admin-api.fukumado.jp/auth/twitch/callback
+      - key: MAIN_API_KEY
+        sync: false # Renderダッシュボードで手動設定（メインサーバーのADMIN_API_KEYと同じ値）
 
   # ===================================
   # クライアントフロントエンド（静的サイト）
@@ -103,8 +107,6 @@ services:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
         value: https://admin-api.fukumado.jp
-      - key: VITE_ADMIN_WS_URL
-        value: wss://admin-api.fukumado.jp
 
   # ===================================
   # ベータ環境 (BETA ENVIRONMENT)
@@ -149,6 +151,8 @@ services:
         sync: false
       - key: TWITCH_REDIRECT_URI
         value: https://beta-api.fukumado.jp/auth/twitch/callback
+      - key: ADMIN_API_KEY
+        generateValue: true # 自動生成（管理API認証用）
 
   # ===================================
   # ベータ管理ダッシュボードバックエンドAPI
@@ -183,6 +187,8 @@ services:
         sync: false
       - key: TWITCH_REDIRECT_URI
         value: https://beta-admin-api.fukumado.jp/auth/twitch/callback
+      - key: MAIN_API_KEY
+        sync: false # Renderダッシュボードで手動設定（メインサーバーのADMIN_API_KEYと同じ値）
 
   # ===================================
   # ベータクライアントフロントエンド（静的サイト）
@@ -211,5 +217,3 @@ services:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
         value: https://beta-admin-api.fukumado.jp
-      - key: VITE_ADMIN_WS_URL
-        value: wss://beta-admin-api.fukumado.jp

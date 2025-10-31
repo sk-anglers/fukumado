@@ -57,6 +57,9 @@ export const env = {
   // メインバックエンドURL
   mainBackendUrl: process.env.MAIN_BACKEND_URL || 'http://localhost:4000',
 
+  // メインバックエンドAPIキー（管理API認証用）
+  mainApiKey: process.env.MAIN_API_KEY || 'dev-admin-key-change-in-production',
+
   // 管理フロントエンドURL
   adminFrontendUrl: process.env.ADMIN_FRONTEND_URL || 'http://localhost:5174',
 

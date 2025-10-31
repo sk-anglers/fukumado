@@ -16,6 +16,7 @@ export const env = {
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
   adminFrontendUrl: process.env.ADMIN_FRONTEND_URL ?? 'http://localhost:5174',
   apiUrl: process.env.API_URL ?? 'http://localhost:4000',
+  adminApiKey: process.env.ADMIN_API_KEY ?? 'dev-admin-key-change-in-production',
   enableYoutube: process.env.ENABLE_YOUTUBE === 'true',
   enableNiconico: process.env.ENABLE_NICONICO === 'true',
   enableEventSub: process.env.ENABLE_EVENTSUB === 'true',

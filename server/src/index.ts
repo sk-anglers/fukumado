@@ -37,6 +37,7 @@ import {
   validateRequestSize,
 } from './middleware/security';
 import { maintenanceMode } from './middleware/maintenanceMode';
+import { adminApiAuth } from './middleware/adminAuth';
 import {
   wsConnectionManager,
   validateWebSocketMessage,
@@ -168,13 +169,15 @@ app.use('/api/streams', apiRateLimiter, streamsRouter);
 app.use('/api/security', apiRateLimiter, securityRouter);
 app.use('/api/consent', apiRateLimiter, consentRouter);
 app.use('/api/legal', apiRateLimiter, legalRouter);
-app.use('/api/admin/maintenance', maintenanceRouter);
-app.use('/api/admin/users', usersRouter);
-app.use('/api/admin/logs', logsRouter);
-app.use('/api/admin/eventsub', eventsubRouter);
-app.use('/api/admin/cache', cacheRouter);
-app.use('/api/admin/streams', adminStreamsRouter);
-app.use('/api/admin', adminRouter);
+
+// 管理APIルーター（APIキー認証必須）
+app.use('/api/admin/maintenance', adminApiAuth, maintenanceRouter);
+app.use('/api/admin/users', adminApiAuth, usersRouter);
+app.use('/api/admin/logs', adminApiAuth, logsRouter);
+app.use('/api/admin/eventsub', adminApiAuth, eventsubRouter);
+app.use('/api/admin/cache', adminApiAuth, cacheRouter);
+app.use('/api/admin/streams', adminApiAuth, adminStreamsRouter);
+app.use('/api/admin', adminApiAuth, adminRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);
