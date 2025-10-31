@@ -21,6 +21,8 @@ class WebSocketService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private isIntentionallyClosed = false;
+  private heartbeatTimer: number | null = null;
+  private readonly heartbeatInterval = 30000; // 30秒
 
   /**
    * WebSocket接続を確立（既に接続済みの場合は何もしない）
@@ -41,6 +43,9 @@ class WebSocketService {
       this.ws.onopen = () => {
         console.log('[WebSocketService] Connected successfully');
         this.reconnectAttempts = 0;
+
+        // ハートビートを開始
+        this.startHeartbeat();
 
         // 接続ハンドラーを実行
         this.openHandlers.forEach(handler => {
@@ -88,6 +93,9 @@ class WebSocketService {
         console.log('[WebSocketService] Connection closed');
         this.ws = null;
 
+        // ハートビートを停止
+        this.stopHeartbeat();
+
         // クローズハンドラーを実行
         this.closeHandlers.forEach(handler => {
           try {
@@ -124,6 +132,8 @@ class WebSocketService {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+
+    this.stopHeartbeat();
 
     if (this.ws) {
       if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
@@ -229,6 +239,35 @@ class WebSocketService {
     this.openHandlers.clear();
     this.closeHandlers.clear();
     this.errorHandlers.clear();
+  }
+
+  /**
+   * ハートビート送信を開始
+   */
+  private startHeartbeat(): void {
+    // 既存のタイマーをクリア
+    this.stopHeartbeat();
+
+    console.log('[WebSocketService] Starting heartbeat (interval: 30s)');
+
+    // 定期的にハートビートを送信
+    this.heartbeatTimer = setInterval(() => {
+      if (this.isConnected()) {
+        console.log('[WebSocketService] Sending heartbeat');
+        this.send({ type: 'heartbeat' });
+      }
+    }, this.heartbeatInterval);
+  }
+
+  /**
+   * ハートビート送信を停止
+   */
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      console.log('[WebSocketService] Stopping heartbeat');
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
   }
 }
 

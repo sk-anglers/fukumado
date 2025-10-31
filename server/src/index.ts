@@ -200,9 +200,23 @@ interface ClientData {
   youtubeAccessToken?: string; // YouTubeアクセストークン
   twitchAccessToken?: string; // Twitchアクセストークン
   cleanup?: () => void;
+  lastMessageAt: number; // 最終メッセージ受信時刻（タイムアウト検出用）
 }
 
 const clients = new Map<WebSocket, ClientData>();
+
+// クライアントタイムアウトチェック（60秒間メッセージがなければ切断）
+const CLIENT_TIMEOUT_MS = 60 * 1000; // 60秒
+setInterval(() => {
+  const now = Date.now();
+  clients.forEach((clientData, ws) => {
+    const timeSinceLastMessage = now - clientData.lastMessageAt;
+    if (timeSinceLastMessage > CLIENT_TIMEOUT_MS) {
+      console.warn(`[WebSocket] Client timeout detected: ${clientData.userId} (${Math.floor(timeSinceLastMessage / 1000)}s since last message)`);
+      ws.close(1001, 'Client timeout');
+    }
+  });
+}, 30 * 1000); // 30秒ごとにチェック
 
 // EventSubイベントハンドラー（全クライアントに通知）
 // 旧: 単一接続版（後方互換性のため保持）
@@ -373,7 +387,8 @@ wss.on('connection', (ws, request) => {
       youtubeChannels: [],
       twitchChannels: [],
       youtubeAccessToken: session?.streamSyncTokens?.youtube,
-      twitchAccessToken: session?.streamSyncTokens?.twitch
+      twitchAccessToken: session?.streamSyncTokens?.twitch,
+      lastMessageAt: Date.now() // 初期化時の現在時刻
     };
 
     clients.set(ws, clientData);
@@ -427,6 +442,14 @@ wss.on('connection', (ws, request) => {
       if (!validation.valid) {
         console.warn(`[WebSocket Security] Invalid message from ${clientIP}: ${validation.reason}`);
         ws.send(JSON.stringify({ type: 'error', error: validation.reason }));
+        return;
+      }
+
+      // 最終メッセージ時刻を更新（タイムアウト検出用）
+      clientData.lastMessageAt = Date.now();
+
+      // ハートビートメッセージは何もせず終了
+      if (payload.type === 'heartbeat') {
         return;
       }
 
