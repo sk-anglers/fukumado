@@ -64,12 +64,25 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.count4,
-.count3,
-.count2 {
+.count4 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* 3スロット: 上1下2レイアウト */
+.count3 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.count3 > *:first-child {
+  grid-column: 1 / -1;
+}
+
+/* 2スロット: 上下配置 */
+.count2 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 1スロット: 全画面 */
 .count1 {
   grid-template-columns: minmax(0, 1fr);
 }

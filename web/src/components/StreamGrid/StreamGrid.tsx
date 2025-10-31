@@ -227,7 +227,7 @@ export const StreamGrid = (): JSX.Element => {
         <div className={clsx(
           styles.grid,
           styles[preset],
-          preset === 'twoByTwo' && styles[`count${activeSlotsCount}`],
+          styles[`count${activeSlotsCount}`],
           fullscreen && styles.gridFullscreen
         )}>
         {activeSlots.map((slot) => (
