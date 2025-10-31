@@ -21,11 +21,54 @@ consentRouter.post(
   ],
   (req: Request, res: Response) => {
     try {
+      const CURRENT_TERMS_VERSION = '1.0.0';
+      const CURRENT_PRIVACY_VERSION = '1.0.0';
+
       const sessionId = (req as any).session?.id || 'unknown';
       const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
       const userAgent = req.get('user-agent') || 'unknown';
       const { consents } = req.body;
 
+      // セッションに同意情報がなければ初期化
+      if (!req.session.consent) {
+        req.session.consent = {
+          hasAcceptedTerms: false,
+          hasAcceptedPrivacy: false,
+          essentialCookies: false,
+          analyticsCookies: false,
+          marketingCookies: false,
+          termsVersion: null,
+          privacyVersion: null,
+          lastUpdated: new Date()
+        };
+      }
+
+      // 同意情報を更新
+      for (const consent of consents) {
+        switch (consent.type) {
+          case 'terms':
+            req.session.consent.hasAcceptedTerms = consent.granted;
+            req.session.consent.termsVersion = CURRENT_TERMS_VERSION;
+            break;
+          case 'privacy':
+            req.session.consent.hasAcceptedPrivacy = consent.granted;
+            req.session.consent.privacyVersion = CURRENT_PRIVACY_VERSION;
+            break;
+          case 'essential_cookies':
+            req.session.consent.essentialCookies = consent.granted;
+            break;
+          case 'analytics_cookies':
+            req.session.consent.analyticsCookies = consent.granted;
+            break;
+          case 'marketing_cookies':
+            req.session.consent.marketingCookies = consent.granted;
+            break;
+        }
+      }
+
+      req.session.consent.lastUpdated = new Date();
+
+      // 統計用にconsentManagerにも記録（オプション）
       const record = consentManager.recordConsent(
         sessionId,
         ipAddress,
@@ -62,14 +105,55 @@ consentRouter.post(
  */
 consentRouter.get('/status', (req: Request, res: Response) => {
   try {
-    const sessionId = (req as any).session?.id || 'unknown';
-    const status = consentManager.getConsentStatus(sessionId);
-    const needs = consentManager.needsConsent(sessionId);
+    const CURRENT_TERMS_VERSION = '1.0.0';
+    const CURRENT_PRIVACY_VERSION = '1.0.0';
+
+    // セッションから直接同意情報を取得
+    const consent = req.session.consent || {
+      hasAcceptedTerms: false,
+      hasAcceptedPrivacy: false,
+      essentialCookies: false,
+      analyticsCookies: false,
+      marketingCookies: false,
+      termsVersion: null,
+      privacyVersion: null,
+      lastUpdated: null
+    };
+
+    const status = consent;
+
+    // 同意が必要かチェック
+    let needsTermsAndPrivacy = false;
+    let needsCookieConsent = false;
+    let reason = 'All consents granted';
+
+    if (!consent.hasAcceptedTerms || !consent.hasAcceptedPrivacy) {
+      needsTermsAndPrivacy = true;
+      reason = 'Terms and privacy policy not accepted';
+    } else if (
+      consent.termsVersion !== CURRENT_TERMS_VERSION ||
+      consent.privacyVersion !== CURRENT_PRIVACY_VERSION
+    ) {
+      needsTermsAndPrivacy = true;
+      reason = 'Terms or privacy policy version updated';
+    } else if (!consent.essentialCookies) {
+      needsCookieConsent = true;
+      reason = 'Cookie consent not given';
+    }
+
+    const needs = {
+      needsTermsAndPrivacy,
+      needsCookieConsent,
+      reason
+    };
 
     res.json({
       status,
       needs,
-      currentVersions: consentManager.getCurrentVersions()
+      currentVersions: {
+        terms: CURRENT_TERMS_VERSION,
+        privacy: CURRENT_PRIVACY_VERSION
+      }
     });
   } catch (error) {
     console.error('[Consent API] Error fetching consent status:', error);
@@ -99,6 +183,46 @@ consentRouter.post(
       const userAgent = req.get('user-agent') || 'unknown';
       const { types } = req.body;
 
+      // セッションに同意情報がなければ初期化
+      if (!req.session.consent) {
+        req.session.consent = {
+          hasAcceptedTerms: false,
+          hasAcceptedPrivacy: false,
+          essentialCookies: false,
+          analyticsCookies: false,
+          marketingCookies: false,
+          termsVersion: null,
+          privacyVersion: null,
+          lastUpdated: new Date()
+        };
+      }
+
+      // 指定された同意を撤回
+      for (const type of types) {
+        switch (type) {
+          case 'terms':
+            req.session.consent.hasAcceptedTerms = false;
+            req.session.consent.termsVersion = null;
+            break;
+          case 'privacy':
+            req.session.consent.hasAcceptedPrivacy = false;
+            req.session.consent.privacyVersion = null;
+            break;
+          case 'essential_cookies':
+            req.session.consent.essentialCookies = false;
+            break;
+          case 'analytics_cookies':
+            req.session.consent.analyticsCookies = false;
+            break;
+          case 'marketing_cookies':
+            req.session.consent.marketingCookies = false;
+            break;
+        }
+      }
+
+      req.session.consent.lastUpdated = new Date();
+
+      // 統計用にconsentManagerにも記録
       const record = consentManager.revokeConsent(
         sessionId,
         ipAddress,
@@ -136,11 +260,32 @@ consentRouter.post(
 consentRouter.get('/export', (req: Request, res: Response) => {
   try {
     const sessionId = (req as any).session?.id || 'unknown';
-    const exportData = consentManager.exportConsentData(sessionId);
+
+    // セッションから同意情報を取得
+    const consentStatus = req.session.consent || {
+      hasAcceptedTerms: false,
+      hasAcceptedPrivacy: false,
+      essentialCookies: false,
+      analyticsCookies: false,
+      marketingCookies: false,
+      termsVersion: null,
+      privacyVersion: null,
+      lastUpdated: null
+    };
+
+    // consentManagerからの履歴も含める
+    const managerData = consentManager.exportConsentData(sessionId);
+
+    const exportData = {
+      sessionId,
+      currentStatus: consentStatus,
+      records: managerData.records,
+      exportedAt: new Date()
+    };
 
     console.log('[Consent API] Data exported:', {
       sessionId: sessionId.substring(0, 8),
-      recordCount: exportData.records.length
+      recordCount: managerData.records.length
     });
 
     res.json(exportData);

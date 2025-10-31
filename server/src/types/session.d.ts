@@ -42,6 +42,17 @@ declare module 'express-session' {
     lastActivity?: string;
     ipAddress?: string;
     userAgent?: string;
+    // 同意情報
+    consent?: {
+      hasAcceptedTerms: boolean;
+      hasAcceptedPrivacy: boolean;
+      essentialCookies: boolean;
+      analyticsCookies: boolean;
+      marketingCookies: boolean;
+      termsVersion: string | null;
+      privacyVersion: string | null;
+      lastUpdated: Date;
+    };
   }
 }
 
@@ -88,6 +99,17 @@ declare global {
       lastActivity?: string;
       ipAddress?: string;
       userAgent?: string;
+      // 同意情報
+      consent?: {
+        hasAcceptedTerms: boolean;
+        hasAcceptedPrivacy: boolean;
+        essentialCookies: boolean;
+        analyticsCookies: boolean;
+        marketingCookies: boolean;
+        termsVersion: string | null;
+        privacyVersion: string | null;
+        lastUpdated: Date;
+      };
     }
   }
 }
