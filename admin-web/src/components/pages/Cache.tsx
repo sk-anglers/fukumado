@@ -37,6 +37,8 @@ export const Cache: React.FC = () => {
         getCacheInfo(),
         getCacheKeys(searchPattern, 100)
       ]);
+      console.log('[Cache] API Response - info:', JSON.stringify(info, null, 2));
+      console.log('[Cache] API Response - keys:', JSON.stringify(keys, null, 2));
       setCacheInfo(info);
       setKeysData(keys);
     } catch (err) {
