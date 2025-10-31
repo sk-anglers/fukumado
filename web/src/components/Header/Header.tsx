@@ -131,7 +131,6 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
   const [showFollowListMenu, setShowFollowListMenu] = useState(false);
   const [showVolumeMenu, setShowVolumeMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
-  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const [audioLevels, setAudioLevels] = useState<Record<string, number>>({});
   const [maxSlots, setMaxSlots] = useState(getMaxSlots());
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -140,7 +139,6 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
   const followListMenuRef = useRef<HTMLDivElement>(null);
   const volumeMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
-  const hamburgerMenuRef = useRef<HTMLDivElement>(null);
 
   const handleEnterFullscreen = async (): Promise<void> => {
     try {
@@ -333,19 +331,16 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
       if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
         setShowNotificationMenu(false);
       }
-      if (hamburgerMenuRef.current && !hamburgerMenuRef.current.contains(event.target as Node)) {
-        setShowHamburgerMenu(false);
-      }
     };
 
-    if (showDropdown || showAccountMenu || showLayoutMenu || showFollowListMenu || showVolumeMenu || showNotificationMenu || showHamburgerMenu) {
+    if (showDropdown || showAccountMenu || showLayoutMenu || showFollowListMenu || showVolumeMenu || showNotificationMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showDropdown, showAccountMenu, showLayoutMenu, showFollowListMenu, showVolumeMenu, showNotificationMenu, showHamburgerMenu]);
+  }, [showDropdown, showAccountMenu, showLayoutMenu, showFollowListMenu, showVolumeMenu, showNotificationMenu]);
 
   return (
     <header className={styles.header}>
@@ -787,113 +782,6 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
           {showAccountMenu && <AccountMenu onClose={() => setShowAccountMenu(false)} />}
         </div>
       </div>
-
-      {/* モバイル用ハンバーガーメニューボタン */}
-      {isMobile && (
-        <button
-          type="button"
-          className={styles.hamburgerButton}
-          onClick={() => setShowHamburgerMenu(!showHamburgerMenu)}
-          title="メニュー"
-        >
-          <Bars3Icon />
-        </button>
-      )}
-
-      {/* モバイル用ハンバーガーメニュードロワー */}
-      {isMobile && showHamburgerMenu && (
-        <div className={styles.hamburgerDrawer} ref={hamburgerMenuRef}>
-          <div className={styles.hamburgerDrawerContent}>
-            <div className={styles.hamburgerDrawerHeader}>
-              <h3>メニュー</h3>
-              <button
-                type="button"
-                className={styles.hamburgerDrawerClose}
-                onClick={() => setShowHamburgerMenu(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className={styles.hamburgerDrawerBody}>
-              {/* フルスクリーンボタン */}
-              {!fullscreen && (
-                <button
-                  className={styles.hamburgerMenuItem}
-                  type="button"
-                  onClick={() => {
-                    handleEnterFullscreen();
-                    setShowHamburgerMenu(false);
-                  }}
-                >
-                  分割レイアウトを全画面表示
-                </button>
-              )}
-
-              {/* 音量ボタン */}
-              <button
-                className={styles.hamburgerMenuItem}
-                type="button"
-                onClick={() => {
-                  setShowVolumeMenu(!showVolumeMenu);
-                }}
-              >
-                {mutedAll ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
-                <span>音量</span>
-              </button>
-
-              {/* レイアウトボタン */}
-              <button
-                className={styles.hamburgerMenuItem}
-                type="button"
-                onClick={() => {
-                  setShowLayoutMenu(!showLayoutMenu);
-                }}
-              >
-                <Squares2X2Icon />
-                <span>レイアウト ({activeSlotsCount}画面)</span>
-              </button>
-
-              {/* フォローリストボタン */}
-              <button
-                className={styles.hamburgerMenuItem}
-                type="button"
-                onClick={() => {
-                  setShowFollowListMenu(!showFollowListMenu);
-                }}
-              >
-                <StarIcon />
-                <span>フォロー ({activeFollowedChannelsCount})</span>
-              </button>
-
-              {/* 通知ボタン */}
-              <button
-                className={styles.hamburgerMenuItem}
-                type="button"
-                onClick={() => {
-                  setShowNotificationMenu(!showNotificationMenu);
-                }}
-              >
-                <BellAlertIcon />
-                <span>通知</span>
-                {unreadCount > 0 && <span className={styles.unreadBadge}>{unreadCount}</span>}
-              </button>
-
-              {/* アカウントボタン */}
-              <button
-                className={styles.hamburgerMenuItem}
-                type="button"
-                onClick={() => {
-                  setShowAccountMenu(!showAccountMenu);
-                }}
-              >
-                <UserCircleIcon />
-                <span>アカウント</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 };

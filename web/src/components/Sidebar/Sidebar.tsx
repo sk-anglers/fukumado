@@ -4,9 +4,11 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { type Streamer } from "../../types";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { useMobileMenuStore } from "../../stores/mobileMenuStore";
+import { useAuthStore } from "../../stores/authStore";
 import { useIsMobile } from "../../hooks/useMediaQuery";
 import { SlotSelectionModal } from "../SlotSelectionModal/SlotSelectionModal";
 import { config } from "../../config";
+import { apiUrl } from "../../utils/api";
 import styles from "./Sidebar.module.css";
 
 interface SidebarProps {
@@ -61,8 +63,23 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
     setPendingStream: state.setPendingStream
   }));
 
+  const twitchAuthenticated = useAuthStore((state) => state.twitchAuthenticated);
+  const twitchUser = useAuthStore((state) => state.twitchUser);
+  const twitchLoading = useAuthStore((state) => state.twitchLoading);
+
   const isMobile = useIsMobile();
   const setSidebarOpen = useMobileMenuStore((state) => state.setSidebarOpen);
+
+  const handleTwitchLogin = (): void => {
+    const authWindow = window.open(
+      apiUrl('/auth/twitch'),
+      'twitch-oauth',
+      'width=500,height=650,menubar=no,toolbar=no'
+    );
+    if (!authWindow) {
+      return;
+    }
+  };
 
   const filteredStreams = useMemo(() => {
     // プラットフォームによるフィルタリングのみ適用
@@ -90,6 +107,24 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
         />
       )}
       <aside className={styles.sidebar}>
+      {isMobile && (
+        <div className={styles.loginSection}>
+          {!twitchAuthenticated ? (
+            <button
+              type="button"
+              className={styles.loginButton}
+              onClick={handleTwitchLogin}
+              disabled={twitchLoading}
+            >
+              Twitchでサインイン
+            </button>
+          ) : (
+            <div className={styles.loginInfo}>
+              <span>接続中: {twitchUser?.displayName ?? 'Twitch'}</span>
+            </div>
+          )}
+        </div>
+      )}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2>フォロー中の配信</h2>
