@@ -2,6 +2,7 @@
 import { AppShell } from "./components/AppShell/AppShell";
 import { ConsentManager } from "./components/ConsentManager";
 import { MaintenancePage } from "./components/MaintenancePage/MaintenancePage";
+import { MobileRestriction } from "./components/MobileRestriction/MobileRestriction";
 import { useStreamUpdates } from "./hooks/useStreamUpdates";
 import { useTwitchChat } from "./hooks/useTwitchChat";
 import { useLayoutStore } from "./stores/layoutStore";
@@ -11,6 +12,7 @@ import { useTwitchAuthStatus } from "./hooks/useTwitchAuthStatus";
 import { useAuthStore } from "./stores/authStore";
 import { useSyncStore } from "./stores/syncStore";
 import { useMaintenanceStore } from "./stores/maintenanceStore";
+import { useIsMobile } from "./hooks/useMediaQuery";
 import { apiFetch } from "./utils/api";
 import { config } from "./config";
 
@@ -61,6 +63,8 @@ function App(): JSX.Element {
 
   useAuthStatus();
   useTwitchAuthStatus();
+
+  const isMobile = useIsMobile();
 
   // グローバルエラーハンドラー（デバッグ用）
   useEffect(() => {
@@ -278,6 +282,11 @@ function App(): JSX.Element {
   // メンテナンス中の場合はメンテナンス画面を表示
   if (maintenanceEnabled) {
     return <MaintenancePage />;
+  }
+
+  // モバイル制限（ベータ環境は除外）
+  if (isMobile && !config.isBeta) {
+    return <MobileRestriction />;
   }
 
   return (
