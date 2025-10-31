@@ -46,7 +46,7 @@ class RedisClient {
         // 初回のエラーのみログ出力
         if (this.retryAttempts <= 1 && !this.hasLoggedWarning) {
           console.warn('[Redis] Redis is not available. Redis features are disabled, but the app will continue to work.');
-          console.warn('[Redis] To enable Redis features, start Redis server on localhost:6379');
+          console.warn('[Redis] Check REDIS_URL environment variable:', env.redisUrl);
         }
         this.isConnected = false;
       });

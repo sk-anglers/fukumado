@@ -10,11 +10,7 @@ class CacheService {
 
   constructor() {
     try {
-      this.client = new Redis({
-        host: env.redis.host,
-        port: env.redis.port,
-        password: env.redis.password,
-        db: env.redis.db,
+      this.client = new Redis(env.redisUrl, {
         retryStrategy: (times) => {
           this.retryAttempts = times;
 
@@ -45,7 +41,7 @@ class CacheService {
         // 初回のエラーのみログ出力
         if (this.retryAttempts <= 1 && !this.hasLoggedWarning) {
           console.warn('[Redis] Redis is not available. Caching is disabled, but the app will continue to work.');
-          console.warn('[Redis] To enable caching, start Redis server on localhost:6379');
+          console.warn('[Redis] Check REDIS_URL environment variable:', env.redisUrl);
         }
         this.connected = false;
       });
