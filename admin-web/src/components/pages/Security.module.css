@@ -38,8 +38,9 @@
 
 .input {
   padding: 10px 12px;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 4px;
+  background: #0f172a;
   font-size: 14px;
   font-family: inherit;
   color: #e2e8f0;
@@ -125,12 +126,12 @@
 }
 
 .permanent {
-  background: #ffebee;
+  background: rgba(209, 52, 56, 0.15);
   color: #d13438;
 }
 
 .temporary {
-  background: #fff8e1;
+  background: rgba(255, 185, 0, 0.15);
   color: #ffb900;
 }
 
@@ -147,17 +148,17 @@
 }
 
 .alertItem.info {
-  background: #e3f2fd;
+  background: rgba(52, 152, 219, 0.15);
   border-color: #3498DB;
 }
 
 .alertItem.warning {
-  background: #fff8e1;
+  background: rgba(255, 185, 0, 0.15);
   border-color: #ffb900;
 }
 
 .alertItem.critical {
-  background: #ffebee;
+  background: rgba(209, 52, 56, 0.15);
   border-color: #d13438;
 }
 

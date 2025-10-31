@@ -63,7 +63,7 @@
 
 .currentMessage {
   padding: 16px;
-  background: #fff8e1;
+  background: rgba(255, 185, 0, 0.15);
   border-left: 4px solid #ffb900;
   border-radius: 4px;
 }
@@ -98,7 +98,7 @@
 
 .bypassInfo {
   padding: 16px;
-  background: #e3f2fd;
+  background: rgba(52, 152, 219, 0.15);
   border-left: 4px solid #3498DB;
   border-radius: 4px;
 }
@@ -119,7 +119,7 @@
 .token {
   flex: 1;
   padding: 10px 12px;
-  background: white;
+  background: #1e293b;
   border: 1px solid #334155;
   border-radius: 4px;
   font-family: 'Courier New', monospace;
@@ -160,8 +160,9 @@
 
 .textarea {
   padding: 10px 12px;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 4px;
+  background: #0f172a;
   font-size: 14px;
   font-family: inherit;
   color: #e2e8f0;
@@ -176,12 +177,12 @@
 
 .select {
   padding: 10px 12px;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
   color: #e2e8f0;
-  background: white;
+  background: #0f172a;
   cursor: pointer;
   outline: none;
 }

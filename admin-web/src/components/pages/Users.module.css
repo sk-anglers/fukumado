@@ -140,7 +140,7 @@
 }
 
 .table tbody tr:hover {
-  background: #F9F9F9;
+  background: #0f172a;
 }
 
 .sessionId {
@@ -223,7 +223,7 @@
 }
 
 .loginCard {
-  background: #F9F9F9;
+  background: #0f172a;
   border: 1px solid #334155;
   border-radius: 6px;
   padding: 16px;
