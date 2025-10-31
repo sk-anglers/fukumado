@@ -1,11 +1,10 @@
-﻿import { useMemo, useEffect, useRef } from "react";
+﻿import { useMemo } from "react";
 import clsx from "clsx";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { type Streamer } from "../../types";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { useMobileMenuStore } from "../../stores/mobileMenuStore";
 import { useAuthStore } from "../../stores/authStore";
-import { useUserStore } from "../../stores/userStore";
 import { useIsMobile } from "../../hooks/useMediaQuery";
 import { SlotSelectionModal } from "../SlotSelectionModal/SlotSelectionModal";
 import { config } from "../../config";
@@ -71,12 +70,8 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
   const setTwitchLoading = useAuthStore((state) => state.setTwitchLoading);
   const setTwitchError = useAuthStore((state) => state.setTwitchError);
 
-  const addFollowedChannels = useUserStore((state) => state.addFollowedChannels);
-  const setCurrentTwitchUser = useUserStore((state) => state.setCurrentTwitchUser);
-
   const isMobile = useIsMobile();
   const setSidebarOpen = useMobileMenuStore((state) => state.setSidebarOpen);
-  const hasSyncedRef = useRef(false);
 
   const refreshTwitchAuthStatus = async (): Promise<void> => {
     setTwitchLoading(true);
@@ -94,40 +89,6 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
       setTwitchStatus({ authenticated: false, user: undefined, error: message });
     } finally {
       setTwitchLoading(false);
-    }
-  };
-
-  const syncFollowedChannels = async (): Promise<void> => {
-    try {
-      console.log('[Sidebar] フォローチャンネル同期を開始');
-      const response = await apiFetch('/api/twitch/subscriptions');
-      if (!response.ok) {
-        if (response.status === 401) {
-          console.error('[Sidebar] 認証エラー: Twitchアカウントへの接続が必要です');
-          return;
-        }
-        throw new Error(`フォローチャンネルの取得に失敗しました (${response.status})`);
-      }
-      const data = await response.json();
-      if (Array.isArray(data.items)) {
-        // フォロー情報を追加する前に、現在のユーザーIDを設定
-        if (twitchUser?.id) {
-          setCurrentTwitchUser(twitchUser.id);
-        }
-
-        const channels = data.items.map((item: { id: string; displayName: string }) => ({
-          platform: 'twitch' as const,
-          channelId: item.id,
-          label: item.displayName
-        }));
-        addFollowedChannels(channels);
-        console.log('[Sidebar] フォローチャンネル同期完了:', channels.length, '件');
-      } else {
-        console.log('[Sidebar] フォローチャンネルは見つかりませんでした');
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '不明なエラー';
-      console.error('[Sidebar] フォローチャンネル同期エラー:', message);
     }
   };
 
@@ -185,20 +146,6 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
       }
     }, 500);
   };
-
-  // 認証完了時に自動的にフォローチャンネルを同期
-  useEffect(() => {
-    if (twitchAuthenticated && twitchUser && !hasSyncedRef.current && isMobile) {
-      console.log('[Sidebar] 認証完了を検知、フォローチャンネルを同期します');
-      hasSyncedRef.current = true;
-      void syncFollowedChannels();
-    }
-
-    // ログアウト時にフラグをリセット
-    if (!twitchAuthenticated) {
-      hasSyncedRef.current = false;
-    }
-  }, [twitchAuthenticated, twitchUser, isMobile]);
 
   const filteredStreams = useMemo(() => {
     // プラットフォームによるフィルタリングのみ適用
