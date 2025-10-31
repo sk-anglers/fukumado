@@ -897,6 +897,21 @@
   }
 
   .actions {
-    display: none;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* スマホで不要なボタンを非表示 */
+  .searchGroup,
+  .fullscreenButton,
+  .volumeMenu,
+  .layoutMenu,
+  .followListMenu {
+    display: none !important;
+  }
+
+  /* アカウントと通知ボタンは表示 */
+  .menuGroup {
+    display: flex;
   }
 }
