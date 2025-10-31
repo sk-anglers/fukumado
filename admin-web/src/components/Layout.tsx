@@ -54,7 +54,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     websocketClient.connect();
 
     // ステータス変更ハンドラー
-    const statusHandler = (status: typeof connectionStatus) => {
+    const statusHandler = (status: ConnectionStatus) => {
       setConnectionStatus(status);
     };
 
@@ -72,12 +72,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     websocketClient.onStatusChange(statusHandler);
     websocketClient.onMessage(messageHandler);
 
-    // クリーンアップ
+    // クリーンアップ（ハンドラーのみ解除、接続は維持）
     return () => {
       console.log('[DEBUG] Layout: WebSocket useEffect CLEANUP');
       websocketClient.offStatusChange(statusHandler);
       websocketClient.offMessage(messageHandler);
-      websocketClient.disconnect();
+      // NOTE: WebSocket接続は切断せず維持（アプリケーション全体で共有）
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
