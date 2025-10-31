@@ -1,0 +1,113 @@
+.container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 600;
+  color: #323130;
+  margin-bottom: 30px;
+}
+
+.section {
+  margin-bottom: 40px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #323130;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #EEEEEE;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.exportButtons {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.exportButton {
+  padding: 12px 24px;
+  background-color: #3498DB;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.exportButton:hover:not(:disabled) {
+  background-color: #2980b9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+}
+
+.exportButton:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.exportButton:nth-child(2) {
+  background-color: #10b981;
+}
+
+.exportButton:nth-child(2):hover:not(:disabled) {
+  background-color: #059669;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.hint {
+  color: #605e5c;
+  font-size: 14px;
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+.updateInfo {
+  color: #323130;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+
+  .pageTitle {
+    font-size: 24px;
+  }
+
+  .sectionTitle {
+    font-size: 18px;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+  }
+
+  .exportButtons {
+    flex-direction: column;
+  }
+
+  .exportButton {
+    width: 100%;
+  }
+}

@@ -19,6 +19,7 @@ interface LayoutProps {
 
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'ダッシュボード', path: '/', icon: '📊' },
+  { id: 'pv-stats', label: 'PV統計', path: '/pv-stats', icon: '📈' },
   { id: 'system', label: 'システム', path: '/system', icon: '💻' },
   { id: 'security', label: 'セキュリティ', path: '/security', icon: '🔒' },
   { id: 'streams', label: '配信管理', path: '/streams', icon: '📺' },

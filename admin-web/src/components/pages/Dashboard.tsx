@@ -480,141 +480,57 @@ export const Dashboard: React.FC = () => {
         </section>
       )}
 
-      {/* PV統計 */}
+      {/* PV統計（サマリー） */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>PV統計（広告掲載用）</h2>
-        {pvLoading && <Loader text="PV統計を読み込んでいます..." />}
-        {!pvLoading && pvStats && (
-          <>
-            {/* 主要メトリクス */}
-            <div className={styles.metricsGrid}>
-              <MetricCard
-                icon="📊"
-                label="今日のPV"
-                value={pvStats.today.pv.toLocaleString()}
-                unit="PV"
-                status="normal"
-              />
-              <MetricCard
-                icon="👥"
-                label="今日のユニーク"
-                value={pvStats.today.uniqueUsers.toLocaleString()}
-                unit="人"
-                status="normal"
-              />
-              <MetricCard
-                icon="📈"
-                label="今月のPV"
-                value={pvStats.month.pv.toLocaleString()}
-                unit="PV"
-                status="normal"
-              />
-              <MetricCard
-                icon="🎯"
-                label="今月のユニーク"
-                value={pvStats.month.uniqueUsers.toLocaleString()}
-                unit="人"
-                status="normal"
-              />
-              <MetricCard
-                icon="🏆"
-                label="累計PV"
-                value={pvStats.total.toLocaleString()}
-                unit="PV"
-                status="normal"
-              />
-            </div>
-
-            {/* 過去30日のPV推移グラフ */}
-            <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>過去30日のPV推移</h2>
-              <Card>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={pvStats.daily}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 12 }}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="pv"
-                      name="ページビュー"
-                      stroke="#3498DB"
-                      strokeWidth={2}
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="uniqueUsers"
-                      name="ユニークユーザー"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Card>
-            </section>
-
-            {/* エクスポートボタン */}
-            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-              <button
-                onClick={async () => {
-                  setExportingPV(true);
-                  try {
-                    await exportPVStats('csv');
-                  } catch (error) {
-                    console.error('Export failed:', error);
-                  } finally {
-                    setExportingPV(false);
-                  }
-                }}
-                disabled={exportingPV}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#3498DB',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: exportingPV ? 'not-allowed' : 'pointer',
-                  opacity: exportingPV ? 0.5 : 1
-                }}
-              >
-                {exportingPV ? 'エクスポート中...' : 'CSV エクスポート'}
-              </button>
-              <button
-                onClick={async () => {
-                  setExportingPV(true);
-                  try {
-                    await exportPVStats('json');
-                  } catch (error) {
-                    console.error('Export failed:', error);
-                  } finally {
-                    setExportingPV(false);
-                  }
-                }}
-                disabled={exportingPV}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: exportingPV ? 'not-allowed' : 'pointer',
-                  opacity: exportingPV ? 0.5 : 1
-                }}
-              >
-                {exportingPV ? 'エクスポート中...' : 'JSON エクスポート'}
-              </button>
-            </div>
-          </>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 className={styles.sectionTitle} style={{ marginBottom: 0 }}>PV統計（広告掲載用）</h2>
+          <a
+            href="/pv-stats"
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#3498DB',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '4px',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            📈 詳細を見る
+          </a>
+        </div>
+        {pvLoading && !pvStats && <Loader text="PV統計を読み込んでいます..." />}
+        {pvStats && (
+          <div className={styles.metricsGrid}>
+            <MetricCard
+              icon="📊"
+              label="今日のPV"
+              value={pvStats.today.pv.toLocaleString()}
+              unit="PV"
+              status="normal"
+            />
+            <MetricCard
+              icon="📈"
+              label="今月のPV"
+              value={pvStats.month.pv.toLocaleString()}
+              unit="PV"
+              status="normal"
+            />
+            <MetricCard
+              icon="🏆"
+              label="累計PV"
+              value={pvStats.total.toLocaleString()}
+              unit="PV"
+              status="normal"
+            />
+          </div>
+        )}
+        {!pvLoading && !pvStats && (
+          <Card>
+            <p style={{ textAlign: 'center', color: '#605e5c', margin: '20px 0' }}>
+              PVデータがまだありません。しばらくお待ちください。
+            </p>
+          </Card>
         )}
       </section>
     </div>
