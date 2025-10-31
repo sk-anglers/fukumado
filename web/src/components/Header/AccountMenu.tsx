@@ -253,6 +253,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
         throw new Error(`ログアウトに失敗しました (${response.status})`);
       }
       setAuthStatus({ authenticated: false, user: undefined, error: undefined });
+      // ユーザーIDをクリアしてフォローチャンネルを非表示に
+      setCurrentYoutubeUser(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setAuthError(message);
@@ -365,6 +367,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
         throw new Error(`Twitchログアウトに失敗しました (${response.status})`);
       }
       setTwitchStatus({ authenticated: false, user: undefined, error: undefined });
+      // ユーザーIDをクリアしてフォローチャンネルを非表示に
+      setCurrentTwitchUser(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setTwitchError(message);
