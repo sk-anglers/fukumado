@@ -252,7 +252,16 @@ export const EventSub: React.FC = () => {
                     {subsData.allChannels.realtime.map((channel) => (
                       <div key={channel.channelId} className={styles.channelCard}>
                         <div className={styles.channelInfo}>
-                          <div className={styles.channelId}>{channel.channelId}</div>
+                          {channel.channelDisplayName || channel.channelLogin ? (
+                            <>
+                              <div className={styles.channelName}>
+                                {channel.channelDisplayName || channel.channelLogin}
+                              </div>
+                              <div className={styles.channelId}>({channel.channelId})</div>
+                            </>
+                          ) : (
+                            <div className={styles.channelId}>{channel.channelId}</div>
+                          )}
                           <div className={styles.channelMeta}>
                             <span className={styles.channelBadge}>👥 {channel.userCount}人</span>
                             <span className={styles.channelMethod}>{channel.method}</span>
@@ -285,7 +294,16 @@ export const EventSub: React.FC = () => {
                     {subsData.allChannels.delayed.map((channel) => (
                       <div key={channel.channelId} className={styles.channelCard}>
                         <div className={styles.channelInfo}>
-                          <div className={styles.channelId}>{channel.channelId}</div>
+                          {channel.channelDisplayName || channel.channelLogin ? (
+                            <>
+                              <div className={styles.channelName}>
+                                {channel.channelDisplayName || channel.channelLogin}
+                              </div>
+                              <div className={styles.channelId}>({channel.channelId})</div>
+                            </>
+                          ) : (
+                            <div className={styles.channelId}>{channel.channelId}</div>
+                          )}
                           <div className={styles.channelMeta}>
                             <span className={styles.channelBadge}>👥 {channel.userCount}人</span>
                             <span className={styles.channelMethod}>{channel.method}</span>

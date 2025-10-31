@@ -3,6 +3,7 @@ import { twitchEventSubManager } from '../services/twitchEventSubManager';
 import { dynamicChannelAllocator } from '../services/dynamicChannelAllocator';
 import { metricsCollector } from '../services/metricsCollector';
 import { priorityManager } from '../services/priorityManager';
+import { fetchChannelsByIds } from '../services/twitchService';
 
 export const eventsubRouter = Router();
 
@@ -79,6 +80,31 @@ eventsubRouter.get('/subscriptions', async (req, res) => {
     const realtimeChannels = twitchChannels.filter(p => p.priority === 'realtime');
     const delayedChannels = twitchChannels.filter(p => p.priority === 'delayed');
 
+    // チャンネル名情報を取得
+    const allChannelIds = twitchChannels.map(p => p.channelId);
+    let channelInfoMap = new Map<string, { login: string; displayName: string }>();
+
+    if (allChannelIds.length > 0) {
+      const accessToken = twitchEventSubManager.getAccessToken();
+      if (accessToken) {
+        try {
+          const channelInfos = await fetchChannelsByIds(accessToken, allChannelIds);
+          channelInfos.forEach(info => {
+            channelInfoMap.set(info.id, {
+              login: info.login,
+              displayName: info.displayName
+            });
+          });
+          console.log(`[EventSub] Fetched channel info for ${channelInfos.length} channels`);
+        } catch (error) {
+          console.error('[EventSub] Failed to fetch channel info:', error);
+          // チャンネル名取得に失敗してもエラーにせず、IDのみで継続
+        }
+      } else {
+        console.warn('[EventSub] Access token not available, skipping channel name lookup');
+      }
+    }
+
     res.json({
       success: true,
       data: {
@@ -87,18 +113,28 @@ eventsubRouter.get('/subscriptions', async (req, res) => {
         subscriptions,
         allChannels: {
           total: twitchChannels.length,
-          realtime: realtimeChannels.map(p => ({
-            channelId: p.channelId,
-            userCount: p.userCount,
-            priority: p.priority,
-            method: 'eventsub'
-          })),
-          delayed: delayedChannels.map(p => ({
-            channelId: p.channelId,
-            userCount: p.userCount,
-            priority: p.priority,
-            method: 'polling'
-          }))
+          realtime: realtimeChannels.map(p => {
+            const info = channelInfoMap.get(p.channelId);
+            return {
+              channelId: p.channelId,
+              channelLogin: info?.login,
+              channelDisplayName: info?.displayName,
+              userCount: p.userCount,
+              priority: p.priority,
+              method: 'eventsub'
+            };
+          }),
+          delayed: delayedChannels.map(p => {
+            const info = channelInfoMap.get(p.channelId);
+            return {
+              channelId: p.channelId,
+              channelLogin: info?.login,
+              channelDisplayName: info?.displayName,
+              userCount: p.userCount,
+              priority: p.priority,
+              method: 'polling'
+            };
+          })
         },
         priorityStats
       },

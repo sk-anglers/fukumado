@@ -524,6 +524,8 @@ export interface EventSubSubscription {
  */
 export interface ChannelInfo {
   channelId: string;
+  channelLogin?: string;
+  channelDisplayName?: string;
   userCount: number;
   priority: 'realtime' | 'delayed';
   method: 'eventsub' | 'polling' | 'webhook';

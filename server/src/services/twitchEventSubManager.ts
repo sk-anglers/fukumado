@@ -338,6 +338,14 @@ export class TwitchEventSubManager {
     const maxLimit = limit || 50;
     return this.eventHistory.slice(0, Math.min(maxLimit, this.eventHistory.length));
   }
+
+  /**
+   * アクセストークンを取得
+   * @returns アクセストークン（未設定の場合はnull）
+   */
+  public getAccessToken(): string | null {
+    return this.accessToken;
+  }
 }
 
 // シングルトンインスタンス

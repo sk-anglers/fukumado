@@ -309,11 +309,18 @@
   flex: 1;
 }
 
+.channelName {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323130;
+  margin-bottom: 4px;
+}
+
 .channelId {
   font-family: monospace;
-  font-size: 14px;
-  font-weight: 500;
-  color: #323130;
+  font-size: 12px;
+  font-weight: 400;
+  color: #8a8886;
 }
 
 .channelMeta {
