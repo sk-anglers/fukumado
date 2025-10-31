@@ -219,15 +219,46 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       return;
     }
 
+    // postMessage イベントリスナー
+    const messageHandler = (event: MessageEvent) => {
+      // オリジン検証（セキュリティ必須）
+      const expectedOrigin = new URL(apiUrl('/')).origin;
+      if (event.origin !== expectedOrigin) {
+        console.warn('[Google Auth] Invalid origin:', event.origin, 'Expected:', expectedOrigin);
+        return;
+      }
+
+      console.log('[Google Auth] Received message:', event.data);
+
+      // 認証完了メッセージを受信
+      if (event.data?.type === 'AUTH_SUCCESS') {
+        console.log('[Google Auth] Authentication successful via postMessage');
+        // 認証状態を更新
+        void refreshAuthStatus();
+        // ポップアップを閉じる
+        authWindow.close();
+        // イベントリスナーを削除
+        window.removeEventListener('message', messageHandler);
+        // タイマーをクリア
+        window.clearInterval(timer);
+      }
+    };
+
+    window.addEventListener('message', messageHandler);
+    console.log('[Google Auth] postMessage listener added');
+
+    // バックアップ: ポーリング（postMessageが失敗した場合の保険）
     const timer = window.setInterval(async () => {
       if (authWindow.closed) {
         window.clearInterval(timer);
+        window.removeEventListener('message', messageHandler);
         await refreshAuthStatus();
         return;
       }
       await refreshAuthStatus();
       if (useAuthStore.getState().authenticated) {
         window.clearInterval(timer);
+        window.removeEventListener('message', messageHandler);
         authWindow.close();
       }
     }, 2000);
@@ -321,15 +352,46 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       return;
     }
 
+    // postMessage イベントリスナー
+    const messageHandler = (event: MessageEvent) => {
+      // オリジン検証（セキュリティ必須）
+      const expectedOrigin = new URL(apiUrl('/')).origin;
+      if (event.origin !== expectedOrigin) {
+        console.warn('[Twitch Auth] Invalid origin:', event.origin, 'Expected:', expectedOrigin);
+        return;
+      }
+
+      console.log('[Twitch Auth] Received message:', event.data);
+
+      // 認証完了メッセージを受信
+      if (event.data?.type === 'AUTH_SUCCESS') {
+        console.log('[Twitch Auth] Authentication successful via postMessage');
+        // 認証状態を更新
+        void refreshTwitchAuthStatus();
+        // ポップアップを閉じる
+        authWindow.close();
+        // イベントリスナーを削除
+        window.removeEventListener('message', messageHandler);
+        // タイマーをクリア
+        window.clearInterval(timer);
+      }
+    };
+
+    window.addEventListener('message', messageHandler);
+    console.log('[Twitch Auth] postMessage listener added');
+
+    // バックアップ: ポーリング（postMessageが失敗した場合の保険）
     const timer = window.setInterval(async () => {
       if (authWindow.closed) {
         window.clearInterval(timer);
+        window.removeEventListener('message', messageHandler);
         await refreshTwitchAuthStatus();
         return;
       }
       await refreshTwitchAuthStatus();
       if (useAuthStore.getState().twitchAuthenticated) {
         window.clearInterval(timer);
+        window.removeEventListener('message', messageHandler);
         authWindow.close();
       }
     }, 2000);

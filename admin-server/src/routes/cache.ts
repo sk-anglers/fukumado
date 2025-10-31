@@ -12,7 +12,8 @@ cacheRouter.get('/info', async (req: Request, res: Response) => {
     const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/info`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
       }
     });
 
@@ -43,7 +44,8 @@ cacheRouter.get('/keys', async (req: Request, res: Response) => {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
       }
     });
 
@@ -70,7 +72,8 @@ cacheRouter.get('/key/:key', async (req: Request, res: Response) => {
     const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/key/${encodeURIComponent(key)}`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
       }
     });
 
@@ -97,7 +100,8 @@ cacheRouter.delete('/key/:key', async (req: Request, res: Response) => {
     const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/key/${encodeURIComponent(key)}`, {
       method: 'DELETE',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
       }
     });
 
@@ -122,7 +126,8 @@ cacheRouter.delete('/pattern', async (req: Request, res: Response) => {
     const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/pattern`, {
       method: 'DELETE',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
       },
       body: JSON.stringify(req.body)
     });
@@ -148,7 +153,8 @@ cacheRouter.post('/flush', async (req: Request, res: Response) => {
     const response = await fetch(`${env.mainBackendUrl}/api/admin/cache/flush`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
       }
     });
 

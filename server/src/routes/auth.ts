@@ -257,31 +257,53 @@ authRouter.get('/success', (_req, res) => {
             3秒後に自動的にアプリに戻ります...<br>
             戻らない場合は下のボタンを押してください。
           </p>
-          <a href="${env.frontendUrl}/" style="display: inline-block; padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; text-decoration: none; font-size: 1.1rem; font-weight: 600; min-height: 44px; line-height: 1.5;">
+          <a href="javascript:void(0)" id="backButton" style="display: inline-block; padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; text-decoration: none; font-size: 1.1rem; font-weight: 600; min-height: 44px; line-height: 1.5;">
             アプリに戻る
           </a>
         </div>
         <script>
-          setTimeout(function() {
-            // 別ウィンドウで開かれている場合は閉じる
-            if (window.opener) {
-              window.close();
-            } else {
-              // 同じウィンドウで開かれている場合はリダイレクト
-              window.location.href = '${env.frontendUrl}/';
-            }
-          }, 3000);
+          // 即座に実行（IIFE）
+          (function() {
+            var link = document.getElementById('backButton');
 
-          // ボタンのクリック処理も同様に
-          document.addEventListener('DOMContentLoaded', function() {
-            var link = document.querySelector('a');
-            if (link && window.opener) {
-              link.addEventListener('click', function(e) {
-                e.preventDefault();
+            // window.opener がある場合（ポップアップで開かれた場合）
+            if (window.opener && !window.opener.closed) {
+              console.log('[Auth Success] Popup detected, sending postMessage');
+
+              // 親ウィンドウに認証完了を通知（postMessage）
+              try {
+                window.opener.postMessage(
+                  { type: 'AUTH_SUCCESS', platform: 'oauth' },
+                  '${env.frontendUrl}'
+                );
+                console.log('[Auth Success] postMessage sent to:', '${env.frontendUrl}');
+              } catch (error) {
+                console.error('[Auth Success] postMessage error:', error);
+              }
+
+              // ボタンクリックでクローズ
+              link.onclick = function() {
+                console.log('[Auth Success] Close button clicked');
                 window.close();
-              });
+                return false;
+              };
+
+              // 3秒後に自動クローズ
+              setTimeout(function() {
+                console.log('[Auth Success] Auto-closing after 3 seconds');
+                window.close();
+              }, 3000);
+            } else {
+              // window.opener がない場合（通常のウィンドウで開かれた場合）
+              console.log('[Auth Success] Normal window detected, redirecting');
+              link.href = '${env.frontendUrl}/';
+
+              // 3秒後にリダイレクト
+              setTimeout(function() {
+                window.location.href = '${env.frontendUrl}/';
+              }, 3000);
             }
-          });
+          })();
         </script>
       </body>
     </html>

@@ -50,7 +50,11 @@ metricsRouter.get('/system', async (req, res) => {
 metricsRouter.get('/api/twitch', async (req, res) => {
   try {
     // serverからHTTP経由で取得
-    const response = await fetch(`${SERVER_API_BASE}/api-tracking/rate-limit`);
+    const response = await fetch(`${SERVER_API_BASE}/api-tracking/rate-limit`, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
     const data = await response.json() as any;
 
     if (!data.success) {
@@ -103,7 +107,11 @@ metricsRouter.get('/api/twitch', async (req, res) => {
 metricsRouter.get('/api/youtube', async (req, res) => {
   try {
     // serverからHTTP経由で取得
-    const response = await fetch(`${SERVER_API_BASE}/api-tracking/youtube-quota`);
+    const response = await fetch(`${SERVER_API_BASE}/api-tracking/youtube-quota`, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
     const data = await response.json() as any;
 
     if (!data.success) {

@@ -14,6 +14,7 @@ async function fetchMainServiceAPI<T>(endpoint: string, options?: RequestInit): 
       method: options?.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey,
         ...options?.headers
       },
       ...options

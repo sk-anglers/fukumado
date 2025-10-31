@@ -14,7 +14,8 @@ async function fetchMainServiceAPI<T>(endpoint: string): Promise<T | null> {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
       }
     });
 

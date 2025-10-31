@@ -22,7 +22,11 @@ apiMonitorRouter.get('/logs', async (req, res) => {
 
     const url = `${SERVER_API_BASE}/api-monitor/logs?${params.toString()}`;
     console.log('[API Monitor] Proxying logs request to:', url);
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
     const data = await response.json() as any;
     console.log('[API Monitor] Logs response:', data.success ? `Success, ${data.data?.logs?.length || 0} logs` : `Failed: ${data.error}`);
 
@@ -46,7 +50,11 @@ apiMonitorRouter.get('/stats', async (req, res) => {
     const serviceParam = req.query.service ? `?service=${req.query.service}` : '';
     const url = `${SERVER_API_BASE}/api-monitor/stats${serviceParam}`;
     console.log('[API Monitor] Proxying stats request to:', url);
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
     const data = await response.json() as any;
     console.log('[API Monitor] Stats response:', data.success ? `Success, ${data.data?.totalCalls || 0} total calls` : `Failed: ${data.error}`);
 
@@ -68,7 +76,11 @@ apiMonitorRouter.get('/stats', async (req, res) => {
 apiMonitorRouter.get('/rate-limit', async (req, res) => {
   try {
     const url = `${SERVER_API_BASE}/api-tracking/rate-limit`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
     const data = await response.json();
 
     res.json(data);
@@ -89,7 +101,11 @@ apiMonitorRouter.get('/rate-limit', async (req, res) => {
 apiMonitorRouter.get('/youtube-quota', async (req, res) => {
   try {
     const url = `${SERVER_API_BASE}/api-tracking/youtube-quota`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
     const data = await response.json();
 
     res.json(data);
