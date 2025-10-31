@@ -34,6 +34,7 @@ interface AuthState {
   // Session ID for token storage
   sessionId?: string;
   setSessionId: (sessionId: string) => void;
+  clearSessionId: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -65,5 +66,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   setTwitchError: (error) => set({ twitchError: error }),
   // Session ID for token storage
   sessionId: undefined,
-  setSessionId: (sessionId) => set({ sessionId })
+  setSessionId: (sessionId) => set({ sessionId }),
+  clearSessionId: () => set({ sessionId: undefined })
 }));

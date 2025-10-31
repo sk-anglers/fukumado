@@ -282,6 +282,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       });
       // YouTube配信リストをクリア
       layoutState.setAvailableStreamsForPlatform('youtube', []);
+      // SessionIDをクリア（再ログイン時に新しいsessionIdを取得）
+      useAuthStore.getState().clearSessionId();
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setAuthError(message);
@@ -423,6 +425,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       });
       // Twitch配信リストをクリア
       layoutState.setAvailableStreamsForPlatform('twitch', []);
+      // SessionIDをクリア（再ログイン時に新しいsessionIdを取得）
+      useAuthStore.getState().clearSessionId();
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setTwitchError(message);
