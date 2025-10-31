@@ -97,13 +97,10 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   const canFollowChannelSync = useSyncStore((state) => state.canFollowChannelSync);
   const getFollowChannelRemainingCooldown = useSyncStore((state) => state.getFollowChannelRemainingCooldown);
 
-  const slots = useLayoutStore((state) => state.slots);
-  const activeSlotsCount = useLayoutStore((state) => state.activeSlotsCount);
   const autoQualityEnabled = useLayoutStore((state) => state.autoQualityEnabled);
   const setSlotQuality = useLayoutStore((state) => state.setSlotQuality);
   const setAutoQualityEnabled = useLayoutStore((state) => state.setAutoQualityEnabled);
   const masterSlotId = useLayoutStore((state) => state.masterSlotId);
-  const clearSlot = useLayoutStore((state) => state.clearSlot);
 
   const totalBytes = useDataUsageStore((state) => state.totalBytes);
   const sessionStartTime = useDataUsageStore((state) => state.sessionStartTime);
@@ -276,10 +273,13 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       setAuthStatus({ authenticated: false, user: undefined, error: undefined });
       // ユーザーIDをクリアしてフォローチャンネルを非表示に
       setCurrentYoutubeUser(null);
-      // スロット情報をクリア
-      for (let i = 0; i < activeSlotsCount; i++) {
-        clearSlot(slots[i].id);
-      }
+      // スロット情報をクリア（最新の状態を取得）
+      const layoutState = useLayoutStore.getState();
+      layoutState.slots.slice(0, layoutState.activeSlotsCount).forEach((slot) => {
+        layoutState.clearSlot(slot.id);
+      });
+      // YouTube配信リストをクリア
+      layoutState.setAvailableStreamsForPlatform('youtube', []);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setAuthError(message);
@@ -414,10 +414,13 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       setTwitchStatus({ authenticated: false, user: undefined, error: undefined });
       // ユーザーIDをクリアしてフォローチャンネルを非表示に
       setCurrentTwitchUser(null);
-      // スロット情報をクリア
-      for (let i = 0; i < activeSlotsCount; i++) {
-        clearSlot(slots[i].id);
-      }
+      // スロット情報をクリア（最新の状態を取得）
+      const layoutState = useLayoutStore.getState();
+      layoutState.slots.slice(0, layoutState.activeSlotsCount).forEach((slot) => {
+        layoutState.clearSlot(slot.id);
+      });
+      // Twitch配信リストをクリア
+      layoutState.setAvailableStreamsForPlatform('twitch', []);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setTwitchError(message);
