@@ -74,6 +74,7 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
   const setPreset = useLayoutStore((state) => state.setPreset);
   const fullscreen = useLayoutStore((state) => state.fullscreen);
   const setFullscreen = useLayoutStore((state) => state.setFullscreen);
+  const getMaxSlots = useLayoutStore((state) => state.getMaxSlots);
 
   const { followedChannels, addFollowedChannel, removeFollowedChannel } = useUserStore((state) => ({
     followedChannels: state.followedChannels,
@@ -130,13 +131,16 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
   const [showFollowListMenu, setShowFollowListMenu] = useState(false);
   const [showVolumeMenu, setShowVolumeMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const [audioLevels, setAudioLevels] = useState<Record<string, number>>({});
+  const [maxSlots, setMaxSlots] = useState(getMaxSlots());
   const dropdownRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const layoutMenuRef = useRef<HTMLDivElement>(null);
   const followListMenuRef = useRef<HTMLDivElement>(null);
   const volumeMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
+  const hamburgerMenuRef = useRef<HTMLDivElement>(null);
 
   const handleEnterFullscreen = async (): Promise<void> => {
     try {
@@ -256,6 +260,27 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
     }
   };
 
+  // 画面向きの変更を監視してスロット数を調整
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      const newMaxSlots = getMaxSlots();
+      setMaxSlots(newMaxSlots);
+
+      // 現在のスロット数が新しい最大値を超えている場合、自動調整
+      if (activeSlotsCount > newMaxSlots) {
+        setActiveSlotsCount(newMaxSlots);
+      }
+    };
+
+    // 画面向きの変更を監視
+    const orientationQuery = window.matchMedia('(orientation: portrait)');
+    orientationQuery.addEventListener('change', handleOrientationChange);
+
+    return () => {
+      orientationQuery.removeEventListener('change', handleOrientationChange);
+    };
+  }, [getMaxSlots, activeSlotsCount, setActiveSlotsCount]);
+
   // 音量レベルのアニメーション（疑似的な音量メーター）
   useEffect(() => {
     if (!showVolumeMenu) return;
@@ -308,16 +333,19 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
       if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
         setShowNotificationMenu(false);
       }
+      if (hamburgerMenuRef.current && !hamburgerMenuRef.current.contains(event.target as Node)) {
+        setShowHamburgerMenu(false);
+      }
     };
 
-    if (showDropdown || showAccountMenu || showLayoutMenu || showFollowListMenu || showVolumeMenu || showNotificationMenu) {
+    if (showDropdown || showAccountMenu || showLayoutMenu || showFollowListMenu || showVolumeMenu || showNotificationMenu || showHamburgerMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showDropdown, showAccountMenu, showLayoutMenu, showFollowListMenu, showVolumeMenu, showNotificationMenu]);
+  }, [showDropdown, showAccountMenu, showLayoutMenu, showFollowListMenu, showVolumeMenu, showNotificationMenu, showHamburgerMenu]);
 
   return (
     <header className={styles.header}>
@@ -597,7 +625,7 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
             <div className={styles.layoutMenu}>
               <div className={styles.slotMenuTitle}>視聴枠数</div>
               <div className={styles.slotMenuButtons}>
-                {Array.from({ length: MAX_ACTIVE_SLOTS }, (_, i) => MAX_ACTIVE_SLOTS - i).map((count) => (
+                {Array.from({ length: maxSlots }, (_, i) => maxSlots - i).map((count) => (
                   <button
                     key={count}
                     type="button"
@@ -759,6 +787,113 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
           {showAccountMenu && <AccountMenu onClose={() => setShowAccountMenu(false)} />}
         </div>
       </div>
+
+      {/* モバイル用ハンバーガーメニューボタン */}
+      {isMobile && (
+        <button
+          type="button"
+          className={styles.hamburgerButton}
+          onClick={() => setShowHamburgerMenu(!showHamburgerMenu)}
+          title="メニュー"
+        >
+          <Bars3Icon />
+        </button>
+      )}
+
+      {/* モバイル用ハンバーガーメニュードロワー */}
+      {isMobile && showHamburgerMenu && (
+        <div className={styles.hamburgerDrawer} ref={hamburgerMenuRef}>
+          <div className={styles.hamburgerDrawerContent}>
+            <div className={styles.hamburgerDrawerHeader}>
+              <h3>メニュー</h3>
+              <button
+                type="button"
+                className={styles.hamburgerDrawerClose}
+                onClick={() => setShowHamburgerMenu(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.hamburgerDrawerBody}>
+              {/* フルスクリーンボタン */}
+              {!fullscreen && (
+                <button
+                  className={styles.hamburgerMenuItem}
+                  type="button"
+                  onClick={() => {
+                    handleEnterFullscreen();
+                    setShowHamburgerMenu(false);
+                  }}
+                >
+                  分割レイアウトを全画面表示
+                </button>
+              )}
+
+              {/* 音量ボタン */}
+              <button
+                className={styles.hamburgerMenuItem}
+                type="button"
+                onClick={() => {
+                  setShowVolumeMenu(!showVolumeMenu);
+                }}
+              >
+                {mutedAll ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
+                <span>音量</span>
+              </button>
+
+              {/* レイアウトボタン */}
+              <button
+                className={styles.hamburgerMenuItem}
+                type="button"
+                onClick={() => {
+                  setShowLayoutMenu(!showLayoutMenu);
+                }}
+              >
+                <Squares2X2Icon />
+                <span>レイアウト ({activeSlotsCount}画面)</span>
+              </button>
+
+              {/* フォローリストボタン */}
+              <button
+                className={styles.hamburgerMenuItem}
+                type="button"
+                onClick={() => {
+                  setShowFollowListMenu(!showFollowListMenu);
+                }}
+              >
+                <StarIcon />
+                <span>フォロー ({activeFollowedChannelsCount})</span>
+              </button>
+
+              {/* 通知ボタン */}
+              <button
+                className={styles.hamburgerMenuItem}
+                type="button"
+                onClick={() => {
+                  setShowNotificationMenu(!showNotificationMenu);
+                }}
+              >
+                <BellAlertIcon />
+                <span>通知</span>
+                {unreadCount > 0 && <span className={styles.unreadBadge}>{unreadCount}</span>}
+              </button>
+
+              {/* アカウントボタン */}
+              <button
+                className={styles.hamburgerMenuItem}
+                type="button"
+                onClick={() => {
+                  setShowAccountMenu(!showAccountMenu);
+                }}
+              >
+                <UserCircleIcon />
+                <span>アカウント</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

@@ -8,6 +8,17 @@ const DEFAULT_VOLUME = 70;
 
 export const MAX_ACTIVE_SLOTS = TOTAL_SLOT_CAPACITY;
 
+// モバイルかどうかとデバイスの向きに応じた最大スロット数を取得
+const getMaxSlotsForDevice = (): number => {
+  if (typeof window === 'undefined') return TOTAL_SLOT_CAPACITY;
+
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+  if (!isMobile) return TOTAL_SLOT_CAPACITY;
+
+  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+  return isPortrait ? 4 : 2;
+};
+
 const createInitialSlots = (): StreamSlot[] =>
   Array.from({ length: TOTAL_SLOT_CAPACITY }, (_, index) => ({
     id: `slot-${index + 1}`,
@@ -79,6 +90,7 @@ export interface LayoutState {
   setFullscreen: (value: boolean) => void;
   setPendingStream: (stream: Streamer | null) => void;
   setModalOpen: (isOpen: boolean) => void;
+  getMaxSlots: () => number;
 }
 
 const initialSlots = createInitialSlots();
@@ -277,7 +289,7 @@ export const useLayoutStore = create<LayoutState>()(
       },
       setActiveSlotsCount: (count) => {
         const state = get();
-        const maxCount = TOTAL_SLOT_CAPACITY;
+        const maxCount = getMaxSlotsForDevice();
         const nextCount = Math.min(Math.max(count, 1), maxCount);
         if (nextCount === state.activeSlotsCount) {
           return;
@@ -323,7 +335,8 @@ export const useLayoutStore = create<LayoutState>()(
       clearChannelSearch: () => set({ channelSearchResults: [], channelSearchError: undefined }),
       setFullscreen: (value) => set({ fullscreen: value }),
       setPendingStream: (stream) => set({ pendingStream: stream }),
-      setModalOpen: (isOpen) => set({ isModalOpen: isOpen })
+      setModalOpen: (isOpen) => set({ isModalOpen: isOpen }),
+      getMaxSlots: () => getMaxSlotsForDevice()
     }),
     {
       name: 'fukumado-layout',

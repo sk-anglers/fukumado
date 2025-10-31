@@ -897,21 +897,134 @@
   }
 
   .actions {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  /* スマホで不要なボタンを非表示 */
-  .searchGroup,
-  .fullscreenButton,
-  .volumeMenu,
-  .layoutMenu,
-  .followListMenu {
     display: none !important;
   }
+}
 
-  /* アカウントと通知ボタンは表示 */
-  .menuGroup {
-    display: flex;
+/* ハンバーガーメニューボタン */
+.hamburgerButton {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.65);
+  color: rgba(226, 232, 240, 0.85);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.hamburgerButton svg {
+  width: 24px;
+  height: 24px;
+}
+
+.hamburgerButton:active {
+  transform: scale(0.95);
+}
+
+/* ハンバーガーメニュードロワー */
+.hamburgerDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 85%;
+  max-width: 400px;
+  background: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(12px);
+  z-index: 200;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
   }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.hamburgerDrawerContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.hamburgerDrawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.hamburgerDrawerHeader h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.hamburgerDrawerClose {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.hamburgerDrawerClose:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.hamburgerDrawerBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hamburgerMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.6);
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.hamburgerMenuItem svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.hamburgerMenuItem:active {
+  transform: scale(0.98);
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.hamburgerMenuItem span {
+  flex: 1;
 }
