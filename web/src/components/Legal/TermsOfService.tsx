@@ -209,6 +209,16 @@ export function TermsOfService(): JSX.Element {
           <li>サービス名: ふくまど！</li>
           <li>運営者: ふくまど！公式運営チーム</li>
           <li>連絡先: fukumado_admin@fukumado.jp</li>
+          <li>
+            お問い合わせフォーム:{' '}
+            <a
+              href="https://forms.gle/8epH3BGw8xDTGe1W6"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              こちらからお問い合わせください
+            </a>
+          </li>
         </ul>
       </section>
     </div>
