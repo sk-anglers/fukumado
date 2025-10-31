@@ -163,7 +163,8 @@ authRouter.get('/twitch/callback', async (req, res) => {
         const response = await fetch(`${env.apiUrl}/api/admin/eventsub/credentials`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Admin-API-Key': env.adminApiKey
           },
           body: JSON.stringify({
             accessToken: tokenResponse.access_token,
