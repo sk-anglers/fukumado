@@ -3,6 +3,7 @@ import { useLayoutStore } from '../stores/layoutStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useSyncStore } from '../stores/syncStore';
 import { useAuthStore } from '../stores/authStore';
+import { useMaintenanceStore } from '../stores/maintenanceStore';
 import { websocketService } from '../services/websocketService';
 import type { Streamer } from '../types';
 
@@ -84,6 +85,8 @@ export const useStreamUpdates = (
   const setSyncing = useSyncStore((state) => state.setSyncing);
   const setLastSyncTime = useSyncStore((state) => state.setLastSyncTime);
   const sessionId = useAuthStore((state) => state.sessionId);
+  const setMaintenance = useMaintenanceStore((state) => state.setMaintenance);
+  const clearMaintenance = useMaintenanceStore((state) => state.clearMaintenance);
 
   // WebSocket接続の確立とメッセージハンドラー登録（常に実行）
   useEffect(() => {
@@ -93,7 +96,24 @@ export const useStreamUpdates = (
 
     // メッセージハンドラーを登録
     const unsubscribeMessage = websocketService.onMessage((message: any) => {
-      if (message.type === 'stream_list_updated') {
+      if (message.type === 'maintenance_status_changed') {
+        console.log('[useStreamUpdates] Maintenance status changed:', {
+          enabled: message.enabled,
+          message: message.message
+        });
+
+        if (message.enabled) {
+          setMaintenance({
+            enabled: true,
+            message: message.message,
+            enabledAt: message.enabledAt,
+            duration: message.duration,
+            scheduledEndAt: message.scheduledEndAt
+          });
+        } else {
+          clearMaintenance();
+        }
+      } else if (message.type === 'stream_list_updated') {
         console.log('[useStreamUpdates] Stream update received:', {
           platform: message.platform,
           count: message.streams.length,
@@ -155,7 +175,9 @@ export const useStreamUpdates = (
     setStreamsLoading,
     setSyncing,
     setLastSyncTime,
-    addNotification
+    addNotification,
+    setMaintenance,
+    clearMaintenance
   ]);
 
   // チャンネルまたはsessionIdが変更されたらsubscribeメッセージを送信

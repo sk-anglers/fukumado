@@ -52,6 +52,14 @@ export const apiFetch = async (input: string, init?: RequestInit): Promise<Respo
     } catch (error) {
       console.error('[API] Failed to parse maintenance response:', error);
     }
+  } else if (response.ok) {
+    // 正常なレスポンス（200-299）の場合、メンテナンスストアをクリア
+    // WebSocketで通知が来る前に503から復帰した場合の補助的対策
+    const maintenanceState = useMaintenanceStore.getState();
+    if (maintenanceState.enabled) {
+      console.log('[API] Clearing maintenance mode (received OK response)');
+      maintenanceState.clearMaintenance();
+    }
   }
 
   return response;

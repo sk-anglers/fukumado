@@ -24,6 +24,7 @@ import { adminRouter } from './routes/admin';
 import { twitchChatService } from './services/twitchChatService';
 import { streamSyncService, tokenStorage } from './services/streamSyncService';
 import { fetchChannelEmotes } from './services/twitchService';
+import { maintenanceService } from './services/maintenanceService';
 import { twitchEventSubService } from './services/twitchEventSubService';
 import { twitchEventSubManager } from './services/twitchEventSubManager';
 import { twitchEventSubWebhookService } from './services/twitchEventSubWebhookService';
@@ -303,6 +304,32 @@ twitchEventSubWebhookService.onStreamEvent((event) => {
   clients.forEach((_, ws) => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(payload);
+    }
+  });
+});
+
+// MaintenanceServiceのイベントハンドラー（メンテナンス状態変更を全クライアントに通知）
+maintenanceService.on('statusChanged', (event) => {
+  console.log('[Maintenance] Status change event:', {
+    enabled: event.enabled,
+    message: event.message,
+    duration: event.duration
+  });
+
+  // 全クライアントに通知
+  const payload = JSON.stringify({
+    type: 'maintenance_status_changed',
+    enabled: event.enabled,
+    message: event.message,
+    enabledAt: event.enabledAt,
+    duration: event.duration,
+    scheduledEndAt: event.scheduledEndAt
+  });
+
+  clients.forEach((_, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+      console.log('[Maintenance] Sent status change to client');
     }
   });
 });

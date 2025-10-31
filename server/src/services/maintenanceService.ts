@@ -1,5 +1,6 @@
 import { cacheService } from './cacheService';
 import { randomBytes } from 'crypto';
+import { EventEmitter } from 'events';
 
 interface MaintenanceStatus {
   enabled: boolean;
@@ -11,7 +12,15 @@ interface MaintenanceStatus {
   scheduledEndAt?: string; // 終了予定時刻
 }
 
-class MaintenanceService {
+interface MaintenanceStatusChangeEvent {
+  enabled: boolean;
+  message?: string;
+  enabledAt?: string;
+  duration?: number;
+  scheduledEndAt?: string;
+}
+
+class MaintenanceService extends EventEmitter {
   // メモリストレージ（ローカル環境用）
   private memoryEnabled: boolean = false;
   private memoryMessage: string = '';
@@ -20,6 +29,10 @@ class MaintenanceService {
   private memoryScheduledEndAt: string | null = null;
   private memoryBypassTokens: Map<string, { expiresAt: string }> = new Map();
   private autoDisableTimer: NodeJS.Timeout | null = null;
+
+  constructor() {
+    super();
+  }
 
   /**
    * メンテナンスモードを有効化
@@ -98,6 +111,15 @@ class MaintenanceService {
 
       console.log(`[Maintenance] Maintenance mode enabled (duration: ${duration === 0 ? 'unlimited' : duration + ' minutes'})`);
 
+      // イベントを発火（WebSocket通知用）
+      this.emit('statusChanged', {
+        enabled: true,
+        message,
+        enabledAt,
+        duration,
+        scheduledEndAt
+      } as MaintenanceStatusChangeEvent);
+
       return {
         enabled: true,
         message,
@@ -141,6 +163,11 @@ class MaintenanceService {
       }
 
       console.log('[Maintenance] Maintenance mode disabled');
+
+      // イベントを発火（WebSocket通知用）
+      this.emit('statusChanged', {
+        enabled: false
+      } as MaintenanceStatusChangeEvent);
     } catch (error) {
       console.error('[Maintenance] Error disabling maintenance mode:', error);
       throw error;
