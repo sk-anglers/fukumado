@@ -256,65 +256,23 @@ authRouter.get('/success', (_req, res) => {
           <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
           <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">認証が完了しました</h2>
           <p style="font-size: 1.1rem; margin-bottom: 2rem; line-height: 1.6;">
-            3秒後に自動的にアプリに戻ります...<br>
-            戻らない場合は下のボタンを押してください。
+            このウィンドウは自動的に閉じます。<br>
+            閉じない場合は、下のボタンを押すか<br>
+            手動でこのウィンドウを閉じてください。
           </p>
-          <a href="javascript:void(0)" id="backButton" style="display: inline-block; padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; text-decoration: none; font-size: 1.1rem; font-weight: 600; min-height: 44px; line-height: 1.5;">
-            アプリに戻る
-          </a>
+          <button onclick="window.close()" style="padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; font-size: 1.1rem; font-weight: 600; cursor: pointer; min-height: 44px;">
+            ウィンドウを閉じる
+          </button>
         </div>
         <script nonce="${nonce}">
-          // 即座に実行（IIFE）
           (function() {
-            console.log('[Auth Success] Script started');
-            console.log('[Auth Success] window.opener:', window.opener);
-            console.log('[Auth Success] window.opener type:', typeof window.opener);
+            console.log('[Auth Success] Authentication completed');
 
-            var link = document.getElementById('backButton');
-
-            // window.opener がある場合（ポップアップで開かれた場合）
-            if (window.opener && !window.opener.closed) {
-              console.log('[Auth Success] Popup detected, sending postMessage');
-
-              // 親ウィンドウに認証完了を通知（postMessage）
-              try {
-                var targetOrigin = '${env.frontendUrl}';
-                console.log('[Auth Success] Target origin:', targetOrigin);
-                window.opener.postMessage(
-                  { type: 'AUTH_SUCCESS', platform: 'oauth' },
-                  targetOrigin
-                );
-                console.log('[Auth Success] postMessage sent successfully');
-              } catch (error) {
-                console.error('[Auth Success] postMessage error:', error);
-              }
-
-              // ボタンクリックでクローズ
-              link.onclick = function() {
-                console.log('[Auth Success] Close button clicked');
-                window.close();
-                return false;
-              };
-
-              // 3秒後に自動クローズ
-              setTimeout(function() {
-                console.log('[Auth Success] Auto-closing after 3 seconds');
-                window.close();
-              }, 3000);
-            } else {
-              // window.opener がない場合（通常のウィンドウで開かれた場合）
-              console.log('[Auth Success] Normal window detected, redirecting');
-              console.log('[Auth Success] window.opener is null or closed');
-              link.href = '${env.frontendUrl}/';
-
-              // 3秒後にリダイレクト
-              setTimeout(function() {
-                console.log('[Auth Success] Redirecting to:', '${env.frontendUrl}/');
-                window.location.href = '${env.frontendUrl}/';
-              }, 3000);
-            }
-
-            console.log('[Auth Success] Script completed');
+            // 1秒後にウィンドウを閉じる試行
+            setTimeout(function() {
+              console.log('[Auth Success] Attempting to close window');
+              window.close();
+            }, 1000);
           })();
         </script>
       </body>
