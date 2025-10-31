@@ -219,55 +219,28 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       return;
     }
 
-    // postMessage イベントリスナー
-    const messageHandler = (event: MessageEvent) => {
-      console.log('[Google Auth] Message received from origin:', event.origin);
-      console.log('[Google Auth] Message data:', event.data);
+    console.log('[Google Auth] OAuth popup opened, starting polling');
 
-      // オリジン検証（セキュリティ必須）
-      const expectedOrigin = new URL(apiUrl('/')).origin;
-      console.log('[Google Auth] Expected origin:', expectedOrigin);
-
-      if (event.origin !== expectedOrigin) {
-        console.warn('[Google Auth] ❌ Invalid origin. Received:', event.origin, 'Expected:', expectedOrigin);
-        return;
-      }
-
-      console.log('[Google Auth] ✅ Origin validated successfully');
-
-      // 認証完了メッセージを受信
-      if (event.data?.type === 'AUTH_SUCCESS') {
-        console.log('[Google Auth] Authentication successful via postMessage');
-        // 認証状態を更新
-        void refreshAuthStatus();
-        // ポップアップを閉じる
-        authWindow.close();
-        // イベントリスナーを削除
-        window.removeEventListener('message', messageHandler);
-        // タイマーをクリア
-        window.clearInterval(timer);
-      }
-    };
-
-    window.addEventListener('message', messageHandler);
-    console.log('[Google Auth] ✅ postMessage listener added');
-    console.log('[Google Auth] Waiting for message from:', new URL(apiUrl('/')).origin);
-
-    // バックアップ: ポーリング（postMessageが失敗した場合の保険）
+    // ポーリング: 500msごとに認証状態を確認
     const timer = window.setInterval(async () => {
+      // ウィンドウが閉じられた場合
       if (authWindow.closed) {
+        console.log('[Google Auth] Popup closed, checking authentication status');
         window.clearInterval(timer);
-        window.removeEventListener('message', messageHandler);
         await refreshAuthStatus();
         return;
       }
+
+      // 認証状態を定期的に確認
       await refreshAuthStatus();
+
+      // 認証成功したらポップアップを閉じる
       if (useAuthStore.getState().authenticated) {
+        console.log('[Google Auth] Authentication successful, closing popup');
         window.clearInterval(timer);
-        window.removeEventListener('message', messageHandler);
         authWindow.close();
       }
-    }, 2000);
+    }, 500);
   };
 
   const handleLogout = async (): Promise<void> => {
@@ -358,55 +331,28 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       return;
     }
 
-    // postMessage イベントリスナー
-    const messageHandler = (event: MessageEvent) => {
-      console.log('[Twitch Auth] Message received from origin:', event.origin);
-      console.log('[Twitch Auth] Message data:', event.data);
+    console.log('[Twitch Auth] OAuth popup opened, starting polling');
 
-      // オリジン検証（セキュリティ必須）
-      const expectedOrigin = new URL(apiUrl('/')).origin;
-      console.log('[Twitch Auth] Expected origin:', expectedOrigin);
-
-      if (event.origin !== expectedOrigin) {
-        console.warn('[Twitch Auth] ❌ Invalid origin. Received:', event.origin, 'Expected:', expectedOrigin);
-        return;
-      }
-
-      console.log('[Twitch Auth] ✅ Origin validated successfully');
-
-      // 認証完了メッセージを受信
-      if (event.data?.type === 'AUTH_SUCCESS') {
-        console.log('[Twitch Auth] Authentication successful via postMessage');
-        // 認証状態を更新
-        void refreshTwitchAuthStatus();
-        // ポップアップを閉じる
-        authWindow.close();
-        // イベントリスナーを削除
-        window.removeEventListener('message', messageHandler);
-        // タイマーをクリア
-        window.clearInterval(timer);
-      }
-    };
-
-    window.addEventListener('message', messageHandler);
-    console.log('[Twitch Auth] ✅ postMessage listener added');
-    console.log('[Twitch Auth] Waiting for message from:', new URL(apiUrl('/')).origin);
-
-    // バックアップ: ポーリング（postMessageが失敗した場合の保険）
+    // ポーリング: 500msごとに認証状態を確認
     const timer = window.setInterval(async () => {
+      // ウィンドウが閉じられた場合
       if (authWindow.closed) {
+        console.log('[Twitch Auth] Popup closed, checking authentication status');
         window.clearInterval(timer);
-        window.removeEventListener('message', messageHandler);
         await refreshTwitchAuthStatus();
         return;
       }
+
+      // 認証状態を定期的に確認
       await refreshTwitchAuthStatus();
+
+      // 認証成功したらポップアップを閉じる
       if (useAuthStore.getState().twitchAuthenticated) {
+        console.log('[Twitch Auth] Authentication successful, closing popup');
         window.clearInterval(timer);
-        window.removeEventListener('message', messageHandler);
         authWindow.close();
       }
-    }, 2000);
+    }, 500);
   };
 
   const handleTwitchLogout = async (): Promise<void> => {
