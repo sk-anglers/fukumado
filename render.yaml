@@ -107,6 +107,8 @@ services:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
         value: https://admin-api.fukumado.jp
+      - key: VITE_API_URL
+        value: https://api.fukumado.jp
 
   # ===================================
   # ベータ環境 (BETA ENVIRONMENT)
@@ -217,3 +219,5 @@ services:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
         value: https://beta-admin-api.fukumado.jp
+      - key: VITE_API_URL
+        value: https://beta-api.fukumado.jp
