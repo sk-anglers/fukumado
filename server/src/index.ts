@@ -140,8 +140,8 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: true, // sameSite=noneの場合は必須
-    sameSite: 'none', // クロスサイトでCookieを送信可能に
+    secure: process.env.NODE_ENV === 'production', // 本番環境のみHTTPS必須
+    sameSite: 'lax', // Safari ITP対策（同一サイト内でのCookie送信を許可）
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
 });

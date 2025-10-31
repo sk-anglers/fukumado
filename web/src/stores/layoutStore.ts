@@ -8,15 +8,15 @@ const DEFAULT_VOLUME = 70;
 
 export const MAX_ACTIVE_SLOTS = TOTAL_SLOT_CAPACITY;
 
-// モバイルかどうかとデバイスの向きに応じた最大スロット数を取得
+// モバイルかどうかに応じた最大スロット数を取得
 const getMaxSlotsForDevice = (): number => {
   if (typeof window === 'undefined') return TOTAL_SLOT_CAPACITY;
 
   const isMobile = window.matchMedia('(max-width: 768px)').matches;
   if (!isMobile) return TOTAL_SLOT_CAPACITY;
 
-  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
-  return isPortrait ? 4 : 2;
+  // モバイルは向きに関わらず2画面まで（Chromeブラウザの動画再生制限対応）
+  return 2;
 };
 
 const createInitialSlots = (): StreamSlot[] =>
