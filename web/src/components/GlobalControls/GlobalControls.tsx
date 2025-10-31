@@ -29,6 +29,7 @@ export const GlobalControls = ({ onOpenPresetModal }: GlobalControlsProps): JSX.
           <Squares2X2Icon />
           <span>レイアウト</span>
         </div>
+        {/* プリセット選択ボタン（課金機能として将来復活予定のためコメントアウト）
         <div className={styles.buttons}>
           {(Object.keys(presetLabels) as LayoutPreset[]).map((key) => (
             <button
@@ -41,9 +42,12 @@ export const GlobalControls = ({ onOpenPresetModal }: GlobalControlsProps): JSX.
             </button>
           ))}
         </div>
+        */}
+        {/* プリセット編集ボタン（課金機能として将来復活予定のためコメントアウト）
         <button type="button" className={styles.primaryAction} onClick={onOpenPresetModal}>
           プリセットを編集
         </button>
+        */}
       </div>
     </div>
   );

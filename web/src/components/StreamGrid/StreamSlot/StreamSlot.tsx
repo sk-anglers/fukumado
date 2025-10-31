@@ -723,6 +723,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                     )}
                   </div>
                   <div className={styles.topButtons}>
+                    {/* フォーカスボタン（課金機能として将来復活予定のためコメントアウト）
                     <button
                       className={styles.focusButton}
                       type="button"
@@ -730,6 +731,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                     >
                       {preset === 'focus' ? '通常表示' : 'フォーカス'}
                     </button>
+                    */}
                     <button
                       className={styles.fullscreenButton}
                       type="button"
