@@ -89,6 +89,10 @@ services:
     rootDir: web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_API_URL
@@ -103,6 +107,10 @@ services:
     rootDir: admin-web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
@@ -201,6 +209,10 @@ services:
     rootDir: web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_API_URL
@@ -215,6 +227,10 @@ services:
     rootDir: admin-web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       # Vite環境変数（ビルド時に使用）
       - key: VITE_ADMIN_API_URL
