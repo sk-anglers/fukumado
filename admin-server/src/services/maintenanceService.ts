@@ -10,7 +10,10 @@ class MaintenanceService {
     try {
       const response = await fetch(`${env.mainBackendUrl}/api/admin/maintenance/enable`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-API-Key': env.mainApiKey
+        },
         body: JSON.stringify({ message, generateBypass, duration })
       });
 
@@ -40,7 +43,10 @@ class MaintenanceService {
     try {
       const response = await fetch(`${env.mainBackendUrl}/api/admin/maintenance/disable`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-API-Key': env.mainApiKey
+        }
       });
 
       if (!response.ok) {
@@ -60,7 +66,11 @@ class MaintenanceService {
    */
   async getStatus(): Promise<MaintenanceStatus> {
     try {
-      const response = await fetch(`${env.mainBackendUrl}/api/admin/maintenance/status`);
+      const response = await fetch(`${env.mainBackendUrl}/api/admin/maintenance/status`, {
+        headers: {
+          'X-Admin-API-Key': env.mainApiKey
+        }
+      });
 
       if (!response.ok) {
         throw new Error('Failed to get maintenance status');
