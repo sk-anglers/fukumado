@@ -88,6 +88,7 @@ export const StreamGrid = (): JSX.Element => {
 
   const autoHideTimerRef = useRef<number | null>(null);
   const initialMuteAppliedRef = useRef(false);
+  const autoUnmuteTimerRef = useRef<number | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -158,10 +159,27 @@ export const StreamGrid = (): JSX.Element => {
     console.log('[StreamGrid] 全スロット準備完了:', allReady);
 
     if (allReady) {
-      console.log('[StreamGrid] 全スロット再生準備完了 - 自動ミュート解除を実行');
-      toggleMuteAll(); // 全ミュート解除
-      useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる
+      console.log('[StreamGrid] 全スロット再生準備完了 - 3秒後に自動ミュート解除を実行');
+
+      // 既存のタイマーをクリア
+      if (autoUnmuteTimerRef.current !== null) {
+        window.clearTimeout(autoUnmuteTimerRef.current);
+      }
+
+      // 3秒後に自動ミュート解除
+      autoUnmuteTimerRef.current = window.setTimeout(() => {
+        console.log('[StreamGrid] 自動ミュート解除を実行');
+        toggleMuteAll(); // 全ミュート解除
+        useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる
+      }, 3000);
     }
+
+    return () => {
+      // クリーンアップ: タイマーをクリア
+      if (autoUnmuteTimerRef.current !== null) {
+        window.clearTimeout(autoUnmuteTimerRef.current);
+      }
+    };
   }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotReadyStates, toggleMuteAll]);
 
   // activeSlotsをメモ化（slots配列またはactiveSlotsCountが変わったときのみ再計算）
