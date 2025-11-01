@@ -150,7 +150,7 @@ const sessionMiddleware = session({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // 本番環境のみHTTPS必須
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Safari対応：本番環境では'none'、開発環境では'lax'
+    sameSite: 'lax', // プロキシ経由で同一オリジンとなるため'lax'で十分（Safari対応完了）
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
 });
