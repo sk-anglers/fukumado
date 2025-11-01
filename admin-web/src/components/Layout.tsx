@@ -40,15 +40,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   // 値だけ取得（表示用） - ConnectionStatusは内部でサブスクライブするので不要
   const unreadAlertCount = useSecurityStore(state => state.unreadAlertCount);
 
-  // setter関数だけ取得（useEffectで使用）
-  const setSystemMetrics = useMetricsStore(state => state.setSystemMetrics);
-  const setTwitchRateLimit = useMetricsStore(state => state.setTwitchRateLimit);
-  const setYoutubeQuota = useMetricsStore(state => state.setYoutubeQuota);
-  const setConnectionStatus = useMetricsStore(state => state.setConnectionStatus);
-  const setMetricsError = useMetricsStore(state => state.setError);
-  const setSecurityMetrics = useSecurityStore(state => state.setSecurityMetrics);
-  const setSecurityError = useSecurityStore(state => state.setError);
-
   // WebSocket接続とメッセージ処理
   useEffect(() => {
     console.log('[DEBUG] Layout: WebSocket useEffect RUNNING');
@@ -57,7 +48,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     // ステータス変更ハンドラー
     const statusHandler = (status: ConnectionStatus) => {
-      setConnectionStatus(status);
+      // getState()を使って直接ストアのアクションを呼び出す（再レンダリング防止）
+      useMetricsStore.getState().setConnectionStatus(status);
     };
 
     // メッセージハンドラー
@@ -66,7 +58,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       if (message.type === 'metrics_update') {
         if (message.data.system) {
           console.log('[DEBUG] Layout: Calling setSystemMetrics');
-          setSystemMetrics(message.data.system);
+          // getState()を使って直接ストアのアクションを呼び出す（再レンダリング防止）
+          useMetricsStore.getState().setSystemMetrics(message.data.system);
         }
       }
     };
@@ -81,7 +74,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       websocketClient.offMessage(messageHandler);
       // NOTE: WebSocket接続は切断せず維持（アプリケーション全体で共有）
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 初期データ読み込み
@@ -97,21 +89,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             getSecurityMetrics()
           ]);
 
-        setSystemMetrics(systemMetrics);
-        setTwitchRateLimit(twitchRate);
-        setYoutubeQuota(youtubeQuota);
-        setSecurityMetrics(securityMetrics);
+        // getState()を使って直接ストアのアクションを呼び出す（再レンダリング防止）
+        useMetricsStore.getState().setSystemMetrics(systemMetrics);
+        useMetricsStore.getState().setTwitchRateLimit(twitchRate);
+        useMetricsStore.getState().setYoutubeQuota(youtubeQuota);
+        useSecurityStore.getState().setSecurityMetrics(securityMetrics);
       } catch (error) {
         console.error('Failed to load initial data:', error);
         const errorMessage =
           error instanceof Error ? error.message : '初期データの読み込みに失敗しました';
-        setMetricsError(errorMessage);
-        setSecurityError(errorMessage);
+        useMetricsStore.getState().setError(errorMessage);
+        useSecurityStore.getState().setError(errorMessage);
       }
     };
 
     loadInitialData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
