@@ -38,3 +38,7 @@ export const useMediaQuery = (query: string): boolean => {
 export const useIsMobile = (): boolean => useMediaQuery('(max-width: 768px)');
 export const useIsTablet = (): boolean => useMediaQuery('(min-width: 769px) and (max-width: 1200px)');
 export const useIsDesktop = (): boolean => useMediaQuery('(min-width: 1201px)');
+
+// 画面の向き検知用のヘルパーフック
+export const useIsLandscape = (): boolean => useMediaQuery('(orientation: landscape)');
+export const useIsPortrait = (): boolean => useMediaQuery('(orientation: portrait)');

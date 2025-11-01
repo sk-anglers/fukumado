@@ -9,6 +9,7 @@ import { apiFetch } from '../../utils/api';
 import type { ChatMessage } from '../../types';
 import styles from './StreamGrid.module.css';
 import { StreamSlotCard } from './StreamSlot/StreamSlot';
+import { useIsMobile, useIsLandscape } from '../../hooks/useMediaQuery';
 
 // メッセージテキストをエモート画像付きでレンダリング
 const renderMessageWithEmotes = (message: ChatMessage) => {
@@ -63,7 +64,7 @@ const renderMessageWithEmotes = (message: ChatMessage) => {
 };
 
 export const StreamGrid = (): JSX.Element => {
-  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
+  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen, setActiveSlotsCount } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     slots: state.slots,
     preset: state.preset,
     selectedSlotId: state.selectedSlotId,
@@ -74,8 +75,12 @@ export const StreamGrid = (): JSX.Element => {
     fullscreen: state.fullscreen,
     setFullscreen: state.setFullscreen,
     clearSelection: state.clearSelection,
-    isModalOpen: state.isModalOpen
+    isModalOpen: state.isModalOpen,
+    setActiveSlotsCount: state.setActiveSlotsCount
   }), shallow);
+
+  const isMobile = useIsMobile();
+  const isLandscape = useIsLandscape();
 
   const autoHideTimerRef = useRef<number | null>(null);
   const [showChat, setShowChat] = useState(false);
@@ -84,6 +89,21 @@ export const StreamGrid = (): JSX.Element => {
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
 
   const messages = useChatStore((state) => state.messages);
+
+  // モバイルで画面の向きに応じてスロット数と全画面表示を変更
+  useEffect(() => {
+    if (isMobile) {
+      if (isLandscape) {
+        // 横向き：2枠表示 + 全画面モード
+        setActiveSlotsCount(2);
+        setFullscreen(true);
+      } else {
+        // 縦向き：4枠表示 + 全画面解除
+        setActiveSlotsCount(4);
+        setFullscreen(false);
+      }
+    }
+  }, [isMobile, isLandscape, setActiveSlotsCount, setFullscreen]);
 
   // activeSlotsをメモ化（slots配列またはactiveSlotsCountが変わったときのみ再計算）
   const activeSlots = useMemo(() => slots.slice(0, activeSlotsCount), [slots, activeSlotsCount]);
