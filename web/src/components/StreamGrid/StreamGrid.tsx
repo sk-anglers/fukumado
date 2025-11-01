@@ -4,7 +4,7 @@ import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useChatStore } from '../../stores/chatStore';
-import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon, SpeakerWaveIcon } from '@heroicons/react/24/outline';
 import { apiFetch } from '../../utils/api';
 import type { ChatMessage } from '../../types';
 import styles from './StreamGrid.module.css';
@@ -89,11 +89,11 @@ export const StreamGrid = (): JSX.Element => {
 
   const autoHideTimerRef = useRef<number | null>(null);
   const initialMuteAppliedRef = useRef(false);
-  const autoUnmuteTimerRef = useRef<number | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [showReadyNotification, setShowReadyNotification] = useState(false);
 
   const messages = useChatStore((state) => state.messages);
 
@@ -101,15 +101,12 @@ export const StreamGrid = (): JSX.Element => {
   useEffect(() => {
     if (isMobile && !initialMuteAppliedRef.current) {
       initialMuteAppliedRef.current = true;
-      console.log('[StreamGrid] モバイル初回ロード - 全ミュート実行');
       // 自動ミュート解除フラグをリセット
       useLayoutStore.getState().resetAutoUnmuted();
       // 現在のミュート状態を取得して、ミュートされていない場合のみ全ミュートを実行
       const currentMutedAll = useLayoutStore.getState().mutedAll;
-      console.log('[StreamGrid] 現在のmutedAll:', currentMutedAll);
       if (!currentMutedAll) {
         toggleMuteAll();
-        console.log('[StreamGrid] 全ミュート実行完了');
       }
     }
   }, [isMobile, toggleMuteAll]);
@@ -129,71 +126,36 @@ export const StreamGrid = (): JSX.Element => {
     }
   }, [isMobile, isLandscape, setActiveSlotsCount, setFullscreen]);
 
-  // モバイルで全スロット再生確認後の自動ミュート解除
+  // モバイルで全スロット再生準備完了時に通知を表示
   useEffect(() => {
-    console.log('[StreamGrid] 自動ミュート解除チェック', {
-      isMobile,
-      mutedAll,
-      autoUnmutedApplied,
-      slotReadyStates
-    });
-
     if (!isMobile || !mutedAll || autoUnmutedApplied) {
-      console.log('[StreamGrid] 自動ミュート解除スキップ（条件不一致）');
       return;
     }
 
     // 配信が割り当てられているスロットを取得
     const assignedSlots = slots.slice(0, activeSlotsCount).filter((slot) => slot.assignedStream);
 
-    console.log('[StreamGrid] 配信割り当てスロット数:', assignedSlots.length);
-
     // 配信がない場合は何もしない
     if (assignedSlots.length === 0) {
-      console.log('[StreamGrid] 配信割り当てスロットなし');
       return;
     }
 
     // 全ての配信が割り当てられたスロットが再生準備完了しているかチェック
     const allReady = assignedSlots.every((slot) => slotReadyStates[slot.id] === true);
 
-    console.log('[StreamGrid] 全スロット準備完了:', allReady);
-
-    if (allReady) {
-      console.log('[StreamGrid] 全スロット再生準備完了 - 5秒後に自動ミュート解除を実行');
-
-      // 既存のタイマーをクリア
-      if (autoUnmuteTimerRef.current !== null) {
-        window.clearTimeout(autoUnmuteTimerRef.current);
-      }
-
-      // 5秒後に自動ミュート解除（各スロットを順番に）
-      autoUnmuteTimerRef.current = window.setTimeout(() => {
-        console.log('[StreamGrid] 自動ミュート解除を実行（順番に各スロット）');
-
-        // 配信が割り当てられているミュート中のスロットを取得
-        const mutedAssignedSlots = assignedSlots.filter((slot) => slot.muted);
-        console.log('[StreamGrid] ミュート解除対象スロット数:', mutedAssignedSlots.length);
-
-        // 各スロットを0.3秒ごとに順番にミュート解除
-        mutedAssignedSlots.forEach((slot, index) => {
-          window.setTimeout(() => {
-            console.log(`[StreamGrid] スロット ${slot.id} をミュート解除`);
-            toggleSlotMute(slot.id);
-          }, index * 300); // 0.3秒ごと
-        });
-
-        useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる
-      }, 5000);
+    if (allReady && !showReadyNotification) {
+      // 全スロット準備完了 - 通知を表示
+      setShowReadyNotification(true);
+      useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる（通知は一度だけ）
     }
+  }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotReadyStates, showReadyNotification]);
 
-    return () => {
-      // クリーンアップ: タイマーをクリア
-      if (autoUnmuteTimerRef.current !== null) {
-        window.clearTimeout(autoUnmuteTimerRef.current);
-      }
-    };
-  }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotReadyStates, toggleSlotMute]);
+  // ミュート解除されたら通知を非表示
+  useEffect(() => {
+    if (!mutedAll && showReadyNotification) {
+      setShowReadyNotification(false);
+    }
+  }, [mutedAll, showReadyNotification]);
 
   // activeSlotsをメモ化（slots配列またはactiveSlotsCountが変わったときのみ再計算）
   const activeSlots = useMemo(() => slots.slice(0, activeSlotsCount), [slots, activeSlotsCount]);
@@ -333,6 +295,18 @@ export const StreamGrid = (): JSX.Element => {
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
     >
+      {/* モバイル用準備完了通知 */}
+      {isMobile && showReadyNotification && (
+        <div className={styles.readyNotification}>
+          <div className={styles.readyNotificationContent}>
+            <SpeakerWaveIcon className={styles.readyNotificationIcon} />
+            <p className={styles.readyNotificationText}>
+              全配信の準備が完了しました！<br />
+              ヘッダーのスピーカーアイコンをタップして音声をONにしてください
+            </p>
+          </div>
+        </div>
+      )}
       <div className={styles.gridWrapper}>
         <div className={clsx(
           styles.grid,

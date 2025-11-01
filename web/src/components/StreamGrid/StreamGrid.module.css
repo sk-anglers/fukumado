@@ -461,3 +461,65 @@
   border-color: rgba(34, 197, 94, 0.5) !important;
   background: rgba(34, 197, 94, 0.3) !important;
 }
+
+/* モバイル用準備完了通知 */
+.readyNotification {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  z-index: 9998;
+  display: flex;
+  justify-content: center;
+  padding: 0 1rem;
+  animation: slideDown 0.5s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.readyNotificationContent {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(16, 185, 129, 0.95));
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  max-width: 500px;
+  width: 100%;
+}
+
+.readyNotificationIcon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.readyNotificationText {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: white;
+  line-height: 1.5;
+  text-align: left;
+}
