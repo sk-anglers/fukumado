@@ -3,8 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.maintenanceService = void 0;
 const cacheService_1 = require("./cacheService");
 const crypto_1 = require("crypto");
-class MaintenanceService {
+const events_1 = require("events");
+class MaintenanceService extends events_1.EventEmitter {
     constructor() {
+        super();
         // メモリストレージ（ローカル環境用）
         this.memoryEnabled = false;
         this.memoryMessage = '';
@@ -72,6 +74,14 @@ class MaintenanceService {
                 }
             }
             console.log(`[Maintenance] Maintenance mode enabled (duration: ${duration === 0 ? 'unlimited' : duration + ' minutes'})`);
+            // イベントを発火（WebSocket通知用）
+            this.emit('statusChanged', {
+                enabled: true,
+                message,
+                enabledAt,
+                duration,
+                scheduledEndAt
+            });
             return {
                 enabled: true,
                 message,
@@ -112,6 +122,10 @@ class MaintenanceService {
                 await cacheService_1.cacheService.delete('admin:maintenance:scheduledEndAt');
             }
             console.log('[Maintenance] Maintenance mode disabled');
+            // イベントを発火（WebSocket通知用）
+            this.emit('statusChanged', {
+                enabled: false
+            });
         }
         catch (error) {
             console.error('[Maintenance] Error disabling maintenance mode:', error);

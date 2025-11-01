@@ -38,6 +38,7 @@ const express_1 = require("express");
 const googleOAuth_1 = require("../utils/googleOAuth");
 const twitchOAuth_1 = require("../utils/twitchOAuth");
 const twitchService_1 = require("../services/twitchService");
+const env_1 = require("../config/env");
 exports.authRouter = (0, express_1.Router)();
 // Google OAuth
 exports.authRouter.get('/google', (req, res) => {
@@ -165,10 +166,11 @@ exports.authRouter.get('/twitch/callback', async (req, res) => {
             // トークンをEventSubManagerに送信
             try {
                 const { fetch } = await Promise.resolve().then(() => __importStar(require('undici')));
-                const response = await fetch('http://localhost:4000/api/admin/eventsub/credentials', {
+                const response = await fetch(`${env_1.env.apiUrl}/api/admin/eventsub/credentials`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-Admin-API-Key': env_1.env.adminApiKey
                     },
                     body: JSON.stringify({
                         accessToken: tokenResponse.access_token,
@@ -186,7 +188,7 @@ exports.authRouter.get('/twitch/callback', async (req, res) => {
                 console.error('[Twitch Callback] Error sending credentials:', error);
             }
             // 管理ダッシュボードにリダイレクト
-            return res.redirect(`http://localhost:5174/eventsub?twitch_auth=success&username=${encodeURIComponent(userInfo.login)}`);
+            return res.redirect(`${env_1.env.adminFrontendUrl}/eventsub?twitch_auth=success&username=${encodeURIComponent(userInfo.login)}`);
         }
         // 通常の認証フロー
         // グローバルエモートを先読み（バックグラウンドで非同期実行）
@@ -240,6 +242,7 @@ exports.authRouter.get('/twitch/logout', (req, res) => {
     res.redirect('/');
 });
 exports.authRouter.get('/success', (_req, res) => {
+    const nonce = res.locals.nonce || '';
     res.send(`
     <!DOCTYPE html>
     <html>
@@ -253,34 +256,24 @@ exports.authRouter.get('/success', (_req, res) => {
           <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
           <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">認証が完了しました</h2>
           <p style="font-size: 1.1rem; margin-bottom: 2rem; line-height: 1.6;">
-            3秒後に自動的にアプリに戻ります...<br>
-            戻らない場合は下のボタンを押してください。
+            このウィンドウは自動的に閉じます。<br>
+            閉じない場合は、下のボタンを押すか<br>
+            手動でこのウィンドウを閉じてください。
           </p>
-          <a href="http://localhost:5173/" style="display: inline-block; padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; text-decoration: none; font-size: 1.1rem; font-weight: 600; min-height: 44px; line-height: 1.5;">
-            アプリに戻る
-          </a>
+          <button onclick="window.close()" style="padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; font-size: 1.1rem; font-weight: 600; cursor: pointer; min-height: 44px;">
+            ウィンドウを閉じる
+          </button>
         </div>
-        <script>
-          setTimeout(function() {
-            // 別ウィンドウで開かれている場合は閉じる
-            if (window.opener) {
-              window.close();
-            } else {
-              // 同じウィンドウで開かれている場合はリダイレクト
-              window.location.href = 'http://localhost:5173/';
-            }
-          }, 3000);
+        <script nonce="${nonce}">
+          (function() {
+            console.log('[Auth Success] Authentication completed');
 
-          // ボタンのクリック処理も同様に
-          document.addEventListener('DOMContentLoaded', function() {
-            var link = document.querySelector('a');
-            if (link && window.opener) {
-              link.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.close();
-              });
-            }
-          });
+            // 2秒後にウィンドウを閉じる試行（セッション確立を待つ）
+            setTimeout(function() {
+              console.log('[Auth Success] Attempting to close window');
+              window.close();
+            }, 2000);
+          })();
         </script>
       </body>
     </html>

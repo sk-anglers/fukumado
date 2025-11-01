@@ -3,9 +3,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateRequestSize = exports.checkBlockedIP = exports.ipBlocklist = exports.websocketRateLimiter = exports.authRateLimiter = exports.apiRateLimiter = exports.securityHeaders = void 0;
+exports.validateRequestSize = exports.checkBlockedIP = exports.ipBlocklist = exports.websocketRateLimiter = exports.authRateLimiter = exports.apiRateLimiter = exports.securityHeaders = exports.generateNonce = void 0;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const helmet_1 = __importDefault(require("helmet"));
+const crypto_1 = __importDefault(require("crypto"));
+/**
+ * Nonce生成ミドルウェア
+ * リクエストごとに一意のnonceを生成し、res.localsに保存
+ */
+const generateNonce = (req, res, next) => {
+    res.locals.nonce = crypto_1.default.randomBytes(16).toString('base64');
+    next();
+};
+exports.generateNonce = generateNonce;
 /**
  * セキュリティヘッダーミドルウェア（Helmet）
  */
@@ -14,7 +24,7 @@ exports.securityHeaders = (0, helmet_1.default)({
         directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'"],
+            scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`],
             imgSrc: ["'self'", 'data:', 'https:'],
             connectSrc: ["'self'", 'https://api.twitch.tv', 'https://id.twitch.tv', 'wss://eventsub.wss.twitch.tv'],
             fontSrc: ["'self'"],

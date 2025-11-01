@@ -7,8 +7,11 @@ const crypto_1 = require("crypto");
  * Twitch EventSub WebSocketの複数接続を管理するマネージャークラス
  *
  * 3本のWebSocket接続を管理し、負荷分散を行う
- * - 各接続: 最大10,000サブスクリプション（5,000チャンネル）
- * - 合計: 最大30,000サブスクリプション（15,000チャンネル）
+ * - 各接続: 最大300サブスクリプション（公式制限）
+ * - 合計: 最大900サブスクリプション（300 × 3接続）
+ * - 認証済みユーザーのサブスクリプションはコスト0（max_total_cost制限の対象外）
+ *
+ * 公式ドキュメント: https://dev.twitch.tv/docs/eventsub/handling-websocket-events
  */
 class TwitchEventSubManager {
     constructor() {
@@ -18,7 +21,7 @@ class TwitchEventSubManager {
         this.accessToken = null;
         this.clientId = null;
         this.maxConnectionCount = 3;
-        this.maxSubscriptionsPerConnection = 10000;
+        this.maxSubscriptionsPerConnection = 300;
         this.eventHistory = [];
         this.maxHistorySize = 100; // 最大100件保持
         console.log('[EventSub Manager] Initializing with 3 connections...');
@@ -278,6 +281,13 @@ class TwitchEventSubManager {
     getEventHistory(limit) {
         const maxLimit = limit || 50;
         return this.eventHistory.slice(0, Math.min(maxLimit, this.eventHistory.length));
+    }
+    /**
+     * アクセストークンを取得
+     * @returns アクセストークン（未設定の場合はnull）
+     */
+    getAccessToken() {
+        return this.accessToken;
     }
 }
 exports.TwitchEventSubManager = TwitchEventSubManager;

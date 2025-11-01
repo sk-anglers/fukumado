@@ -5,6 +5,8 @@ const express_1 = require("express");
 const twitchEventSubManager_1 = require("../services/twitchEventSubManager");
 const dynamicChannelAllocator_1 = require("../services/dynamicChannelAllocator");
 const metricsCollector_1 = require("../services/metricsCollector");
+const priorityManager_1 = require("../services/priorityManager");
+const twitchService_1 = require("../services/twitchService");
 exports.eventsubRouter = (0, express_1.Router)();
 /**
  * GET /api/admin/eventsub/stats
@@ -49,12 +51,13 @@ exports.eventsubRouter.get('/stats', async (req, res) => {
 });
 /**
  * GET /api/admin/eventsub/subscriptions
- * 購読チャンネル一覧取得
+ * 購読チャンネル一覧取得（優先度情報も含む）
  */
 exports.eventsubRouter.get('/subscriptions', async (req, res) => {
     try {
         const channelIds = twitchEventSubManager_1.twitchEventSubManager.getSubscribedUserIds();
         const stats = twitchEventSubManager_1.twitchEventSubManager.getStats();
+        const allocationStats = dynamicChannelAllocator_1.dynamicChannelAllocator.getStats();
         // 各接続の購読チャンネル情報を収集
         const subscriptions = stats.connections.map((conn) => ({
             connectionIndex: conn.index,
@@ -63,12 +66,71 @@ exports.eventsubRouter.get('/subscriptions', async (req, res) => {
             subscriptionCount: conn.subscriptionCount,
             subscribedUserIds: conn.subscribedUserIds
         }));
+        // PriorityManagerから全チャンネル情報を取得
+        const allPriorities = priorityManager_1.priorityManager.calculatePriorities();
+        const priorityStats = priorityManager_1.priorityManager.getStats();
+        // Twitchチャンネルのみをフィルタリング
+        const twitchChannels = allPriorities.filter(p => p.platform === 'twitch');
+        // 優先度別に分類
+        const realtimeChannels = twitchChannels.filter(p => p.priority === 'realtime');
+        const delayedChannels = twitchChannels.filter(p => p.priority === 'delayed');
+        // チャンネル名情報を取得
+        const allChannelIds = twitchChannels.map(p => p.channelId);
+        let channelInfoMap = new Map();
+        if (allChannelIds.length > 0) {
+            const accessToken = twitchEventSubManager_1.twitchEventSubManager.getAccessToken();
+            if (accessToken) {
+                try {
+                    const channelInfos = await (0, twitchService_1.fetchChannelsByIds)(accessToken, allChannelIds);
+                    channelInfos.forEach(info => {
+                        channelInfoMap.set(info.id, {
+                            login: info.login,
+                            displayName: info.displayName
+                        });
+                    });
+                    console.log(`[EventSub] Fetched channel info for ${channelInfos.length} channels`);
+                }
+                catch (error) {
+                    console.error('[EventSub] Failed to fetch channel info:', error);
+                    // チャンネル名取得に失敗してもエラーにせず、IDのみで継続
+                }
+            }
+            else {
+                console.warn('[EventSub] Access token not available, skipping channel name lookup');
+            }
+        }
         res.json({
             success: true,
             data: {
                 totalChannels: channelIds.length,
                 channelIds,
-                subscriptions
+                subscriptions,
+                allChannels: {
+                    total: twitchChannels.length,
+                    realtime: realtimeChannels.map(p => {
+                        const info = channelInfoMap.get(p.channelId);
+                        return {
+                            channelId: p.channelId,
+                            channelLogin: info?.login,
+                            channelDisplayName: info?.displayName,
+                            userCount: p.userCount,
+                            priority: p.priority,
+                            method: 'eventsub'
+                        };
+                    }),
+                    delayed: delayedChannels.map(p => {
+                        const info = channelInfoMap.get(p.channelId);
+                        return {
+                            channelId: p.channelId,
+                            channelLogin: info?.login,
+                            channelDisplayName: info?.displayName,
+                            userCount: p.userCount,
+                            priority: p.priority,
+                            method: 'polling'
+                        };
+                    })
+                },
+                priorityStats
             },
             timestamp: new Date().toISOString()
         });

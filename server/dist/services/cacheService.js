@@ -14,11 +14,7 @@ class CacheService {
         this.maxRetries = 3;
         this.hasLoggedWarning = false;
         try {
-            this.client = new ioredis_1.default({
-                host: env_1.env.redis.host,
-                port: env_1.env.redis.port,
-                password: env_1.env.redis.password,
-                db: env_1.env.redis.db,
+            this.client = new ioredis_1.default(env_1.env.redisUrl, {
                 retryStrategy: (times) => {
                     this.retryAttempts = times;
                     // 最大リトライ回数を超えたら諦める
@@ -45,7 +41,7 @@ class CacheService {
                 // 初回のエラーのみログ出力
                 if (this.retryAttempts <= 1 && !this.hasLoggedWarning) {
                     console.warn('[Redis] Redis is not available. Caching is disabled, but the app will continue to work.');
-                    console.warn('[Redis] To enable caching, start Redis server on localhost:6379');
+                    console.warn('[Redis] Check REDIS_URL environment variable:', env_1.env.redisUrl);
                 }
                 this.connected = false;
             });

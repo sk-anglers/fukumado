@@ -116,7 +116,7 @@ setInterval(() => {
  */
 function validateWebSocketMessage(message) {
     // メッセージタイプのホワイトリスト
-    const allowedTypes = ['subscribe', 'subscribe_streams', 'unsubscribe'];
+    const allowedTypes = ['subscribe', 'subscribe_streams', 'unsubscribe', 'heartbeat'];
     if (!message.type) {
         return { valid: false, reason: 'Missing message type' };
     }
@@ -174,8 +174,8 @@ class WebSocketHeartbeat {
                 ws.ping();
                 // Pongが返ってこない場合は接続を切断
                 const timeout = setTimeout(() => {
-                    console.warn('[WebSocket Heartbeat] No pong received, terminating connection');
-                    ws.terminate();
+                    console.warn('[WebSocket Heartbeat] No pong received, closing connection');
+                    ws.close(1001, 'No pong received');
                 }, this.pongTimeout);
                 // Pongを受信したらタイムアウトをクリア
                 ws.once('pong', () => {

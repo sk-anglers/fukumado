@@ -111,7 +111,8 @@ class TwitchChatService {
                     message: message,
                     timestamp: new Date().toLocaleTimeString('ja-JP', {
                         hour: '2-digit',
-                        minute: '2-digit'
+                        minute: '2-digit',
+                        timeZone: 'Asia/Tokyo'
                     }),
                     avatarColor: tags.color || this.getRandomColor(),
                     channelLogin: channelLogin,

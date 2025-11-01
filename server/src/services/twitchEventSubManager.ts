@@ -6,8 +6,11 @@ import { randomUUID } from 'crypto';
  * Twitch EventSub WebSocketの複数接続を管理するマネージャークラス
  *
  * 3本のWebSocket接続を管理し、負荷分散を行う
- * - 各接続: 最大10,000サブスクリプション（5,000チャンネル）
- * - 合計: 最大30,000サブスクリプション（15,000チャンネル）
+ * - 各接続: 最大300サブスクリプション（公式制限）
+ * - 合計: 最大900サブスクリプション（300 × 3接続）
+ * - 認証済みユーザーのサブスクリプションはコスト0（max_total_cost制限の対象外）
+ *
+ * 公式ドキュメント: https://dev.twitch.tv/docs/eventsub/handling-websocket-events
  */
 export class TwitchEventSubManager {
   private connections: TwitchEventSubConnection[] = [];
@@ -16,7 +19,7 @@ export class TwitchEventSubManager {
   private accessToken: string | null = null;
   private clientId: string | null = null;
   private readonly maxConnectionCount: number = 3;
-  private readonly maxSubscriptionsPerConnection: number = 10000;
+  private readonly maxSubscriptionsPerConnection: number = 300;
   private eventHistory: EventSubHistoryItem[] = [];
   private readonly maxHistorySize: number = 100; // 最大100件保持
 

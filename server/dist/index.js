@@ -3,8 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.analyticsTracker = exports.pvTracker = void 0;
+exports.getWebSocketStats = getWebSocketStats;
 const express_1 = __importDefault(require("express"));
 const express_session_1 = __importDefault(require("express-session"));
+const connect_redis_1 = __importDefault(require("connect-redis"));
+const ioredis_1 = __importDefault(require("ioredis"));
 const cors_1 = __importDefault(require("cors"));
 const http_1 = require("http");
 const ws_1 = require("ws");
@@ -26,21 +30,52 @@ const admin_1 = require("./routes/admin");
 const twitchChatService_1 = require("./services/twitchChatService");
 const streamSyncService_1 = require("./services/streamSyncService");
 const twitchService_1 = require("./services/twitchService");
+const maintenanceService_1 = require("./services/maintenanceService");
 const twitchEventSubManager_1 = require("./services/twitchEventSubManager");
 const twitchEventSubWebhookService_1 = require("./services/twitchEventSubWebhookService");
 const priorityManager_1 = require("./services/priorityManager");
 const security_2 = require("./middleware/security");
 const maintenanceMode_1 = require("./middleware/maintenanceMode");
+const adminAuth_1 = require("./middleware/adminAuth");
 const websocketSecurity_1 = require("./middleware/websocketSecurity");
 const logging_1 = require("./middleware/logging");
 const anomalyDetection_1 = require("./services/anomalyDetection");
 const metricsCollector_1 = require("./services/metricsCollector");
+const systemMetricsCollector_1 = require("./services/systemMetricsCollector");
 const sessionSecurity_1 = require("./middleware/sessionSecurity");
+const pvTracker_1 = require("./services/pvTracker");
+const pvCounter_1 = require("./middleware/pvCounter");
+const analyticsTracker_1 = require("./services/analyticsTracker");
+const analytics_1 = require("./routes/analytics");
 const app = (0, express_1.default)();
+// Renderのリバースプロキシを信頼
+app.set('trust proxy', true);
+// Redisクライアントの作成（ioredis）
+const redisClient = new ioredis_1.default(env_1.env.redisUrl, {
+    maxRetriesPerRequest: null,
+    retryStrategy: (times) => {
+        if (times > 10) {
+            console.error('[Redis] Max reconnection attempts reached');
+            return null;
+        }
+        return Math.min(times * 100, 3000);
+    }
+});
+redisClient.on('error', (err) => console.error('[Redis] Client Error:', err));
+redisClient.on('connect', () => console.log('[Redis] Client Connected'));
+redisClient.on('ready', () => console.log('[Redis] Client Ready'));
+redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...'));
+// PV計測サービスの初期化
+exports.pvTracker = new pvTracker_1.PVTracker(redisClient);
+console.log('[PVTracker] PV tracking service initialized');
+// アナリティクストラッキングサービスの初期化
+exports.analyticsTracker = new analyticsTracker_1.AnalyticsTracker(redisClient);
+(0, analytics_1.setAnalyticsTracker)(exports.analyticsTracker);
+console.log('[AnalyticsTracker] Analytics tracking service initialized');
 // CORS設定（モバイル対応 + 本番環境）
 const allowedOrigins = [
-    'http://localhost:5173',
-    'http://192.168.11.18:5173',
+    env_1.env.frontendUrl, // 環境変数から取得（デフォルト: localhost:5173）
+    'http://192.168.11.18:5173', // モバイル開発用（ローカルネットワーク）
     'http://127.0.0.1:5173'
 ];
 // 本番環境の場合は本番URLを追加
@@ -54,6 +89,7 @@ app.use((0, cors_1.default)({
     credentials: true
 }));
 // セキュリティミドルウェア
+app.use(security_2.generateNonce); // Nonce生成（CSP用）
 app.use(security_2.securityHeaders); // セキュリティヘッダー
 app.use(security_2.checkBlockedIP); // IPブロックチェック
 app.use(security_2.validateRequestSize); // リクエストサイズ検証
@@ -76,13 +112,14 @@ app.use((req, res, next) => {
 });
 // セッションミドルウェア（WebSocketでも使用するためexport）
 const sessionMiddleware = (0, express_session_1.default)({
+    store: new connect_redis_1.default({ client: redisClient }),
     secret: env_1.env.sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // 本番環境ではHTTPSのみ
-        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production', // 本番環境のみHTTPS必須
+        sameSite: 'lax', // Safari ITP対策（同一サイト内でのCookie送信を許可）
         maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
     }
 });
@@ -94,6 +131,8 @@ app.use((0, sessionSecurity_1.checkSessionTimeout)(30)); // 30分のタイムア
 app.use(sessionSecurity_1.includeCSRFToken); // CSRFトークンをレスポンスに含める
 // メンテナンスモードチェック（/healthは除外される）
 app.use(maintenanceMode_1.maintenanceMode);
+// PVカウントミドルウェア（ボット除外、API除外）
+app.use((0, pvCounter_1.createPVCounterMiddleware)(exports.pvTracker));
 app.get('/health', (_, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -113,19 +152,33 @@ app.use('/api/streams', security_2.apiRateLimiter, streams_1.streamsRouter);
 app.use('/api/security', security_2.apiRateLimiter, security_1.securityRouter);
 app.use('/api/consent', security_2.apiRateLimiter, consent_1.consentRouter);
 app.use('/api/legal', security_2.apiRateLimiter, legal_1.legalRouter);
-app.use('/api/admin/maintenance', maintenance_1.maintenanceRouter);
-app.use('/api/admin/users', users_1.usersRouter);
-app.use('/api/admin/logs', logs_1.logsRouter);
-app.use('/api/admin/eventsub', eventsub_1.eventsubRouter);
-app.use('/api/admin/cache', cache_1.cacheRouter);
-app.use('/api/admin/streams', adminStreams_1.adminStreamsRouter);
-app.use('/api/admin', admin_1.adminRouter);
+// 管理APIルーター（APIキー認証必須）
+app.use('/api/admin/maintenance', adminAuth_1.adminApiAuth, maintenance_1.maintenanceRouter);
+app.use('/api/admin/users', adminAuth_1.adminApiAuth, users_1.usersRouter);
+app.use('/api/admin/logs', adminAuth_1.adminApiAuth, logs_1.logsRouter);
+app.use('/api/admin/eventsub', adminAuth_1.adminApiAuth, eventsub_1.eventsubRouter);
+app.use('/api/admin/cache', adminAuth_1.adminApiAuth, cache_1.cacheRouter);
+app.use('/api/admin/streams', adminAuth_1.adminApiAuth, adminStreams_1.adminStreamsRouter);
+app.use('/api/admin', adminAuth_1.adminApiAuth, admin_1.adminRouter);
+app.use('/api/analytics', security_2.apiRateLimiter, analytics_1.analyticsRouter);
 // HTTPサーバーを作成
 const server = (0, http_1.createServer)(app);
 // WebSocketサーバーを作成
 const wss = new ws_1.WebSocketServer({ server, path: '/chat' });
 console.log('[WebSocket] WebSocket server initialized on path /chat');
 const clients = new Map();
+// クライアントタイムアウトチェック（60秒間メッセージがなければ切断）
+const CLIENT_TIMEOUT_MS = 60 * 1000; // 60秒
+setInterval(() => {
+    const now = Date.now();
+    clients.forEach((clientData, ws) => {
+        const timeSinceLastMessage = now - clientData.lastMessageAt;
+        if (timeSinceLastMessage > CLIENT_TIMEOUT_MS) {
+            console.warn(`[WebSocket] Client timeout detected: ${clientData.userId} (${Math.floor(timeSinceLastMessage / 1000)}s since last message)`);
+            ws.close(1001, 'Client timeout');
+        }
+    });
+}, 30 * 1000); // 30秒ごとにチェック
 // EventSubイベントハンドラー（全クライアントに通知）
 // 旧: 単一接続版（後方互換性のため保持）
 // twitchEventSubService.onStreamEvent((event) => {
@@ -216,6 +269,29 @@ twitchEventSubWebhookService_1.twitchEventSubWebhookService.onStreamEvent((event
         }
     });
 });
+// MaintenanceServiceのイベントハンドラー（メンテナンス状態変更を全クライアントに通知）
+maintenanceService_1.maintenanceService.on('statusChanged', (event) => {
+    console.log('[Maintenance] Status change event:', {
+        enabled: event.enabled,
+        message: event.message,
+        duration: event.duration
+    });
+    // 全クライアントに通知
+    const payload = JSON.stringify({
+        type: 'maintenance_status_changed',
+        enabled: event.enabled,
+        message: event.message,
+        enabledAt: event.enabledAt,
+        duration: event.duration,
+        scheduledEndAt: event.scheduledEndAt
+    });
+    clients.forEach((_, ws) => {
+        if (ws.readyState === ws_1.WebSocket.OPEN) {
+            ws.send(payload);
+            console.log('[Maintenance] Sent status change to client');
+        }
+    });
+});
 wss.on('connection', (ws, request) => {
     const clientIP = request.socket.remoteAddress || 'unknown';
     console.log(`[WebSocket] Client attempting connection from ${clientIP}`);
@@ -249,7 +325,8 @@ wss.on('connection', (ws, request) => {
             youtubeChannels: [],
             twitchChannels: [],
             youtubeAccessToken: session?.streamSyncTokens?.youtube,
-            twitchAccessToken: session?.streamSyncTokens?.twitch
+            twitchAccessToken: session?.streamSyncTokens?.twitch,
+            lastMessageAt: Date.now() // 初期化時の現在時刻
         };
         clients.set(ws, clientData);
         console.log(`[WebSocket] Client connected with session ID: ${clientData.userId}`);
@@ -296,6 +373,12 @@ wss.on('connection', (ws, request) => {
                 if (!validation.valid) {
                     console.warn(`[WebSocket Security] Invalid message from ${clientIP}: ${validation.reason}`);
                     ws.send(JSON.stringify({ type: 'error', error: validation.reason }));
+                    return;
+                }
+                // 最終メッセージ時刻を更新（タイムアウト検出用）
+                clientData.lastMessageAt = Date.now();
+                // ハートビートメッセージは何もせず終了
+                if (payload.type === 'heartbeat') {
                     return;
                 }
                 if (payload.type === 'subscribe') {
@@ -423,10 +506,31 @@ wss.on('connection', (ws, request) => {
         });
     }); // sessionMiddlewareコールバックの終了
 });
+/**
+ * WebSocket統計を取得（管理API用）
+ */
+function getWebSocketStats() {
+    const now = Date.now();
+    const CLIENT_TIMEOUT_MS = 60 * 1000; // 60秒
+    let activeConnections = 0;
+    clients.forEach((clientData) => {
+        const timeSinceLastMessage = now - clientData.lastMessageAt;
+        if (timeSinceLastMessage <= CLIENT_TIMEOUT_MS) {
+            activeConnections++;
+        }
+    });
+    return {
+        totalConnections: clients.size,
+        activeConnections: activeConnections,
+        zombieConnections: clients.size - activeConnections
+    };
+}
 server.listen(env_1.env.port, async () => {
     // eslint-disable-next-line no-console
     console.log(`[server] listening on http://localhost:${env_1.env.port}`);
     console.log('[server] StreamSyncService will start automatically when clients connect');
+    // SystemMetricsCollectorを開始
+    systemMetricsCollector_1.systemMetricsCollector.start();
     // EventSubが有効な場合の通知（接続は管理者ログイン時に実行）
     if (env_1.env.enableEventSub) {
         console.log('[server] EventSub is enabled');

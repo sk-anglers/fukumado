@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchChannelEmotes = exports.fetchGlobalEmotes = exports.searchChannels = exports.fetchLiveStreams = exports.fetchFollowedChannels = void 0;
+exports.fetchChannelsByIds = exports.fetchChannelEmotes = exports.fetchGlobalEmotes = exports.searchChannels = exports.fetchLiveStreams = exports.fetchFollowedChannels = void 0;
 const env_1 = require("../config/env");
 const emoteCacheService_1 = require("./emoteCacheService");
 const followedChannelsCacheService_1 = require("./followedChannelsCacheService");
@@ -224,4 +224,62 @@ const fetchChannelEmotes = async (accessToken, broadcasterId) => {
     return emotes;
 };
 exports.fetchChannelEmotes = fetchChannelEmotes;
+/**
+ * ユーザーIDのリストからチャンネル情報を取得
+ * @param accessToken Twitchアクセストークン
+ * @param userIds ユーザーIDの配列（最大100件ずつ処理）
+ * @returns チャンネル情報の配列
+ */
+const fetchChannelsByIds = async (accessToken, userIds) => {
+    if (userIds.length === 0)
+        return [];
+    console.log('[Twitch Service] Fetching channel info for user IDs:', userIds.length);
+    const headers = buildHeaders(accessToken);
+    const allChannels = [];
+    // ユーザーIDを100件ずつのバッチに分割
+    const batchSize = 100;
+    const batches = [];
+    for (let i = 0; i < userIds.length; i += batchSize) {
+        batches.push(userIds.slice(i, i + batchSize));
+    }
+    console.log(`[Twitch Service] Split into ${batches.length} batches of up to ${batchSize} user IDs`);
+    // 各バッチに対してAPIリクエストを実行
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        const params = new URLSearchParams();
+        batch.forEach((id) => params.append('id', id));
+        console.log(`[Twitch Service] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} user IDs)`);
+        const response = await (0, apiTracker_1.trackedTwitchRequest)(`${TWITCH_BASE}/users?${params.toString()}`, {
+            method: 'GET',
+            headers
+        }, 'GET /helix/users');
+        if (response.statusCode >= 400) {
+            const text = await response.body.text();
+            // 429 Rate Limitエラーの特別処理
+            if (response.statusCode === 429) {
+                const retryAfter = response.headers['retry-after'] || response.headers['ratelimit-reset'];
+                console.error('[Twitch Service] ⚠️ Rate limit exceeded!');
+                console.error(`[Twitch Service] Retry-After: ${retryAfter || '不明'}`);
+                console.error('[Twitch Service] APIリクエストの頻度が高すぎます。しばらく待ってから再試行してください。');
+                const retryMessage = retryAfter
+                    ? `${retryAfter}秒後に再試行してください`
+                    : 'しばらく待ってから再試行してください';
+                throw new Error(`Twitch APIのレート制限に達しました。${retryMessage}`);
+            }
+            console.error(`[Twitch Service] Batch ${batchIndex + 1} error:`, text);
+            throw new Error(`Failed to fetch Twitch users: ${response.statusCode} - ${text}`);
+        }
+        const data = (await response.body.json());
+        console.log(`[Twitch Service] Batch ${batchIndex + 1} returned ${data.data.length} users`);
+        const channels = data.data.map((item) => ({
+            id: item.id,
+            login: item.login,
+            displayName: item.display_name
+        }));
+        allChannels.push(...channels);
+    }
+    console.log(`[Twitch Service] Total channels fetched: ${allChannels.length}`);
+    return allChannels;
+};
+exports.fetchChannelsByIds = fetchChannelsByIds;
 //# sourceMappingURL=twitchService.js.map
