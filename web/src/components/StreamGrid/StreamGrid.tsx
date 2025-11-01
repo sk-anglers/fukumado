@@ -4,7 +4,7 @@ import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useChatStore } from '../../stores/chatStore';
-import { ChatBubbleLeftRightIcon, SpeakerWaveIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon, SpeakerWaveIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { apiFetch } from '../../utils/api';
 import type { ChatMessage } from '../../types';
 import styles from './StreamGrid.module.css';
@@ -97,6 +97,8 @@ export const StreamGrid = (): JSX.Element => {
   const [showReadyNotification, setShowReadyNotification] = useState(false);
   const [showLoadingPopup, setShowLoadingPopup] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [showReloadPopup, setShowReloadPopup] = useState(false);
+  const hasPlayedStatesRef = useRef<Record<string, boolean>>({});
 
   const messages = useChatStore((state) => state.messages);
 
@@ -171,6 +173,29 @@ export const StreamGrid = (): JSX.Element => {
       setShowReadyNotification(false);
     }
   }, [mutedAll, showReadyNotification]);
+
+  // モバイルで再生停止を検知してリロードを促す
+  useEffect(() => {
+    if (!isMobile) return;
+
+    // 配信が割り当てられているスロットを取得
+    const assignedSlots = slots.slice(0, activeSlotsCount).filter((slot) => slot.assignedStream);
+
+    assignedSlots.forEach((slot) => {
+      const isPlaying = slotPlayingStates[slot.id] === true;
+      const hasPlayed = hasPlayedStatesRef.current[slot.id] === true;
+
+      // 一度でも再生開始したことを記録
+      if (isPlaying && !hasPlayed) {
+        hasPlayedStatesRef.current[slot.id] = true;
+      }
+
+      // 一度再生開始後に停止した場合、リロードポップアップを表示
+      if (hasPlayed && !isPlaying && !showReloadPopup) {
+        setShowReloadPopup(true);
+      }
+    });
+  }, [isMobile, slots, activeSlotsCount, slotPlayingStates, showReloadPopup]);
 
   // activeSlotsをメモ化（slots配列またはactiveSlotsCountが変わったときのみ再計算）
   const activeSlots = useMemo(() => slots.slice(0, activeSlotsCount), [slots, activeSlotsCount]);
@@ -330,6 +355,24 @@ export const StreamGrid = (): JSX.Element => {
               全配信の準備が完了しました！<br />
               ヘッダーのスピーカーアイコンをタップして音声をONにしてください
             </p>
+          </div>
+        </div>
+      )}
+      {/* モバイル用リロード通知 */}
+      {isMobile && showReloadPopup && (
+        <div className={styles.reloadNotification}>
+          <div className={styles.reloadNotificationContent}>
+            <p className={styles.reloadNotificationText}>
+              配信が停止しました
+            </p>
+            <button
+              type="button"
+              className={styles.reloadButton}
+              onClick={() => window.location.reload()}
+            >
+              <ArrowPathIcon className={styles.reloadButtonIcon} />
+              <span>リロード</span>
+            </button>
           </div>
         </div>
       )}
