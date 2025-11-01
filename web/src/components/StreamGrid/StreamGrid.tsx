@@ -9,7 +9,7 @@ import { apiFetch } from '../../utils/api';
 import type { ChatMessage } from '../../types';
 import styles from './StreamGrid.module.css';
 import { StreamSlotCard } from './StreamSlot/StreamSlot';
-import { useIsMobile, useIsLandscape } from '../../hooks/useMediaQuery';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 
 // メッセージテキストをエモート画像付きでレンダリング
 const renderMessageWithEmotes = (message: ChatMessage) => {
@@ -86,7 +86,6 @@ export const StreamGrid = (): JSX.Element => {
   }), shallow);
 
   const isMobile = useIsMobile();
-  const isLandscape = useIsLandscape();
 
   const autoHideTimerRef = useRef<number | null>(null);
   const initialMuteAppliedRef = useRef(false);
@@ -116,20 +115,12 @@ export const StreamGrid = (): JSX.Element => {
     }
   }, [isMobile, toggleMuteAll]);
 
-  // モバイルで画面の向きに応じてスロット数と全画面表示を変更
+  // モバイルで初回アクセス時にスロット数を設定（横向き/縦向き関係なく常に3枠）
   useEffect(() => {
-    if (isMobile) {
-      if (isLandscape) {
-        // 横向き：2枠表示 + 全画面モード
-        setActiveSlotsCount(2);
-        setFullscreen(true);
-      } else {
-        // 縦向き：3枠表示 + 全画面解除
-        setActiveSlotsCount(3);
-        setFullscreen(false);
-      }
+    if (isMobile && activeSlotsCount !== 3) {
+      setActiveSlotsCount(3);
     }
-  }, [isMobile, isLandscape, setActiveSlotsCount, setFullscreen]);
+  }, [isMobile, activeSlotsCount, setActiveSlotsCount]);
 
   // モバイルで準備中ポップアップと再生開始通知を管理
   useEffect(() => {
