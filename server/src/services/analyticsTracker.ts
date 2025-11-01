@@ -232,26 +232,26 @@ export class AnalyticsTracker {
         },
         layout: {
           slotsDistribution: this.convertToNumberRecord(layoutSlots),
-          presetDistribution: layoutPreset as Record<LayoutPreset, number>
+          presetDistribution: layoutPreset as unknown as Record<LayoutPreset, number>
         },
         device: {
-          distribution: devices as Record<DeviceType, number>,
+          distribution: devices as unknown as Record<DeviceType, number>,
           screenSizes: screenSizesArray
         },
         buttons: {
-          clicks: buttons as Record<ButtonType, number>
+          clicks: buttons as unknown as Record<ButtonType, number>
         },
         features: {
-          usage: features as Record<FeatureType, number>,
-          platformUsage: platforms as Record<Platform, number>
+          usage: features as unknown as Record<FeatureType, number>,
+          platformUsage: platforms as unknown as Record<Platform, number>
         },
         streams: {
-          actions: streamActions as Record<StreamActionType, number>,
-          platformActions: streamPlatforms as Record<Platform, number>
+          actions: streamActions as unknown as Record<StreamActionType, number>,
+          platformActions: streamPlatforms as unknown as Record<Platform, number>
         },
         auth: {
-          logins: authLogins as Record<Platform, number>,
-          logouts: authLogouts as Record<Platform, number>
+          logins: authLogins as unknown as Record<Platform, number>,
+          logouts: authLogouts as unknown as Record<Platform, number>
         },
         sessions: {
           averageDuration: await this.getAverageSessionDuration(days),
