@@ -465,7 +465,7 @@
 /* モバイル用準備中ポップアップ */
 .loadingPopup {
   position: fixed;
-  top: 1rem;
+  top: calc(60px + 0.5rem);
   left: 0;
   right: 0;
   z-index: 9998;
@@ -518,7 +518,7 @@
 /* モバイル用準備完了通知 */
 .readyNotification {
   position: fixed;
-  top: 1rem;
+  top: calc(60px + 0.5rem);
   left: 0;
   right: 0;
   z-index: 9998;
@@ -582,7 +582,7 @@
 /* モバイル用リロード通知 */
 .reloadNotification {
   position: fixed;
-  top: 1rem;
+  top: calc(60px + 0.5rem);
   left: 0;
   right: 0;
   z-index: 9999;
