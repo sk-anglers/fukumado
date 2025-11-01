@@ -2,6 +2,7 @@ import * as WS from 'ws';
 import { twitchConduitClient } from './twitchConduitClient';
 import { getTwitchAppAccessToken } from './twitchAppAuth';
 import { env } from '../config/env';
+import { metricsCollector } from './metricsCollector';
 import type { Conduit, ConduitShard, ConduitStats } from '../types/conduit';
 import type { StreamEvent, StreamEventHandler } from '../types/eventsub';
 
@@ -12,8 +13,10 @@ interface WebSocketConnection {
   ws: WS.WebSocket;
   sessionId: string;
   shardId: string;
-  status: 'connecting' | 'connected' | 'disconnected' | 'error';
+  status: 'connecting' | 'connected' | 'disconnected' | 'error' | 'reconnecting';
   connectedAt: Date | null;
+  reconnectAttempts: number;
+  reconnectTimer?: NodeJS.Timeout;
 }
 
 /**
@@ -44,89 +47,120 @@ export class TwitchConduitManager {
   public async initialize(): Promise<void> {
     console.log('[Conduit Manager] Initializing Conduit...');
 
-    // 既存Conduit確認
-    const existingConduits = await twitchConduitClient.getConduits();
+    try {
+      // 既存Conduit確認
+      const existingConduits = await twitchConduitClient.getConduits();
 
-    if (existingConduits.length > 0) {
-      this.conduitId = existingConduits[0].id;
-      console.log(`[Conduit Manager] Using existing Conduit: ${this.conduitId}`);
+      if (existingConduits.length > 0) {
+        this.conduitId = existingConduits[0].id;
+        console.log(`[Conduit Manager] Using existing Conduit: ${this.conduitId}`);
 
-      // 既存シャード情報を取得
-      const shardsResponse = await twitchConduitClient.getShards(this.conduitId);
-      console.log(`[Conduit Manager] Found ${shardsResponse.data.length} existing shard(s)`);
-    } else {
-      // 新規Conduit作成
-      console.log(`[Conduit Manager] Creating new Conduit with ${this.initialShardCount} shard capacity...`);
-      const conduit = await twitchConduitClient.createConduit(this.initialShardCount);
-      this.conduitId = conduit.id;
-      console.log(`[Conduit Manager] Conduit created: ${this.conduitId}`);
+        // 既存シャード情報を取得
+        const shardsResponse = await twitchConduitClient.getShards(this.conduitId);
+        console.log(`[Conduit Manager] Found ${shardsResponse.data.length} existing shard(s)`);
+      } else {
+        // 新規Conduit作成
+        console.log(`[Conduit Manager] Creating new Conduit with ${this.initialShardCount} shard capacity...`);
+        const conduit = await twitchConduitClient.createConduit(this.initialShardCount);
+        this.conduitId = conduit.id;
+        console.log(`[Conduit Manager] Conduit created: ${this.conduitId}`);
+      }
+    } catch (error) {
+      console.error('[Conduit Manager] Failed to initialize Conduit:', error);
+      metricsCollector.incrementCounter('conduit_api_errors_total');
+      throw error;
     }
   }
 
   /**
    * 新しいWebSocket接続を作成してシャードとして登録
    */
-  public async createWebSocketShard(shardId: string): Promise<void> {
+  public async createWebSocketShard(shardId: string, retryCount: number = 3): Promise<void> {
     if (!this.conduitId) {
       throw new Error('Conduit not initialized. Call initialize() first.');
     }
 
-    console.log(`[Conduit Manager] Creating WebSocket shard #${shardId}...`);
+    let lastError: Error | null = null;
 
-    // WebSocket接続を確立
-    const wsUrl = 'wss://eventsub.wss.twitch.tv/ws';
-    const ws = new WS.WebSocket(wsUrl);
+    for (let attempt = 1; attempt <= retryCount; attempt++) {
+      try {
+        console.log(`[Conduit Manager] Creating WebSocket shard #${shardId} (attempt ${attempt}/${retryCount})...`);
 
-    // 接続情報を保存
-    const connection: WebSocketConnection = {
-      ws,
-      sessionId: '',
-      shardId,
-      status: 'connecting',
-      connectedAt: null
-    };
-    this.connections.set(shardId, connection);
+        // WebSocket接続を確立
+        const wsUrl = 'wss://eventsub.wss.twitch.tv/ws';
+        const ws = new WS.WebSocket(wsUrl);
 
-    // 接続確立を待機
-    await new Promise<void>((resolve, reject) => {
-      ws.on('open', () => {
-        console.log(`[Conduit Manager] Shard #${shardId} WebSocket connected`);
-        connection.status = 'connected';
-        connection.connectedAt = new Date();
-        resolve();
-      });
+        // 接続情報を保存
+        const connection: WebSocketConnection = {
+          ws,
+          sessionId: '',
+          shardId,
+          status: 'connecting',
+          connectedAt: null,
+          reconnectAttempts: 0
+        };
+        this.connections.set(shardId, connection);
 
-      ws.on('error', (error) => {
-        console.error(`[Conduit Manager] Shard #${shardId} WebSocket error:`, error);
-        connection.status = 'error';
-        reject(error);
-      });
-    });
+        // 接続確立を待機
+        await new Promise<void>((resolve, reject) => {
+          ws.on('open', () => {
+            console.log(`[Conduit Manager] Shard #${shardId} WebSocket connected`);
+            connection.status = 'connected';
+            connection.connectedAt = new Date();
+            resolve();
+          });
 
-    // セッションIDを取得
-    const sessionId = await this.waitForSessionId(ws, shardId);
-    connection.sessionId = sessionId;
+          ws.on('error', (error) => {
+            console.error(`[Conduit Manager] Shard #${shardId} WebSocket error:`, error);
+            connection.status = 'error';
+            reject(error);
+          });
+        });
 
-    console.log(`[Conduit Manager] Shard #${shardId} session ID: ${sessionId}`);
+        // セッションIDを取得
+        const sessionId = await this.waitForSessionId(ws, shardId);
+        connection.sessionId = sessionId;
 
-    // シャードを登録
-    await twitchConduitClient.updateShards({
-      conduit_id: this.conduitId,
-      shards: [
-        {
-          id: shardId,
-          transport: {
-            method: 'websocket',
-            session_id: sessionId
-          }
+        console.log(`[Conduit Manager] Shard #${shardId} session ID: ${sessionId}`);
+
+        // シャードを登録
+        await twitchConduitClient.updateShards({
+          conduit_id: this.conduitId,
+          shards: [
+            {
+              id: shardId,
+              transport: {
+                method: 'websocket',
+                session_id: sessionId
+              }
+            }
+          ]
+        });
+
+        console.log(`[Conduit Manager] Shard #${shardId} registered successfully`);
+
+        // メッセージハンドラーを設定
+        this.setupMessageHandlers(ws, shardId);
+
+        // 成功
+        return;
+      } catch (error) {
+        lastError = error as Error;
+        console.error(`[Conduit Manager] Shard #${shardId} creation failed (attempt ${attempt}/${retryCount}):`, error);
+        metricsCollector.incrementCounter('conduit_shard_failures_total');
+
+        // 最後の試行でない場合は待機してリトライ
+        if (attempt < retryCount) {
+          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // 指数バックオフ（最大10秒）
+          console.log(`[Conduit Manager] Retrying shard #${shardId} in ${waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         }
-      ]
-    });
+      }
+    }
 
-    console.log(`[Conduit Manager] Shard #${shardId} registered successfully`);
-
-    // メッセージハンドラーを設定
-    this.setupMessageHandlers(ws, shardId);
+    // 全ての試行が失敗
+    console.error(`[Conduit Manager] Failed to create shard #${shardId} after ${retryCount} attempts`);
+    throw lastError || new Error(`Failed to create shard #${shardId}`);
   }
 
   /**
@@ -194,13 +228,21 @@ export class TwitchConduitManager {
             break;
 
           case 'session_reconnect':
-            console.log(`[Conduit Manager] Shard #${shardId} reconnect requested`);
-            // TODO: 再接続処理
+            console.log(`[Conduit Manager] Shard #${shardId} reconnect requested by Twitch`);
+            const reconnectUrl = message.payload?.session?.reconnect_url;
+            if (reconnectUrl) {
+              this.reconnectShard(shardId, reconnectUrl);
+            } else {
+              console.error(`[Conduit Manager] Shard #${shardId} reconnect URL missing`);
+              this.reconnectShard(shardId);
+            }
             break;
 
           case 'revocation':
             console.log(`[Conduit Manager] Shard #${shardId} subscription revoked`);
-            // TODO: サブスクリプション削除
+            const subscriptionType = message.metadata?.subscription_type;
+            const condition = message.payload?.subscription?.condition;
+            console.log(`[Conduit Manager] Revoked: ${subscriptionType}`, condition);
             break;
         }
       } catch (error) {
@@ -213,8 +255,13 @@ export class TwitchConduitManager {
       const connection = this.connections.get(shardId);
       if (connection) {
         connection.status = 'disconnected';
+
+        // 自動再接続（正常終了コード以外）
+        if (code !== 1000) {
+          console.log(`[Conduit Manager] Shard #${shardId} unexpected close, initiating reconnect...`);
+          this.reconnectShard(shardId);
+        }
       }
-      // TODO: 自動再接続
     });
 
     ws.on('error', (error) => {
@@ -223,7 +270,105 @@ export class TwitchConduitManager {
       if (connection) {
         connection.status = 'error';
       }
+      metricsCollector.incrementCounter('conduit_websocket_errors_total');
     });
+  }
+
+  /**
+   * シャードを再接続
+   */
+  private async reconnectShard(shardId: string, reconnectUrl?: string): Promise<void> {
+    const connection = this.connections.get(shardId);
+    if (!connection) {
+      console.error(`[Conduit Manager] Cannot reconnect shard #${shardId}: connection not found`);
+      return;
+    }
+
+    // 既存の再接続タイマーをクリア
+    if (connection.reconnectTimer) {
+      clearTimeout(connection.reconnectTimer);
+    }
+
+    // 最大再接続試行回数チェック
+    const maxReconnectAttempts = 10;
+    if (connection.reconnectAttempts >= maxReconnectAttempts) {
+      console.error(`[Conduit Manager] Shard #${shardId} exceeded max reconnect attempts (${maxReconnectAttempts})`);
+      connection.status = 'error';
+      metricsCollector.incrementCounter('conduit_reconnection_failures_total');
+      return;
+    }
+
+    connection.reconnectAttempts++;
+    connection.status = 'reconnecting';
+
+    // 指数バックオフで再接続待機時間を計算
+    const backoffMs = Math.min(1000 * Math.pow(2, connection.reconnectAttempts - 1), 30000); // 最大30秒
+    console.log(`[Conduit Manager] Shard #${shardId} reconnecting in ${backoffMs}ms (attempt ${connection.reconnectAttempts}/${maxReconnectAttempts})...`);
+
+    connection.reconnectTimer = setTimeout(async () => {
+      try {
+        // 古いWebSocketをクリーンアップ
+        connection.ws.removeAllListeners();
+        connection.ws.close();
+
+        // 新しいWebSocket接続を作成
+        const wsUrl = reconnectUrl || 'wss://eventsub.wss.twitch.tv/ws';
+        const ws = new WS.WebSocket(wsUrl);
+        connection.ws = ws;
+        connection.status = 'connecting';
+
+        // 接続確立を待機
+        await new Promise<void>((resolve, reject) => {
+          ws.on('open', () => {
+            console.log(`[Conduit Manager] Shard #${shardId} reconnected successfully`);
+            connection.status = 'connected';
+            connection.connectedAt = new Date();
+            connection.reconnectAttempts = 0; // リセット
+            metricsCollector.incrementCounter('conduit_reconnections_total');
+            resolve();
+          });
+
+          ws.on('error', (error) => {
+            console.error(`[Conduit Manager] Shard #${shardId} reconnect error:`, error);
+            connection.status = 'error';
+            reject(error);
+          });
+        });
+
+        // セッションIDを取得
+        const sessionId = await this.waitForSessionId(ws, shardId);
+        connection.sessionId = sessionId;
+
+        console.log(`[Conduit Manager] Shard #${shardId} new session ID: ${sessionId}`);
+
+        // シャードを再登録
+        if (this.conduitId) {
+          await twitchConduitClient.updateShards({
+            conduit_id: this.conduitId,
+            shards: [
+              {
+                id: shardId,
+                transport: {
+                  method: 'websocket',
+                  session_id: sessionId
+                }
+              }
+            ]
+          });
+
+          console.log(`[Conduit Manager] Shard #${shardId} re-registered successfully`);
+        }
+
+        // メッセージハンドラーを再設定
+        this.setupMessageHandlers(ws, shardId);
+      } catch (error) {
+        console.error(`[Conduit Manager] Shard #${shardId} reconnection failed:`, error);
+        metricsCollector.incrementCounter('conduit_reconnection_failures_total');
+
+        // 再度再接続を試行
+        this.reconnectShard(shardId, reconnectUrl);
+      }
+    }, backoffMs);
   }
 
   /**
