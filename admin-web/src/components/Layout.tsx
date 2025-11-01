@@ -32,13 +32,24 @@ const navItems: NavItem[] = [
   { id: 'maintenance', label: 'メンテナンス', path: '/maintenance', icon: '🔧' }
 ];
 
+/**
+ * セキュリティバッジコンポーネント
+ * このコンポーネントのみがunreadAlertCountの変更をサブスクライブする
+ */
+const SecurityBadge: React.FC = () => {
+  const unreadAlertCount = useSecurityStore(state => state.unreadAlertCount);
+
+  if (unreadAlertCount === 0) {
+    return null;
+  }
+
+  return <span className={styles.badge}>{unreadAlertCount}</span>;
+};
+
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
 
   console.log('[DEBUG] Layout: Rendering');
-
-  // 値だけ取得（表示用） - ConnectionStatusは内部でサブスクライブするので不要
-  const unreadAlertCount = useSecurityStore(state => state.unreadAlertCount);
 
   // WebSocket接続とメッセージ処理
   useEffect(() => {
@@ -132,9 +143,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 >
                   <span className={styles.navIcon}>{item.icon}</span>
                   <span className={styles.navLabel}>{item.label}</span>
-                  {item.id === 'security' && unreadAlertCount > 0 && (
-                    <span className={styles.badge}>{unreadAlertCount}</span>
-                  )}
+                  {item.id === 'security' && <SecurityBadge />}
                 </Link>
               );
             })}
