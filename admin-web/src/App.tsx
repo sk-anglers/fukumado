@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { Dashboard, System, Security, Maintenance, Streams, Users, Logs, EventSub, Cache, ApiMonitor, PVStats } from './components/pages';
+import { Dashboard, System, Security, Maintenance, Streams, Users, Logs, EventSub, Cache, ApiMonitor, PVStats, Analytics } from './components/pages';
 import { setAuthCredentials } from './services/apiClient';
 import styles from './App.module.css';
 
@@ -118,6 +118,7 @@ function App() {
           <Route path="/cache" element={<Cache />} />
           <Route path="/api-monitor" element={<ApiMonitor />} />
           <Route path="/pv-stats" element={<PVStats />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/maintenance" element={<Maintenance />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

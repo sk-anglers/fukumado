@@ -26,7 +26,8 @@ import {
   CacheInfoResponse,
   CacheKeysResponse,
   CacheKeyValueResponse,
-  PVStats
+  PVStats,
+  AnalyticsStats
 } from '../types';
 
 /**
@@ -631,4 +632,54 @@ export const backupPVStats = async (): Promise<void> => {
   await fetchAPI('/pv/backup', {
     method: 'POST'
   });
+};
+
+// ========================================
+// アナリティクス統計API
+// ========================================
+
+/**
+ * アナリティクス統計を取得
+ * @param days 取得する日数（デフォルト: 30日）
+ */
+export const getAnalyticsStats = async (days: number = 30): Promise<AnalyticsStats | null> => {
+  try {
+    const response = await fetchAPI<AnalyticsStats>(`/analytics/stats?days=${days}`);
+    return response || null;
+  } catch (error) {
+    console.error('[API] Failed to fetch analytics stats:', error);
+    return null;
+  }
+};
+
+/**
+ * アナリティクス統計をエクスポート
+ * @param format エクスポート形式（json | csv）
+ * @param days 取得する日数（デフォルト: 30日）
+ */
+export const exportAnalyticsStats = async (format: 'json' | 'csv', days: number = 30): Promise<void> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/analytics/export?format=${format}&days=${days}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`);
+    }
+
+    // ファイルとしてダウンロード
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-stats-${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error('[API] Failed to export analytics stats:', error);
+    throw error;
+  }
 };

@@ -710,3 +710,123 @@ export interface PVStats {
   monthly: PVMonthlyStats[]; // 過去12ヶ月分
   timestamp: string;      // ISO 8601形式
 }
+
+// ========================================
+// アナリティクス統計型定義
+// ========================================
+
+/**
+ * レイアウトプリセット
+ */
+export type LayoutPreset = 'twoByTwo' | 'oneByTwo' | 'focus';
+
+/**
+ * デバイスタイプ
+ */
+export type DeviceType = 'mobile' | 'tablet' | 'desktop';
+
+/**
+ * プラットフォーム
+ */
+export type Platform = 'youtube' | 'twitch' | 'niconico';
+
+/**
+ * ボタンタイプ
+ */
+export type ButtonType =
+  | 'sync_start'
+  | 'sync_stop'
+  | 'mute_all'
+  | 'fullscreen'
+  | 'layout_preset'
+  | 'slot_add'
+  | 'slot_remove'
+  | 'stream_search'
+  | 'auth_youtube'
+  | 'auth_twitch'
+  | 'logout';
+
+/**
+ * 機能タイプ
+ */
+export type FeatureType =
+  | 'chat'
+  | 'emote'
+  | 'search'
+  | 'sync'
+  | 'quality_change';
+
+/**
+ * 配信アクションタイプ
+ */
+export type StreamActionType =
+  | 'assign'
+  | 'clear'
+  | 'mute'
+  | 'unmute'
+  | 'volume_change'
+  | 'quality_change'
+  | 'swap';
+
+/**
+ * アナリティクス統計
+ */
+export interface AnalyticsStats {
+  // 全体統計
+  total: {
+    events: number;
+    sessions: number;
+    uniqueUsers: number;
+  };
+
+  // レイアウト統計
+  layout: {
+    slotsDistribution: Record<number, number>;  // 分割数別の使用回数
+    presetDistribution: Record<LayoutPreset, number>;  // プリセット別の使用回数
+  };
+
+  // デバイス統計
+  device: {
+    distribution: Record<DeviceType, number>;  // デバイス別の使用回数
+    screenSizes: Array<{ width: number; height: number; count: number }>;
+  };
+
+  // ボタン統計
+  buttons: {
+    clicks: Record<ButtonType, number>;  // ボタン別のクリック数
+  };
+
+  // 機能統計
+  features: {
+    usage: Record<FeatureType, number>;  // 機能別の使用回数
+    platformUsage: Record<Platform, number>;  // プラットフォーム別の使用回数
+  };
+
+  // 配信操作統計
+  streams: {
+    actions: Record<StreamActionType, number>;  // アクション別の実行回数
+    platformActions: Record<Platform, number>;  // プラットフォーム別の操作回数
+  };
+
+  // 認証統計
+  auth: {
+    logins: Record<Platform, number>;   // プラットフォーム別のログイン回数
+    logouts: Record<Platform, number>;  // プラットフォーム別のログアウト回数
+  };
+
+  // セッション統計
+  sessions: {
+    averageDuration: number;  // 平均セッション時間（ミリ秒）
+    averagePageViews: number; // 平均ページビュー数
+  };
+
+  // 時系列データ
+  timeline: {
+    daily: Array<{
+      date: string;
+      events: number;
+      sessions: number;
+      uniqueUsers: number;
+    }>;
+  };
+}
