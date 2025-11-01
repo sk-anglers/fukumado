@@ -586,8 +586,8 @@ export const clearApiLogs = async (service?: 'twitch' | 'youtube' | 'other'): Pr
  */
 export const getPVStats = async (): Promise<PVStats | null> => {
   try {
-    const response = await fetchAPI<ApiResponse<PVStats>>('/pv/stats');
-    return response.data || null;
+    const response = await fetchAPI<PVStats>('/pv/stats');
+    return response || null;
   } catch (error) {
     console.error('[API] Failed to fetch PV stats:', error);
     return null;
