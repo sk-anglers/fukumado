@@ -121,8 +121,8 @@ export const StreamGrid = (): JSX.Element => {
         setActiveSlotsCount(2);
         setFullscreen(true);
       } else {
-        // 縦向き：4枠表示 + 全画面解除
-        setActiveSlotsCount(4);
+        // 縦向き：3枠表示 + 全画面解除
+        setActiveSlotsCount(3);
         setFullscreen(false);
       }
     }
