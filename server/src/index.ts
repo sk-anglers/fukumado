@@ -607,12 +607,26 @@ wss.on('connection', (ws, request) => {
       }
     }
 
-    // StreamSyncServiceからユーザーを削除
-    streamSyncService.unregisterUser(clientData.userId);
-    console.log(`[WebSocket] Unregistered user ${clientData.userId} from StreamSyncService`);
-
+    // 現在の接続を削除
     clients.delete(ws);
     console.log(`[WebSocket] Total clients: ${clients.size}`);
+
+    // 同じuserIdを持つ他の接続が存在するかチェック
+    let hasOtherConnection = false;
+    for (const [, otherData] of clients) {
+      if (otherData.userId === clientData.userId) {
+        hasOtherConnection = true;
+        break;
+      }
+    }
+
+    // 他の接続がない場合のみStreamSyncServiceからユーザーを削除
+    if (!hasOtherConnection) {
+      streamSyncService.unregisterUser(clientData.userId);
+      console.log(`[WebSocket] Unregistered user ${clientData.userId} from StreamSyncService`);
+    } else {
+      console.log(`[WebSocket] User ${clientData.userId} has other active connections, keeping registered`);
+    }
   });
 
   ws.on('error', (error) => {
