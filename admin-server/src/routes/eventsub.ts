@@ -86,6 +86,31 @@ eventsubRouter.get('/subscriptions', async (req, res) => {
         totalChannels: number;
         channelIds: string[];
         subscriptions: any[];
+        allChannels?: {
+          total: number;
+          realtime: Array<{
+            channelId: string;
+            channelLogin?: string;
+            channelDisplayName?: string;
+            userCount: number;
+            priority: string;
+            method: string;
+          }>;
+          delayed: Array<{
+            channelId: string;
+            channelLogin?: string;
+            channelDisplayName?: string;
+            userCount: number;
+            priority: string;
+            method: string;
+          }>;
+        };
+        priorityStats?: {
+          totalUsers: number;
+          totalChannels: number;
+          realtimeChannels: number;
+          delayedChannels: number;
+        };
       };
       timestamp: string;
     }>('/api/admin/eventsub/subscriptions');
