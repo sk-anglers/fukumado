@@ -110,6 +110,9 @@ class TwitchChatService {
       this.client = new tmi.Client(clientOptions);
 
       this.client.on('message', (channel, tags, message, self) => {
+        // メッセージイベント発火の確認（最優先ログ）
+        console.log(`[Twitch Chat Service] >>> MESSAGE EVENT FIRED <<< Channel: ${channel}, User: ${tags.username}, Self: ${self}`);
+
         try {
           // メッセージ受信時刻を記録
           this.lastMessageReceivedAt = new Date();
@@ -178,9 +181,11 @@ class TwitchChatService {
           };
 
           // すべてのハンドラーに通知
+          console.log(`[Twitch Chat Service] Notifying ${this.messageHandlers.size} handlers with message from ${chatMessage.author}`);
           this.messageHandlers.forEach((handler) => {
             try {
               handler(chatMessage);
+              console.log('[Twitch Chat Service] Handler executed successfully');
             } catch (error) {
               console.error('[Twitch Chat] Error in message handler:', error);
             }
