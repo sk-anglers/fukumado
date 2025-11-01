@@ -15,8 +15,9 @@ const getMaxSlotsForDevice = (): number => {
   const isMobile = window.matchMedia('(max-width: 768px)').matches;
   if (!isMobile) return TOTAL_SLOT_CAPACITY;
 
-  // モバイルは向きに関わらず2画面まで（Chromeブラウザの動画再生制限対応）
-  return 2;
+  // モバイルは画面の向きに応じて最大スロット数を変更
+  const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+  return isLandscape ? 2 : 4; // 横向き: 2枠、縦向き: 4枠
 };
 
 const createInitialSlots = (): StreamSlot[] =>
