@@ -159,19 +159,19 @@ export const StreamGrid = (): JSX.Element => {
     console.log('[StreamGrid] 全スロット準備完了:', allReady);
 
     if (allReady) {
-      console.log('[StreamGrid] 全スロット再生準備完了 - 3秒後に自動ミュート解除を実行');
+      console.log('[StreamGrid] 全スロット再生準備完了 - 5秒後に自動ミュート解除を実行');
 
       // 既存のタイマーをクリア
       if (autoUnmuteTimerRef.current !== null) {
         window.clearTimeout(autoUnmuteTimerRef.current);
       }
 
-      // 3秒後に自動ミュート解除
+      // 5秒後に自動ミュート解除
       autoUnmuteTimerRef.current = window.setTimeout(() => {
         console.log('[StreamGrid] 自動ミュート解除を実行');
         toggleMuteAll(); // 全ミュート解除
         useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる
-      }, 3000);
+      }, 5000);
     }
 
     return () => {
