@@ -14,8 +14,7 @@ import type {
   StreamActionType,
   Platform
 } from '../types/analytics';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { backendOrigin } from '../utils/api';
 
 /**
  * デバイスタイプを判定
@@ -56,7 +55,7 @@ function createBaseEventData(): {
  */
 async function sendEvent(event: AnalyticsEvent): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/analytics/track`, {
+    const response = await fetch(`${backendOrigin}/api/analytics/track`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
