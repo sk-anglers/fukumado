@@ -64,7 +64,7 @@ const renderMessageWithEmotes = (message: ChatMessage) => {
 };
 
 export const StreamGrid = (): JSX.Element => {
-  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen, setActiveSlotsCount } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
+  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen, setActiveSlotsCount, toggleMuteAll, mutedAll } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     slots: state.slots,
     preset: state.preset,
     selectedSlotId: state.selectedSlotId,
@@ -76,19 +76,33 @@ export const StreamGrid = (): JSX.Element => {
     setFullscreen: state.setFullscreen,
     clearSelection: state.clearSelection,
     isModalOpen: state.isModalOpen,
-    setActiveSlotsCount: state.setActiveSlotsCount
+    setActiveSlotsCount: state.setActiveSlotsCount,
+    toggleMuteAll: state.toggleMuteAll,
+    mutedAll: state.mutedAll
   }), shallow);
 
   const isMobile = useIsMobile();
   const isLandscape = useIsLandscape();
 
   const autoHideTimerRef = useRef<number | null>(null);
+  const initialMuteAppliedRef = useRef(false);
   const [showChat, setShowChat] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
 
   const messages = useChatStore((state) => state.messages);
+
+  // モバイルで初回ロード時に全ミュート（autoplay対応）
+  useEffect(() => {
+    if (isMobile && !initialMuteAppliedRef.current) {
+      initialMuteAppliedRef.current = true;
+      // 全スロットがミュートされていない場合のみ全ミュートを実行
+      if (!mutedAll) {
+        toggleMuteAll();
+      }
+    }
+  }, [isMobile, mutedAll, toggleMuteAll]);
 
   // モバイルで画面の向きに応じてスロット数と全画面表示を変更
   useEffect(() => {
