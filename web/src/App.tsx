@@ -4,7 +4,6 @@ import { ConsentManager } from "./components/ConsentManager";
 import { MaintenancePage } from "./components/MaintenancePage/MaintenancePage";
 import { MobileRestriction } from "./components/MobileRestriction/MobileRestriction";
 import { UnsupportedBrowser } from "./components/UnsupportedBrowser/UnsupportedBrowser";
-import { DebugPanel } from "./components/DebugPanel/DebugPanel";
 import { useStreamUpdates } from "./hooks/useStreamUpdates";
 import { useTwitchChat } from "./hooks/useTwitchChat";
 import { useLayoutStore } from "./stores/layoutStore";
@@ -307,7 +306,6 @@ function App(): JSX.Element {
     <>
       <ConsentManager />
       <AppShell />
-      <DebugPanel />
     </>
   );
 }
