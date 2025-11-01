@@ -99,14 +99,18 @@ export const StreamGrid = (): JSX.Element => {
   useEffect(() => {
     if (isMobile && !initialMuteAppliedRef.current) {
       initialMuteAppliedRef.current = true;
-      // 全スロットがミュートされていない場合のみ全ミュートを実行
-      if (!mutedAll) {
-        toggleMuteAll();
-      }
+      console.log('[StreamGrid] モバイル初回ロード - 全ミュート実行');
       // 自動ミュート解除フラグをリセット
       useLayoutStore.getState().resetAutoUnmuted();
+      // 現在のミュート状態を取得して、ミュートされていない場合のみ全ミュートを実行
+      const currentMutedAll = useLayoutStore.getState().mutedAll;
+      console.log('[StreamGrid] 現在のmutedAll:', currentMutedAll);
+      if (!currentMutedAll) {
+        toggleMuteAll();
+        console.log('[StreamGrid] 全ミュート実行完了');
+      }
     }
-  }, [isMobile, mutedAll, toggleMuteAll]);
+  }, [isMobile, toggleMuteAll]);
 
   // モバイルで画面の向きに応じてスロット数と全画面表示を変更
   useEffect(() => {
@@ -125,16 +129,33 @@ export const StreamGrid = (): JSX.Element => {
 
   // モバイルで全スロット再生確認後の自動ミュート解除
   useEffect(() => {
-    if (!isMobile || !mutedAll || autoUnmutedApplied) return;
+    console.log('[StreamGrid] 自動ミュート解除チェック', {
+      isMobile,
+      mutedAll,
+      autoUnmutedApplied,
+      slotReadyStates
+    });
+
+    if (!isMobile || !mutedAll || autoUnmutedApplied) {
+      console.log('[StreamGrid] 自動ミュート解除スキップ（条件不一致）');
+      return;
+    }
 
     // 配信が割り当てられているスロットを取得
     const assignedSlots = slots.slice(0, activeSlotsCount).filter((slot) => slot.assignedStream);
 
+    console.log('[StreamGrid] 配信割り当てスロット数:', assignedSlots.length);
+
     // 配信がない場合は何もしない
-    if (assignedSlots.length === 0) return;
+    if (assignedSlots.length === 0) {
+      console.log('[StreamGrid] 配信割り当てスロットなし');
+      return;
+    }
 
     // 全ての配信が割り当てられたスロットが再生準備完了しているかチェック
     const allReady = assignedSlots.every((slot) => slotReadyStates[slot.id] === true);
+
+    console.log('[StreamGrid] 全スロット準備完了:', allReady);
 
     if (allReady) {
       console.log('[StreamGrid] 全スロット再生準備完了 - 自動ミュート解除を実行');
