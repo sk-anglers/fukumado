@@ -652,18 +652,26 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
             pointerEvents: assignedStream ? 'auto' : 'none',
             zIndex: assignedStream ? 0 : -9999
           }}
+          onClick={(e) => {
+            // モバイルの場合、プレイヤーコンテナをタップでコントロール表示
+            if (isMobile && assignedStream) {
+              e.stopPropagation();
+              onSelect();
+              setShowMobileControls(true);
+            }
+          }}
         >
           <div className={styles.playerFrame} ref={playerContainerRef} id={`player-${slot.id}`} />
           {assignedStream && (
             <>
               <div
                 className={styles.selectableOverlay}
+                style={{
+                  pointerEvents: isMobile ? 'none' : 'auto'
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelect();
-                  if (isMobile) {
-                    setShowMobileControls(true);
-                  }
                 }}
               />
               {!playerReady && (
