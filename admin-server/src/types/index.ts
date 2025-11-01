@@ -175,3 +175,123 @@ export const TTL = {
   SECURITY_TEMP_BLOCK: 3600, // 1時間（一時ブロック）
   MAINTENANCE_BYPASS: 3600,  // 1時間（Bypass URL）
 } as const;
+
+// ========================================
+// アナリティクス関連の型定義
+// ========================================
+
+/**
+ * レイアウトプリセット
+ */
+export type LayoutPreset = 'twoByTwo' | 'oneByTwo' | 'focus';
+
+/**
+ * デバイスタイプ
+ */
+export type DeviceType = 'mobile' | 'tablet' | 'desktop';
+
+/**
+ * プラットフォーム
+ */
+export type Platform = 'youtube' | 'twitch' | 'niconico';
+
+/**
+ * ボタンタイプ
+ */
+export type ButtonType =
+  | 'sync_start'
+  | 'sync_stop'
+  | 'mute_all'
+  | 'fullscreen'
+  | 'layout_preset'
+  | 'slot_add'
+  | 'slot_remove'
+  | 'stream_search'
+  | 'auth_youtube'
+  | 'auth_twitch'
+  | 'logout';
+
+/**
+ * 機能タイプ
+ */
+export type FeatureType =
+  | 'chat'
+  | 'emote'
+  | 'search'
+  | 'sync'
+  | 'quality_change';
+
+/**
+ * 配信アクションタイプ
+ */
+export type StreamActionType =
+  | 'assign'
+  | 'clear'
+  | 'mute'
+  | 'unmute'
+  | 'volume_change'
+  | 'quality_change'
+  | 'swap';
+
+/**
+ * アナリティクス統計データ
+ */
+export interface AnalyticsStats {
+  // 全体統計
+  total: {
+    events: number;
+    sessions: number;
+    uniqueUsers: number;
+  };
+
+  // レイアウト統計
+  layout: {
+    slotsDistribution: Record<number, number>;
+    presetDistribution: Record<LayoutPreset, number>;
+  };
+
+  // デバイス統計
+  device: {
+    distribution: Record<DeviceType, number>;
+    screenSizes: Array<{ width: number; height: number; count: number }>;
+  };
+
+  // ボタン統計
+  buttons: {
+    clicks: Record<ButtonType, number>;
+  };
+
+  // 機能統計
+  features: {
+    usage: Record<FeatureType, number>;
+    platformUsage: Record<Platform, number>;
+  };
+
+  // 配信操作統計
+  streams: {
+    actions: Record<StreamActionType, number>;
+    platformActions: Record<Platform, number>;
+  };
+
+  // 認証統計
+  auth: {
+    logins: Record<Platform, number>;
+    logouts: Record<Platform, number>;
+  };
+
+  // セッション統計
+  sessions: {
+    averageDuration: number;
+    averagePageViews: number;
+  };
+
+  // 時系列データ
+  timeline: {
+    daily: Array<{
+      date: string;
+      events: number;
+      sessions: number;
+      uniqueUsers: number;
+    }>;
+  };
+}

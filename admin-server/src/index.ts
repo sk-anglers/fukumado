@@ -18,6 +18,7 @@ import { eventsubRouter } from './routes/eventsub';
 import { cacheRouter } from './routes/cache';
 import { apiMonitorRouter } from './routes/apiMonitor';
 import pvRouter from './routes/pv';
+import analyticsRouter from './routes/analytics';
 import { metricsCollector } from './services/metricsCollector';
 import { securityMonitor } from './services/securityMonitor';
 
@@ -92,6 +93,7 @@ app.use('/admin/api/eventsub', eventsubRouter);
 app.use('/admin/api/cache', cacheRouter);
 app.use('/admin/api/api-monitor', apiMonitorRouter);
 app.use('/admin/api/pv', pvRouter);
+app.use('/admin/api/analytics', analyticsRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);
