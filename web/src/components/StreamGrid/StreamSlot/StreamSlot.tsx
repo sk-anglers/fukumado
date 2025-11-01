@@ -661,6 +661,9 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelect();
+                  if (isMobile) {
+                    setShowMobileControls(true);
+                  }
                 }}
               />
               {!playerReady && (
@@ -674,31 +677,56 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                   </div>
                 </div>
               )}
-              {/* モバイル用の小さな×ボタン */}
+              {/* モバイル用のコントロールボタン */}
               {isMobile && (
-                <button
-                  className={styles.mobileCloseButton}
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    clearSlot(slot.id);
-                    // 配信削除をトラッキング
-                    if (assignedStream) {
-                      trackStream({
-                        actionType: 'clear',
-                        platform: assignedStream.platform,
-                        slotId: slot.id
-                      });
-                    }
-                  }}
-                  aria-label="配信を削除"
-                  style={{
-                    opacity: showMobileControls ? 1 : 0,
-                    pointerEvents: showMobileControls ? 'auto' : 'none'
-                  }}
-                >
-                  <XMarkIcon />
-                </button>
+                <>
+                  <button
+                    className={styles.mobileCloseButton}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      clearSlot(slot.id);
+                      // 配信削除をトラッキング
+                      if (assignedStream) {
+                        trackStream({
+                          actionType: 'clear',
+                          platform: assignedStream.platform,
+                          slotId: slot.id
+                        });
+                      }
+                    }}
+                    aria-label="配信を削除"
+                    style={{
+                      opacity: showMobileControls ? 1 : 0,
+                      pointerEvents: showMobileControls ? 'auto' : 'none'
+                    }}
+                  >
+                    <XMarkIcon />
+                  </button>
+                  <button
+                    className={styles.mobileMuteButton}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleSlotMute(slot.id);
+                      // ミュート/ミュート解除をトラッキング
+                      if (assignedStream) {
+                        trackStream({
+                          actionType: slot.muted ? 'unmute' : 'mute',
+                          platform: assignedStream.platform,
+                          slotId: slot.id
+                        });
+                      }
+                    }}
+                    aria-label={slot.muted ? 'ミュート解除' : 'ミュート'}
+                    style={{
+                      opacity: showMobileControls ? 1 : 0,
+                      pointerEvents: showMobileControls ? 'auto' : 'none'
+                    }}
+                  >
+                    {slot.muted ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
+                  </button>
+                </>
               )}
             </>
           )}
