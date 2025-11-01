@@ -21,9 +21,12 @@ export const EventSub: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [twitchUsername, setTwitchUsername] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      // 初回読み込み時のみローディング表示
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       setError(null);
       const [stats, subs, events] = await Promise.all([
         getEventSubStats(),
@@ -37,7 +40,9 @@ export const EventSub: React.FC = () => {
       console.error('Failed to load EventSub data:', err);
       setError(err instanceof Error ? err.message : 'データの読み込みに失敗しました');
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
   };
 
@@ -48,7 +53,7 @@ export const EventSub: React.FC = () => {
 
     try {
       await reconnectEventSub();
-      await loadData();
+      await loadData(true); // 再接続後は初回読み込みとして扱う
     } catch (err) {
       console.error('Failed to reconnect:', err);
       alert('再接続に失敗しました');
@@ -62,7 +67,7 @@ export const EventSub: React.FC = () => {
 
     try {
       await unsubscribeEventSub(userId);
-      await loadData();
+      await loadData(true); // 購読解除後は初回読み込みとして扱う
     } catch (err) {
       console.error('Failed to unsubscribe:', err);
       alert('購読解除に失敗しました');
@@ -76,8 +81,8 @@ export const EventSub: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 30000); // 30秒ごとに更新
+    loadData(true); // 初回読み込み
+    const interval = setInterval(() => loadData(false), 30000); // 30秒ごとにバックグラウンド更新
 
     // URLパラメータから認証成功を検出
     const params = new URLSearchParams(window.location.search);
@@ -124,7 +129,7 @@ export const EventSub: React.FC = () => {
               🔓 Twitchログイン
             </button>
           )}
-          <button onClick={loadData} className={styles.refreshButton}>
+          <button onClick={() => loadData(true)} className={styles.refreshButton}>
             🔄 更新
           </button>
           <button onClick={handleReconnect} className={styles.reconnectButton}>
