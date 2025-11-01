@@ -114,14 +114,19 @@ class TwitchChatService {
         console.log(`[Twitch Chat Service] >>> MESSAGE EVENT FIRED <<< Channel: ${channel}, User: ${tags.username}, Self: ${self}`);
 
         try {
+          console.log('[Twitch Chat Service] Entering try block...');
+
           // メッセージ受信時刻を記録
           this.lastMessageReceivedAt = new Date();
+          console.log('[Twitch Chat Service] Timestamp recorded');
 
           const channelLogin = channel.replace('#', '');
+          console.log('[Twitch Chat Service] Channel login extracted:', channelLogin);
 
           console.log(`[Twitch Chat] Message from ${tags.username} in ${channelLogin}: ${message}${self ? ' (self)' : ''}`);
 
           // エモート情報をパース
+          console.log('[Twitch Chat Service] Parsing emotes...');
           const emotes: TwitchEmote[] = [];
           if (tags.emotes) {
             console.log('[Twitch Chat] Raw emotes:', tags.emotes);
@@ -136,6 +141,7 @@ class TwitchChatService {
           }
 
           // バッジ情報をパース
+          console.log('[Twitch Chat Service] Parsing badges...');
           const badges: TwitchBadge[] = [];
           const channelId = this.channelIdMap.get(channelLogin);
           console.log('[Twitch Chat] Raw badges:', tags.badges, 'channelId:', channelId);
@@ -151,6 +157,7 @@ class TwitchChatService {
             });
             console.log('[Twitch Chat] Parsed badges:', badges);
           }
+          console.log('[Twitch Chat Service] Badges parsed successfully');
 
           // Bits情報を抽出
           const bits = tags.bits ? parseInt(tags.bits, 10) : undefined;
@@ -160,6 +167,7 @@ class TwitchChatService {
           const isModerator = tags.mod || false;
           const isVip = tags.badges?.vip !== undefined;
 
+          console.log('[Twitch Chat Service] Creating chat message object...');
           const chatMessage: TwitchChatMessage = {
             id: tags.id || `${Date.now()}-${Math.random()}`,
             platform: 'twitch',
@@ -179,19 +187,36 @@ class TwitchChatService {
             isModerator,
             isVip
           };
+          console.log('[Twitch Chat Service] Chat message object created successfully');
 
           // すべてのハンドラーに通知
-          console.log(`[Twitch Chat Service] Notifying ${this.messageHandlers.size} handlers with message from ${chatMessage.author}`);
+          console.log(`[Twitch Chat Service] About to notify ${this.messageHandlers.size} handlers with message from ${chatMessage.author}`);
+
+          if (this.messageHandlers.size === 0) {
+            console.warn('[Twitch Chat Service] WARNING: No message handlers registered!');
+          }
+
           this.messageHandlers.forEach((handler) => {
             try {
+              console.log('[Twitch Chat Service] Calling handler...');
               handler(chatMessage);
               console.log('[Twitch Chat Service] Handler executed successfully');
             } catch (error) {
-              console.error('[Twitch Chat] Error in message handler:', error);
+              console.error('[Twitch Chat Service] Error in message handler:', error);
+              if (error instanceof Error) {
+                console.error('[Twitch Chat Service] Error stack:', error.stack);
+              }
             }
           });
+          console.log('[Twitch Chat Service] All handlers notified');
         } catch (error) {
-          console.error('[Twitch Chat] Error processing message:', error);
+          console.error('[Twitch Chat Service] !!! CRITICAL ERROR processing message !!!');
+          console.error('[Twitch Chat Service] Error details:', error);
+          if (error instanceof Error) {
+            console.error('[Twitch Chat Service] Error name:', error.name);
+            console.error('[Twitch Chat Service] Error message:', error.message);
+            console.error('[Twitch Chat Service] Error stack:', error.stack);
+          }
         }
       });
 
