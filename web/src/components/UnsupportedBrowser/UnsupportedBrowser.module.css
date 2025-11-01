@@ -1,0 +1,165 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+}
+
+.content {
+  background: white;
+  border-radius: 1rem;
+  padding: 3rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.message {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.recommendation {
+  margin-bottom: 2rem;
+}
+
+.recommendTitle {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+.browsers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.browserItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.browserIcon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.browserLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.browserName {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.downloadLink {
+  display: inline-block;
+  padding: 0.5rem 1.5rem;
+  background: #3498db;
+  color: white;
+  text-decoration: none;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.downloadLink:hover {
+  background: #2980b9;
+}
+
+.reason {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.details {
+  text-align: left;
+}
+
+.summary {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: #f5f5f5;
+  transition: background 0.2s;
+}
+
+.summary:hover {
+  background: #e8e8e8;
+}
+
+.detailsText {
+  margin-top: 1rem;
+  padding: 1rem;
+  font-size: 0.95rem;
+  color: #666;
+  line-height: 1.8;
+  background: #fafafa;
+  border-radius: 0.5rem;
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .content {
+    padding: 2rem 1.5rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .message {
+    font-size: 1rem;
+  }
+
+  .recommendTitle {
+    font-size: 1.25rem;
+  }
+
+  .browsers {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .icon {
+    font-size: 3rem;
+  }
+}

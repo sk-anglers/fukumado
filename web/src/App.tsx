@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell/AppShell";
 import { ConsentManager } from "./components/ConsentManager";
 import { MaintenancePage } from "./components/MaintenancePage/MaintenancePage";
 import { MobileRestriction } from "./components/MobileRestriction/MobileRestriction";
+import { UnsupportedBrowser } from "./components/UnsupportedBrowser/UnsupportedBrowser";
 import { DebugPanel } from "./components/DebugPanel/DebugPanel";
 import { useStreamUpdates } from "./hooks/useStreamUpdates";
 import { useTwitchChat } from "./hooks/useTwitchChat";
@@ -16,6 +17,7 @@ import { useMaintenanceStore } from "./stores/maintenanceStore";
 import { useIsMobile } from "./hooks/useMediaQuery";
 import { useLayoutTracking } from "./hooks/useAnalytics";
 import { apiFetch } from "./utils/api";
+import { isSafari } from "./utils/browserDetection";
 import { config } from "./config";
 
 function App(): JSX.Element {
@@ -289,6 +291,11 @@ function App(): JSX.Element {
   // メンテナンス中の場合はメンテナンス画面を表示
   if (maintenanceEnabled) {
     return <MaintenancePage />;
+  }
+
+  // Safari非対応画面を表示
+  if (isSafari()) {
+    return <UnsupportedBrowser />;
   }
 
   // モバイル制限（ベータ環境は除外）
