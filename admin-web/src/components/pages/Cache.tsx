@@ -29,9 +29,12 @@ export const Cache: React.FC = () => {
   const [keyValue, setKeyValue] = useState<CacheKeyValueResponse | null>(null);
   const [loadingKeyValue, setLoadingKeyValue] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      // 初回読み込み時のみローディング表示
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       setError(null);
       const [info, keys] = await Promise.all([
         getCacheInfo(),
@@ -45,7 +48,9 @@ export const Cache: React.FC = () => {
       console.error('Failed to load cache data:', err);
       setError(err instanceof Error ? err.message : 'データの読み込みに失敗しました');
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
   };
 
@@ -76,7 +81,7 @@ export const Cache: React.FC = () => {
       await deleteCacheKey(key);
       setSelectedKey(null);
       setKeyValue(null);
-      await loadData();
+      await loadData(true); // 削除後は初回読み込みとして扱う
     } catch (err) {
       console.error('Failed to delete key:', err);
       alert('キーの削除に失敗しました');
@@ -95,7 +100,7 @@ export const Cache: React.FC = () => {
 
     try {
       await deleteCachePattern(patternInput);
-      await loadData();
+      await loadData(true); // パターン削除後は初回読み込みとして扱う
     } catch (err) {
       console.error('Failed to delete pattern:', err);
       alert('パターン削除に失敗しました');
@@ -115,7 +120,7 @@ export const Cache: React.FC = () => {
       await flushCache();
       setSelectedKey(null);
       setKeyValue(null);
-      await loadData();
+      await loadData(true); // フラッシュ後は初回読み込みとして扱う
     } catch (err) {
       console.error('Failed to flush cache:', err);
       alert('キャッシュフラッシュに失敗しました');
@@ -123,8 +128,8 @@ export const Cache: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 30000); // 30秒ごとに更新
+    loadData(true); // 初回読み込み
+    const interval = setInterval(() => loadData(false), 30000); // 30秒ごとにバックグラウンド更新
     return () => clearInterval(interval);
   }, [searchPattern]);
 

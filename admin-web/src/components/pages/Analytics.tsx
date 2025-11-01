@@ -27,9 +27,12 @@ export const Analytics: React.FC = () => {
 
   // アナリティクス統計データを取得
   useEffect(() => {
-    const fetchAnalyticsStats = async () => {
+    const fetchAnalyticsStats = async (isInitialLoad = false) => {
       try {
-        setLoading(true);
+        // 初回読み込み時のみローディング表示
+        if (isInitialLoad) {
+          setLoading(true);
+        }
         const data = await getAnalyticsStats(days);
         if (data) {
           setStats(data);
@@ -37,15 +40,17 @@ export const Analytics: React.FC = () => {
       } catch (error) {
         console.error('[Analytics] Failed to fetch analytics stats:', error);
       } finally {
-        setLoading(false);
+        if (isInitialLoad) {
+          setLoading(false);
+        }
       }
     };
 
     // 初回実行
-    fetchAnalyticsStats();
+    fetchAnalyticsStats(true);
 
-    // 60秒ごとに更新
-    const interval = setInterval(fetchAnalyticsStats, 60000);
+    // 60秒ごとにバックグラウンド更新
+    const interval = setInterval(() => fetchAnalyticsStats(false), 60000);
 
     return () => {
       clearInterval(interval);

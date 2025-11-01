@@ -72,9 +72,12 @@ export const Dashboard: React.FC = () => {
   // PV統計データを定期的に取得
   useEffect(() => {
     console.log('[DEBUG] Dashboard: PV stats useEffect RUNNING');
-    const fetchPVStats = async () => {
+    const fetchPVStats = async (isInitialLoad = false) => {
       try {
-        setPVLoading(true);
+        // 初回読み込み時のみローディング表示
+        if (isInitialLoad) {
+          setPVLoading(true);
+        }
         const stats = await getPVStats();
         if (stats) {
           setPVStats(stats);
@@ -82,15 +85,17 @@ export const Dashboard: React.FC = () => {
       } catch (error) {
         console.error('[Dashboard] Failed to fetch PV stats:', error);
       } finally {
-        setPVLoading(false);
+        if (isInitialLoad) {
+          setPVLoading(false);
+        }
       }
     };
 
     // 初回実行
-    fetchPVStats();
+    fetchPVStats(true);
 
-    // 30秒ごとに更新
-    const interval = setInterval(fetchPVStats, 30000);
+    // 30秒ごとにバックグラウンド更新
+    const interval = setInterval(() => fetchPVStats(false), 30000);
 
     return () => {
       console.log('[DEBUG] Dashboard: PV stats useEffect CLEANUP');

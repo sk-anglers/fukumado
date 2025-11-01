@@ -47,8 +47,11 @@ export const ApiMonitor: React.FC = () => {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(30);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isInitialLoad = false) => {
+    // 初回読み込み時のみローディング表示
+    if (isInitialLoad) {
+      setLoading(true);
+    }
     try {
       const serviceParam = selectedService === 'all' ? undefined : selectedService;
 
@@ -92,7 +95,9 @@ export const ApiMonitor: React.FC = () => {
     } catch (error) {
       console.error('[ApiMonitor] Failed to fetch API monitoring data:', error);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
   };
 
@@ -144,14 +149,14 @@ export const ApiMonitor: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(true); // 初回読み込み
   }, [selectedService, logLimit, statusFilter]);
 
   useEffect(() => {
     if (!autoRefresh) return;
 
     const interval = setInterval(() => {
-      fetchData();
+      fetchData(false); // バックグラウンド更新
     }, refreshInterval * 1000);
 
     return () => clearInterval(interval);
