@@ -30,6 +30,7 @@ import { twitchEventSubManager } from './services/twitchEventSubManager';
 import { twitchEventSubWebhookService } from './services/twitchEventSubWebhookService';
 import { priorityManager } from './services/priorityManager';
 import { dynamicChannelAllocator } from './services/dynamicChannelAllocator';
+import { getTwitchAppAccessToken } from './services/twitchAppAuth';
 import {
   generateNonce,
   securityHeaders,
@@ -651,10 +652,26 @@ server.listen(env.port, async () => {
   // SystemMetricsCollectorを開始
   systemMetricsCollector.start();
 
-  // EventSubが有効な場合の通知（接続は管理者ログイン時に実行）
+  // EventSubが有効な場合の処理
   if (env.enableEventSub) {
     console.log('[server] EventSub is enabled');
-    console.log('[server] EventSub will be initialized when admin authenticates via dashboard');
+
+    const eventSubMode = process.env.EVENTSUB_MODE || 'websocket';
+    console.log(`[server] EventSub mode: ${eventSubMode}`);
+
+    if (eventSubMode === 'conduit') {
+      // Conduitsモード: サーバー起動時に自動初期化
+      console.log('[server] Initializing Conduits mode...');
+      try {
+        await twitchEventSubManager.connectAll();
+        console.log('[server] Conduits mode initialized successfully');
+      } catch (error) {
+        console.error('[server] Failed to initialize Conduits mode:', error);
+      }
+    } else {
+      // WebSocketモード: 管理者ログイン時に初期化
+      console.log('[server] EventSub will be initialized when admin authenticates via dashboard');
+    }
   } else {
     console.log('[server] EventSub is disabled');
   }
