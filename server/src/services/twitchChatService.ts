@@ -215,12 +215,12 @@ class TwitchChatService {
         }
       });
 
-      // エラーイベントハンドラー
-      this.client.on('error', (error) => {
+      // エラーイベントハンドラー（TMI.jsの型定義に含まれていないため、型アサーションを使用）
+      (this.client as any).on('error', (error: any) => {
         console.error('[Twitch Chat Service] IRC Error:', error);
 
         // 認証エラーの場合は再接続を試みない
-        if (error.message && error.message.includes('Login authentication failed')) {
+        if (error?.message && error.message.includes('Login authentication failed')) {
           console.error('[Twitch Chat Service] Authentication failed - token may be invalid');
           this.connectionPromise = null;
           return;
