@@ -486,6 +486,8 @@
   border: 1px solid rgba(148, 163, 184, 0.3);
   max-width: 500px;
   width: 100%;
+  max-height: calc(100vh - 2rem - 80px);
+  overflow-y: auto;
 }
 
 .loadingSpinner {
@@ -547,6 +549,8 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   max-width: 500px;
   width: 100%;
+  max-height: calc(100vh - 2rem - 80px);
+  overflow-y: auto;
 }
 
 .readyNotificationIcon {
@@ -599,6 +603,8 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   max-width: 500px;
   width: 100%;
+  max-height: calc(100vh - 2rem - 80px);
+  overflow-y: auto;
 }
 
 .reloadNotificationText {
