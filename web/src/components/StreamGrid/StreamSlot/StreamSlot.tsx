@@ -272,7 +272,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
             width: '100%',
             height: '100%',
             parent: [window.location.hostname],
-            autoplay: false,
+            autoplay: true,
             muted: true
           });
 
@@ -343,12 +343,12 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
           playerInstanceRef.current = new YT.Player(playerContainerRef.current, {
             videoId: assignedStream.id,
             playerVars: {
-              autoplay: 0,
+              autoplay: 1,
               controls: 1,
               rel: 0,
               modestbranding: 1,
               playsinline: 1,
-              mute: slot.muted ? 1 : 0,
+              mute: 1,
               ...(slot.quality !== 'auto' ? { vq: youtubeQuality } : {})
             } as any,
             events: {
