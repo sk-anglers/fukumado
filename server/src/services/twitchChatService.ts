@@ -42,9 +42,12 @@ class TwitchChatService {
   private maxReconnectAttempts: number = 10;
   private lastConnectedAt: Date | null = null;
   private isManualDisconnect: boolean = false;
+  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private lastMessageReceivedAt: Date | null = null;
 
   constructor() {
     console.log('[Twitch Chat Service] Initializing');
+    this.startHealthCheck();
   }
 
   public setCredentials(accessToken: string, username: string): void {
@@ -107,71 +110,84 @@ class TwitchChatService {
       this.client = new tmi.Client(clientOptions);
 
       this.client.on('message', (channel, tags, message, self) => {
-        const channelLogin = channel.replace('#', '');
+        try {
+          // メッセージ受信時刻を記録
+          this.lastMessageReceivedAt = new Date();
 
-        console.log(`[Twitch Chat] Message from ${tags.username} in ${channelLogin}: ${message}${self ? ' (self)' : ''}`);
+          const channelLogin = channel.replace('#', '');
 
-        // エモート情報をパース
-        const emotes: TwitchEmote[] = [];
-        if (tags.emotes) {
-          console.log('[Twitch Chat] Raw emotes:', tags.emotes);
-          Object.entries(tags.emotes).forEach(([emoteId, positions]) => {
-            const parsedPositions = positions.map((pos) => {
-              const [start, end] = pos.split('-').map(Number);
-              return { start, end };
+          console.log(`[Twitch Chat] Message from ${tags.username} in ${channelLogin}: ${message}${self ? ' (self)' : ''}`);
+
+          // エモート情報をパース
+          const emotes: TwitchEmote[] = [];
+          if (tags.emotes) {
+            console.log('[Twitch Chat] Raw emotes:', tags.emotes);
+            Object.entries(tags.emotes).forEach(([emoteId, positions]) => {
+              const parsedPositions = positions.map((pos) => {
+                const [start, end] = pos.split('-').map(Number);
+                return { start, end };
+              });
+              emotes.push({ id: emoteId, positions: parsedPositions });
+              console.log('[Twitch Chat] Parsed emote:', { id: emoteId, positions: parsedPositions });
             });
-            emotes.push({ id: emoteId, positions: parsedPositions });
-            console.log('[Twitch Chat] Parsed emote:', { id: emoteId, positions: parsedPositions });
-          });
-        }
+          }
 
-        // バッジ情報をパース
-        const badges: TwitchBadge[] = [];
-        const channelId = this.channelIdMap.get(channelLogin);
-        console.log('[Twitch Chat] Raw badges:', tags.badges, 'channelId:', channelId);
-        if (tags.badges) {
-          Object.entries(tags.badges).forEach(([setId, version]) => {
-            const imageUrl = badgeService.getBadgeUrl(setId, version || '1', channelId);
-            console.log(`[Twitch Chat] Badge lookup: ${setId}/${version} -> ${imageUrl || 'NOT FOUND'}`);
-            badges.push({
-              setId,
-              version: version || '1',
-              imageUrl: imageUrl || undefined
+          // バッジ情報をパース
+          const badges: TwitchBadge[] = [];
+          const channelId = this.channelIdMap.get(channelLogin);
+          console.log('[Twitch Chat] Raw badges:', tags.badges, 'channelId:', channelId);
+          if (tags.badges) {
+            Object.entries(tags.badges).forEach(([setId, version]) => {
+              const imageUrl = badgeService.getBadgeUrl(setId, version || '1', channelId);
+              console.log(`[Twitch Chat] Badge lookup: ${setId}/${version} -> ${imageUrl || 'NOT FOUND'}`);
+              badges.push({
+                setId,
+                version: version || '1',
+                imageUrl: imageUrl || undefined
+              });
             });
+            console.log('[Twitch Chat] Parsed badges:', badges);
+          }
+
+          // Bits情報を抽出
+          const bits = tags.bits ? parseInt(tags.bits, 10) : undefined;
+
+          // 特別なロール情報
+          const isSubscriber = tags.subscriber || false;
+          const isModerator = tags.mod || false;
+          const isVip = tags.badges?.vip !== undefined;
+
+          const chatMessage: TwitchChatMessage = {
+            id: tags.id || `${Date.now()}-${Math.random()}`,
+            platform: 'twitch',
+            author: tags['display-name'] || tags.username || 'Anonymous',
+            message: message,
+            timestamp: new Date().toLocaleTimeString('ja-JP', {
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: 'Asia/Tokyo'
+            }),
+            avatarColor: tags.color || this.getRandomColor(),
+            channelLogin: channelLogin,
+            emotes: emotes.length > 0 ? emotes : undefined,
+            badges: badges.length > 0 ? badges : undefined,
+            bits,
+            isSubscriber,
+            isModerator,
+            isVip
+          };
+
+          // すべてのハンドラーに通知
+          this.messageHandlers.forEach((handler) => {
+            try {
+              handler(chatMessage);
+            } catch (error) {
+              console.error('[Twitch Chat] Error in message handler:', error);
+            }
           });
-          console.log('[Twitch Chat] Parsed badges:', badges);
+        } catch (error) {
+          console.error('[Twitch Chat] Error processing message:', error);
         }
-
-        // Bits情報を抽出
-        const bits = tags.bits ? parseInt(tags.bits, 10) : undefined;
-
-        // 特別なロール情報
-        const isSubscriber = tags.subscriber || false;
-        const isModerator = tags.mod || false;
-        const isVip = tags.badges?.vip !== undefined;
-
-        const chatMessage: TwitchChatMessage = {
-          id: tags.id || `${Date.now()}-${Math.random()}`,
-          platform: 'twitch',
-          author: tags['display-name'] || tags.username || 'Anonymous',
-          message: message,
-          timestamp: new Date().toLocaleTimeString('ja-JP', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'Asia/Tokyo'
-          }),
-          avatarColor: tags.color || this.getRandomColor(),
-          channelLogin: channelLogin,
-          emotes: emotes.length > 0 ? emotes : undefined,
-          badges: badges.length > 0 ? badges : undefined,
-          bits,
-          isSubscriber,
-          isModerator,
-          isVip
-        };
-
-        // すべてのハンドラーに通知
-        this.messageHandlers.forEach((handler) => handler(chatMessage));
       });
 
       this.client.on('connected', () => {
@@ -197,6 +213,48 @@ class TwitchChatService {
         } else {
           console.error('[Twitch Chat Service] Max reconnect attempts reached. Giving up.');
         }
+      });
+
+      // エラーイベントハンドラー
+      this.client.on('error', (error) => {
+        console.error('[Twitch Chat Service] IRC Error:', error);
+
+        // 認証エラーの場合は再接続を試みない
+        if (error.message && error.message.includes('Login authentication failed')) {
+          console.error('[Twitch Chat Service] Authentication failed - token may be invalid');
+          this.connectionPromise = null;
+          return;
+        }
+
+        // その他のエラーの場合は再接続を試みる
+        if (!this.isManualDisconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
+          console.log('[Twitch Chat Service] Error detected, will attempt reconnection');
+        }
+      });
+
+      // notice イベント（Twitchからの通知）
+      this.client.on('notice', (channel, msgid, message) => {
+        console.log(`[Twitch Chat Service] Notice in ${channel}: [${msgid}] ${message}`);
+
+        // msg_channel_suspended などの重要な通知をログ
+        if (msgid === 'msg_channel_suspended' || msgid === 'msg_banned') {
+          console.error(`[Twitch Chat Service] Channel issue: ${msgid} - ${message}`);
+        }
+      });
+
+      // reconnect イベント
+      this.client.on('reconnect', () => {
+        console.log('[Twitch Chat Service] TMI.js is attempting to reconnect...');
+      });
+
+      // connecting イベント
+      this.client.on('connecting', (address, port) => {
+        console.log(`[Twitch Chat Service] Connecting to ${address}:${port}...`);
+      });
+
+      // logon イベント
+      this.client.on('logon', () => {
+        console.log('[Twitch Chat Service] Logged on to Twitch IRC');
       });
 
       // 接続が完了するまで待機
@@ -314,6 +372,68 @@ class TwitchChatService {
   }
 
   /**
+   * 定期的な健全性チェックを開始
+   */
+  private startHealthCheck(): void {
+    // 既存のインターバルをクリア
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+    }
+
+    // 1分ごとにチェック
+    this.healthCheckInterval = setInterval(() => {
+      this.performHealthCheck();
+    }, 60000);
+
+    console.log('[Twitch Chat Service] Health check started (interval: 1 minute)');
+  }
+
+  /**
+   * 健全性チェックを実行
+   */
+  private performHealthCheck(): void {
+    // クライアントが存在しない場合はスキップ
+    if (!this.client) {
+      return;
+    }
+
+    const now = new Date();
+
+    // 接続状態をチェック
+    const readyState = this.client.readyState();
+    console.log(`[Twitch Chat Service] Health check - Ready state: ${readyState}, Channels: ${this.joinedChannels.size}`);
+
+    // 接続されていない場合
+    if (readyState !== 'OPEN') {
+      console.warn(`[Twitch Chat Service] Health check failed - Connection not open (state: ${readyState})`);
+
+      // 手動切断でない場合は再接続を試みる
+      if (!this.isManualDisconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
+        console.log('[Twitch Chat Service] Initiating reconnection from health check...');
+        this.attemptReconnect();
+      }
+      return;
+    }
+
+    // 接続時刻からの経過時間をチェック（5分以上メッセージがない場合は警告）
+    if (this.joinedChannels.size > 0 && this.lastMessageReceivedAt) {
+      const timeSinceLastMessage = now.getTime() - this.lastMessageReceivedAt.getTime();
+      const minutesSinceLastMessage = Math.floor(timeSinceLastMessage / 60000);
+
+      if (minutesSinceLastMessage >= 5) {
+        console.warn(`[Twitch Chat Service] No messages received for ${minutesSinceLastMessage} minutes (${this.joinedChannels.size} channels joined)`);
+      }
+    }
+
+    // 接続時刻からの経過時間をログ
+    if (this.lastConnectedAt) {
+      const connectionDuration = now.getTime() - this.lastConnectedAt.getTime();
+      const minutesConnected = Math.floor(connectionDuration / 60000);
+      console.log(`[Twitch Chat Service] Health check - Connected for ${minutesConnected} minutes`);
+    }
+  }
+
+  /**
    * 再接続を試行（指数バックオフ付き）
    */
   private attemptReconnect(): void {
@@ -371,6 +491,14 @@ class TwitchChatService {
 
     console.log('[Twitch Chat Service] Disconnecting...');
     this.isManualDisconnect = true; // 手動切断フラグを設定
+
+    // ヘルスチェックを停止
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+      console.log('[Twitch Chat Service] Health check stopped');
+    }
+
     await this.client.disconnect();
     this.client = null;
     this.joinedChannels.clear();
