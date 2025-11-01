@@ -64,7 +64,7 @@ const renderMessageWithEmotes = (message: ChatMessage) => {
 };
 
 export const StreamGrid = (): JSX.Element => {
-  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen, setActiveSlotsCount, toggleMuteAll, mutedAll, slotReadyStates, autoUnmutedApplied } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
+  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen, setActiveSlotsCount, toggleMuteAll, toggleSlotMute, mutedAll, slotReadyStates, autoUnmutedApplied } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     slots: state.slots,
     preset: state.preset,
     selectedSlotId: state.selectedSlotId,
@@ -78,6 +78,7 @@ export const StreamGrid = (): JSX.Element => {
     isModalOpen: state.isModalOpen,
     setActiveSlotsCount: state.setActiveSlotsCount,
     toggleMuteAll: state.toggleMuteAll,
+    toggleSlotMute: state.toggleSlotMute,
     mutedAll: state.mutedAll,
     slotReadyStates: state.slotReadyStates,
     autoUnmutedApplied: state.autoUnmutedApplied
@@ -166,18 +167,21 @@ export const StreamGrid = (): JSX.Element => {
         window.clearTimeout(autoUnmuteTimerRef.current);
       }
 
-      // 5秒後に自動ミュート解除
+      // 5秒後に自動ミュート解除（各スロットを順番に）
       autoUnmuteTimerRef.current = window.setTimeout(() => {
-        console.log('[StreamGrid] 自動ミュート解除を実行');
-        const beforeMutedAll = useLayoutStore.getState().mutedAll;
-        console.log('[StreamGrid] 実行前 mutedAll:', beforeMutedAll);
+        console.log('[StreamGrid] 自動ミュート解除を実行（順番に各スロット）');
 
-        toggleMuteAll(); // 全ミュート解除
+        // 配信が割り当てられているミュート中のスロットを取得
+        const mutedAssignedSlots = assignedSlots.filter((slot) => slot.muted);
+        console.log('[StreamGrid] ミュート解除対象スロット数:', mutedAssignedSlots.length);
 
-        const afterMutedAll = useLayoutStore.getState().mutedAll;
-        const afterSlots = useLayoutStore.getState().slots;
-        console.log('[StreamGrid] 実行後 mutedAll:', afterMutedAll);
-        console.log('[StreamGrid] 実行後 スロットミュート状態:', afterSlots.map(s => ({ id: s.id, muted: s.muted })));
+        // 各スロットを0.3秒ごとに順番にミュート解除
+        mutedAssignedSlots.forEach((slot, index) => {
+          window.setTimeout(() => {
+            console.log(`[StreamGrid] スロット ${slot.id} をミュート解除`);
+            toggleSlotMute(slot.id);
+          }, index * 300); // 0.3秒ごと
+        });
 
         useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる
       }, 5000);
@@ -189,7 +193,7 @@ export const StreamGrid = (): JSX.Element => {
         window.clearTimeout(autoUnmuteTimerRef.current);
       }
     };
-  }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotReadyStates, toggleMuteAll]);
+  }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotReadyStates, toggleSlotMute]);
 
   // activeSlotsをメモ化（slots配列またはactiveSlotsCountが変わったときのみ再計算）
   const activeSlots = useMemo(() => slots.slice(0, activeSlotsCount), [slots, activeSlotsCount]);
