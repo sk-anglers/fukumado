@@ -4,6 +4,7 @@ import { dynamicChannelAllocator } from '../services/dynamicChannelAllocator';
 import { metricsCollector } from '../services/metricsCollector';
 import { priorityManager } from '../services/priorityManager';
 import { fetchChannelsByIds } from '../services/twitchService';
+import { getTwitchAppAccessToken } from '../services/twitchAppAuth';
 
 export const eventsubRouter = Router();
 
@@ -85,7 +86,24 @@ eventsubRouter.get('/subscriptions', async (req, res) => {
     let channelInfoMap = new Map<string, { login: string; displayName: string }>();
 
     if (allChannelIds.length > 0) {
-      const accessToken = twitchEventSubManager.getAccessToken();
+      // モードに応じたトークンを取得
+      let accessToken: string | null = null;
+      const mode = stats.mode;
+
+      if (mode === 'conduit') {
+        // Conduitsモード: App Access Token を使用
+        try {
+          accessToken = await getTwitchAppAccessToken();
+          console.log('[EventSub] Using App Access Token for Conduits mode');
+        } catch (error) {
+          console.error('[EventSub] Failed to get App Access Token:', error);
+        }
+      } else {
+        // WebSocketモード: User Access Token を使用
+        accessToken = twitchEventSubManager.getAccessToken();
+        console.log('[EventSub] Using User Access Token for WebSocket mode');
+      }
+
       if (accessToken) {
         try {
           const channelInfos = await fetchChannelsByIds(accessToken, allChannelIds);

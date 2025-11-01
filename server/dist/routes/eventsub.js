@@ -14,7 +14,7 @@ exports.eventsubRouter = (0, express_1.Router)();
  */
 exports.eventsubRouter.get('/stats', async (req, res) => {
     try {
-        const stats = twitchEventSubManager_1.twitchEventSubManager.getStats();
+        const stats = await twitchEventSubManager_1.twitchEventSubManager.getStats();
         const capacity = twitchEventSubManager_1.twitchEventSubManager.getCapacity();
         const metrics = metricsCollector_1.metricsCollector.getStats();
         // エラー状態を判定
