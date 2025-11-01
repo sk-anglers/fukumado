@@ -18,7 +18,15 @@ analyticsRouter.post('/track', async (req: Request, res: Response) => {
   try {
     const event: AnalyticsEvent = req.body;
 
+    // デバッグ: イベント受信ログ
+    console.log('[Analytics] Event received:', {
+      type: event?.type,
+      timestamp: event?.timestamp,
+      bodySize: JSON.stringify(req.body).length
+    });
+
     if (!event || !event.type) {
+      console.warn('[Analytics] Invalid event data received');
       return res.status(400).json({
         success: false,
         error: 'Invalid event data',
@@ -32,16 +40,30 @@ analyticsRouter.post('/track', async (req: Request, res: Response) => {
       ? (Array.isArray(forwarded) ? forwarded[0] : forwarded).split(',')[0].trim()
       : req.ip || req.socket.remoteAddress || 'unknown';
 
+    console.log('[Analytics] Event details:', {
+      type: event.type,
+      ip: ip,
+      hasUserAgent: !!event.userAgent
+    });
+
     // User-Agent情報を追加
     if (!event.userAgent && req.headers['user-agent']) {
       event.userAgent = req.headers['user-agent'];
     }
 
+    // デバッグ: analyticsTrackerInstanceの存在確認
+    console.log('[Analytics] Tracker status:', {
+      trackerExists: !!analyticsTrackerInstance,
+      trackerType: analyticsTrackerInstance ? typeof analyticsTrackerInstance : 'undefined'
+    });
+
     // イベントを記録
     if (analyticsTrackerInstance) {
+      console.log('[Analytics] Calling trackEvent...');
       await analyticsTrackerInstance.trackEvent(event, ip);
+      console.log('[Analytics] trackEvent completed successfully');
     } else {
-      console.warn('[Analytics] Analytics tracker not initialized');
+      console.warn('[Analytics] Analytics tracker not initialized - event not recorded');
     }
 
     res.json({
@@ -49,7 +71,11 @@ analyticsRouter.post('/track', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('[Analytics] Error tracking event:', error);
+    console.error('[Analytics] Error tracking event:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      eventType: req.body?.type
+    });
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       success: false,

@@ -27,8 +27,18 @@ export class AnalyticsTracker {
    * イベントを記録
    */
   async trackEvent(event: AnalyticsEvent, ip: string): Promise<void> {
+    console.log('[AnalyticsTracker] trackEvent called:', {
+      eventType: event.type,
+      ip: ip.substring(0, 10) + '...' // IPの一部のみログ出力
+    });
+
     const dateKey = this.getDateKey(new Date());
     const hourKey = this.getHourKey(new Date());
+
+    console.log('[AnalyticsTracker] Keys:', {
+      dateKey,
+      hourKey
+    });
 
     try {
       // イベントをJSON形式で保存（リスト）
@@ -36,6 +46,8 @@ export class AnalyticsTracker {
         ...event,
         ip: this.hashIP(ip)
       });
+
+      console.log('[AnalyticsTracker] Saving to Redis...');
 
       await Promise.all([
         // イベントログを保存（最新1000件まで）
@@ -56,11 +68,22 @@ export class AnalyticsTracker {
         this.redis.expire(`analytics:unique:daily:${dateKey}`, 60 * 60 * 24 * this.RETENTION_DAYS)
       ]);
 
+      console.log('[AnalyticsTracker] Redis save completed');
+
       // イベントタイプ別の集計
+      console.log('[AnalyticsTracker] Calling aggregateEvent...');
       await this.aggregateEvent(event, dateKey);
+      console.log('[AnalyticsTracker] aggregateEvent completed');
 
     } catch (error) {
-      console.error('[AnalyticsTracker] Error tracking event:', error);
+      console.error('[AnalyticsTracker] Error tracking event:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        eventType: event.type,
+        dateKey,
+        hourKey
+      });
+      // エラーを再スローせず、処理を継続
     }
   }
 
