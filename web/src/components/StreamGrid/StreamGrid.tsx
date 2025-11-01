@@ -64,7 +64,7 @@ const renderMessageWithEmotes = (message: ChatMessage) => {
 };
 
 export const StreamGrid = (): JSX.Element => {
-  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen, setActiveSlotsCount, toggleMuteAll, toggleSlotMute, mutedAll, slotReadyStates, autoUnmutedApplied } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
+  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen, setActiveSlotsCount, toggleMuteAll, toggleSlotMute, mutedAll, slotReadyStates, slotPlayingStates, autoUnmutedApplied } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     slots: state.slots,
     preset: state.preset,
     selectedSlotId: state.selectedSlotId,
@@ -81,6 +81,7 @@ export const StreamGrid = (): JSX.Element => {
     toggleSlotMute: state.toggleSlotMute,
     mutedAll: state.mutedAll,
     slotReadyStates: state.slotReadyStates,
+    slotPlayingStates: state.slotPlayingStates,
     autoUnmutedApplied: state.autoUnmutedApplied
   }), shallow);
 
@@ -94,6 +95,7 @@ export const StreamGrid = (): JSX.Element => {
   const [isSending, setIsSending] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [showReadyNotification, setShowReadyNotification] = useState(false);
+  const [showLoadingPopup, setShowLoadingPopup] = useState(false);
 
   const messages = useChatStore((state) => state.messages);
 
@@ -126,9 +128,10 @@ export const StreamGrid = (): JSX.Element => {
     }
   }, [isMobile, isLandscape, setActiveSlotsCount, setFullscreen]);
 
-  // モバイルで全スロット再生準備完了時に通知を表示
+  // モバイルで準備中ポップアップと再生開始通知を管理
   useEffect(() => {
-    if (!isMobile || !mutedAll || autoUnmutedApplied) {
+    if (!isMobile || !mutedAll) {
+      setShowLoadingPopup(false);
       return;
     }
 
@@ -137,18 +140,24 @@ export const StreamGrid = (): JSX.Element => {
 
     // 配信がない場合は何もしない
     if (assignedSlots.length === 0) {
+      setShowLoadingPopup(false);
       return;
     }
 
-    // 全ての配信が割り当てられたスロットが再生準備完了しているかチェック
-    const allReady = assignedSlots.every((slot) => slotReadyStates[slot.id] === true);
+    // 全ての配信が割り当てられたスロットが再生開始しているかチェック
+    const allPlaying = assignedSlots.every((slot) => slotPlayingStates[slot.id] === true);
 
-    if (allReady && !showReadyNotification) {
-      // 全スロット準備完了 - 通知を表示
+    if (allPlaying && !autoUnmutedApplied) {
+      // 全スロット再生開始 - 通知を表示し、準備中ポップアップを非表示
       setShowReadyNotification(true);
+      setShowLoadingPopup(false);
       useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる（通知は一度だけ）
+    } else if (!allPlaying && !autoUnmutedApplied) {
+      // まだ全スロット再生開始していない - 準備中ポップアップを表示
+      setShowLoadingPopup(true);
+      setShowReadyNotification(false);
     }
-  }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotReadyStates, showReadyNotification]);
+  }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotPlayingStates]);
 
   // ミュート解除されたら通知を非表示
   useEffect(() => {
@@ -295,6 +304,15 @@ export const StreamGrid = (): JSX.Element => {
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
     >
+      {/* モバイル用準備中ポップアップ */}
+      {isMobile && showLoadingPopup && (
+        <div className={styles.loadingPopup}>
+          <div className={styles.loadingPopupContent}>
+            <div className={styles.loadingSpinner}></div>
+            <p className={styles.loadingPopupText}>配信を読み込んでいます...</p>
+          </div>
+        </div>
+      )}
       {/* モバイル用準備完了通知 */}
       {isMobile && showReadyNotification && (
         <div className={styles.readyNotification}>

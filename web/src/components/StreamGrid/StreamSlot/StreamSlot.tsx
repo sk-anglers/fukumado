@@ -85,7 +85,7 @@ const formatViewerLabel = (viewerCount?: number): string =>
 const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelection, onSelect }: StreamSlotCardProps): JSX.Element => {
   const { trackStream } = useAnalytics();
 
-  const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen, userInteracted, masterSlotId, setSlotReady } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
+  const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen, userInteracted, masterSlotId, setSlotReady, setSlotPlaying } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     setVolume: state.setVolume,
     toggleSlotMute: state.toggleSlotMute,
     preset: state.preset,
@@ -97,7 +97,8 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
     setModalOpen: state.setModalOpen,
     userInteracted: state.userInteracted,
     masterSlotId: state.masterSlotId,
-    setSlotReady: state.setSlotReady
+    setSlotReady: state.setSlotReady,
+    setSlotPlaying: state.setSlotPlaying
   }), shallow);
 
   const isMobile = useIsMobile();
@@ -118,11 +119,15 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
     readyHandler: (() => void) | null;
     offlineHandler: (() => void) | null;
     errorHandler: ((event: any) => void) | null;
+    playHandler: (() => void) | null;
+    pauseHandler: (() => void) | null;
     qualityTimeoutId: number | undefined;
   }>({
     readyHandler: null,
     offlineHandler: null,
     errorHandler: null,
+    playHandler: null,
+    pauseHandler: null,
     qualityTimeoutId: undefined
   });
 
@@ -320,15 +325,29 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
             console.error('[Twitch] プレイヤーエラー:', errorEvent);
           };
 
+          const playHandler = () => {
+            if (!isMounted) return;
+            setSlotPlaying(slot.id, true); // 再生開始を通知
+          };
+
+          const pauseHandler = () => {
+            if (!isMounted) return;
+            setSlotPlaying(slot.id, false); // 再生停止を通知
+          };
+
           // イベントリスナーを登録
           twitchPlayer.addEventListener(TwitchAPI.Player.READY, readyHandler);
           twitchPlayer.addEventListener(TwitchAPI.Player.OFFLINE, offlineHandler);
           twitchPlayer.addEventListener(TwitchAPI.Player.ERROR, errorHandler);
+          twitchPlayer.addEventListener(TwitchAPI.Player.PLAY, playHandler);
+          twitchPlayer.addEventListener(TwitchAPI.Player.PAUSE, pauseHandler);
 
           // ハンドラーを保存（クリーンアップ時に使用）
           twitchEventHandlersRef.current.readyHandler = readyHandler;
           twitchEventHandlersRef.current.offlineHandler = offlineHandler;
           twitchEventHandlersRef.current.errorHandler = errorHandler;
+          twitchEventHandlersRef.current.playHandler = playHandler;
+          twitchEventHandlersRef.current.pauseHandler = pauseHandler;
 
           // グローバルに登録（同期機能のため）
           (window as any)[`twitchPlayer_${slot.id}`] = playerInstanceRef.current;
@@ -371,6 +390,15 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                 // 画質設定を適用
                 if (slot.quality !== 'auto') {
                   event.target.setPlaybackQuality(youtubeQuality);
+                }
+              },
+              onStateChange: (event: any) => {
+                if (!isMounted) return;
+                // YT.PlayerState.PLAYING = 1, YT.PlayerState.PAUSED = 2
+                if (event.data === 1) {
+                  setSlotPlaying(slot.id, true); // 再生開始
+                } else if (event.data === 2) {
+                  setSlotPlaying(slot.id, false); // 一時停止
                 }
               },
               onError: (event: any) => {

@@ -462,6 +462,57 @@
   background: rgba(34, 197, 94, 0.3) !important;
 }
 
+/* モバイル用準備中ポップアップ */
+.loadingPopup {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  z-index: 9998;
+  display: flex;
+  justify-content: center;
+  padding: 0 1rem;
+  animation: slideDown 0.5s ease;
+}
+
+.loadingPopupContent {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: rgba(30, 41, 59, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  max-width: 500px;
+  width: 100%;
+}
+
+.loadingSpinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(148, 163, 184, 0.3);
+  border-top-color: rgba(56, 189, 248, 0.9);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingPopupText {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.95);
+  line-height: 1.5;
+  text-align: left;
+}
+
 /* モバイル用準備完了通知 */
 .readyNotification {
   position: fixed;

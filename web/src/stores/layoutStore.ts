@@ -62,6 +62,7 @@ export interface LayoutState {
   isModalOpen: boolean;
   userInteracted: boolean;
   slotReadyStates: Record<string, boolean>;
+  slotPlayingStates: Record<string, boolean>;
   autoUnmutedApplied: boolean;
   setPreset: (preset: LayoutPreset) => void;
   setUserInteracted: (value: boolean) => void;
@@ -95,6 +96,7 @@ export interface LayoutState {
   setModalOpen: (isOpen: boolean) => void;
   getMaxSlots: () => number;
   setSlotReady: (slotId: string, ready: boolean) => void;
+  setSlotPlaying: (slotId: string, playing: boolean) => void;
   resetAutoUnmuted: () => void;
 }
 
@@ -125,6 +127,7 @@ export const useLayoutStore = create<LayoutState>()(
       showSelection: false,
       masterSlotId: null,
       slotReadyStates: {},
+      slotPlayingStates: {},
       autoUnmutedApplied: false,
       setPreset: (preset) => set({ preset }),
       setUserInteracted: (value) => set({ userInteracted: value }),
@@ -349,6 +352,13 @@ export const useLayoutStore = create<LayoutState>()(
           slotReadyStates: {
             ...state.slotReadyStates,
             [slotId]: ready
+          }
+        })),
+      setSlotPlaying: (slotId, playing) =>
+        set((state) => ({
+          slotPlayingStates: {
+            ...state.slotPlayingStates,
+            [slotId]: playing
           }
         })),
       resetAutoUnmuted: () => set({ autoUnmutedApplied: false })
