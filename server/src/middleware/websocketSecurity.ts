@@ -179,6 +179,10 @@ export function validateWebSocketMessage(message: any): { valid: boolean; reason
 
 /**
  * WebSocketのPing/Pongハートビート管理
+ *
+ * 注意: この機能は現在無効化されています。
+ * Renderのプロキシ/ロードバランサーがWebSocket Ping/Pongフレームを適切に転送しない問題があるため、
+ * アプリケーションレベルのheartbeat（{ type: 'heartbeat' } JSONメッセージ）のみを使用しています。
  */
 export class WebSocketHeartbeat {
   private intervals: Map<WebSocket, NodeJS.Timeout> = new Map();
@@ -186,42 +190,19 @@ export class WebSocketHeartbeat {
   private readonly pongTimeout = 5000; // 5秒
 
   /**
-   * ハートビートを開始
+   * ハートビートを開始（無効化済み）
    */
   public start(ws: WebSocket): void {
-    // Pongハンドラーを設定
-    ws.on('pong', () => {
-      console.log('[WebSocket Heartbeat] Pong received');
-    });
-
-    // 定期的にPingを送信
-    const interval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        console.log('[WebSocket Heartbeat] Sending ping');
-        ws.ping();
-
-        // Pongが返ってこない場合は接続を切断
-        const timeout = setTimeout(() => {
-          console.warn('[WebSocket Heartbeat] No pong received, closing connection');
-          ws.close(1001, 'No pong received');
-        }, this.pongTimeout);
-
-        // Pongを受信したらタイムアウトをクリア
-        ws.once('pong', () => {
-          clearTimeout(timeout);
-        });
-      } else {
-        this.stop(ws);
-      }
-    }, this.pingInterval);
-
-    this.intervals.set(ws, interval);
+    // WebSocket Ping/Pongハートビートは無効化されています
+    // アプリケーションレベルのheartbeatメッセージを使用してください
+    console.log('[WebSocket Heartbeat] Protocol-level heartbeat is disabled, using application-level heartbeat');
   }
 
   /**
-   * ハートビートを停止
+   * ハートビートを停止（無効化済み）
    */
   public stop(ws: WebSocket): void {
+    // WebSocket Ping/Pongハートビートは無効化されています
     const interval = this.intervals.get(ws);
     if (interval) {
       clearInterval(interval);

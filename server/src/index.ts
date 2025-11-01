@@ -384,8 +384,8 @@ wss.on('connection', (ws, request) => {
   metricsCollector.recordWebSocketConnection(true); // メトリクス記録
   console.log('[WebSocket] Client connected');
 
-  // ハートビートを開始
-  wsHeartbeat.start(ws);
+  // ハートビートを開始（無効化：アプリケーションレベルのheartbeatのみ使用）
+  // wsHeartbeat.start(ws);
 
   // セッション情報を取得するためにミドルウェアを手動で適用
   const mockResponse = {
@@ -578,8 +578,8 @@ wss.on('connection', (ws, request) => {
   ws.on('close', async () => {
     console.log(`[WebSocket] Client disconnected: ${clientIP}`);
 
-    // ハートビートを停止
-    wsHeartbeat.stop(ws);
+    // ハートビートを停止（無効化：アプリケーションレベルのheartbeatのみ使用）
+    // wsHeartbeat.stop(ws);
 
     // 接続を解除
     wsConnectionManager.unregisterConnection(clientIP);
