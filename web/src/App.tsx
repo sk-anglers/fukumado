@@ -13,12 +13,15 @@ import { useAuthStore } from "./stores/authStore";
 import { useSyncStore } from "./stores/syncStore";
 import { useMaintenanceStore } from "./stores/maintenanceStore";
 import { useIsMobile } from "./hooks/useMediaQuery";
+import { useLayoutTracking } from "./hooks/useAnalytics";
 import { apiFetch } from "./utils/api";
 import { config } from "./config";
 
 function App(): JSX.Element {
   const ensureSelection = useLayoutStore((state) => state.ensureSelection);
   const slots = useLayoutStore((state) => state.slots);
+  const preset = useLayoutStore((state) => state.preset);
+  const activeSlotsCount = useLayoutStore((state) => state.activeSlotsCount);
   const followedChannels = useUserStore((state) => state.followedChannels);
   const addFollowedChannels = useUserStore((state) => state.addFollowedChannels);
   const setCurrentYoutubeUser = useUserStore((state) => state.setCurrentYoutubeUser);
@@ -65,6 +68,9 @@ function App(): JSX.Element {
   useTwitchAuthStatus();
 
   const isMobile = useIsMobile();
+
+  // レイアウト変更を自動追跡
+  useLayoutTracking(activeSlotsCount, preset);
 
   // グローバルエラーハンドラー（デバッグ用）
   useEffect(() => {

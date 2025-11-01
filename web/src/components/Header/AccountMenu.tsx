@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AdjustmentsHorizontalIcon, CircleStackIcon, ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../stores/authStore';
+import { useAnalytics } from '../../hooks/useAnalytics';
 import { useUserStore } from '../../stores/userStore';
 import { useSyncStore, SYNC_INTERVAL_OPTIONS } from '../../stores/syncStore';
 import { useLayoutStore } from '../../stores/layoutStore';
@@ -68,6 +69,8 @@ interface ChannelResult {
 }
 
 export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
+  const { trackAuth } = useAnalytics();
+
   const authenticated = useAuthStore((state) => state.authenticated);
   const authUser = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.loading);
@@ -259,6 +262,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
         console.log('[Google Auth] Authentication successful, closing popup');
         window.clearInterval(timer);
         authWindow.close();
+        // YouTubeログイン成功をトラッキング
+        trackAuth('youtube', 'login', true);
       }
     }, 500);
   };
@@ -284,9 +289,14 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       layoutState.setAvailableStreamsForPlatform('youtube', []);
       // SessionIDをクリア（再ログイン時に新しいsessionIdを取得）
       useAuthStore.getState().clearSessionId();
+
+      // ログアウトをトラッキング
+      trackAuth('youtube', 'logout', true);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setAuthError(message);
+      // ログアウト失敗もトラッキング
+      trackAuth('youtube', 'logout', false);
     } finally {
       setAuthLoading(false);
     }
@@ -402,6 +412,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
         console.log('[Twitch Auth] Authentication successful, closing popup');
         window.clearInterval(timer);
         authWindow.close();
+        // Twitchログイン成功をトラッキング
+        trackAuth('twitch', 'login', true);
       }
     }, 500);
   };
@@ -427,9 +439,14 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       layoutState.setAvailableStreamsForPlatform('twitch', []);
       // SessionIDをクリア（再ログイン時に新しいsessionIdを取得）
       useAuthStore.getState().clearSessionId();
+
+      // Twitchログアウト成功をトラッキング
+      trackAuth('twitch', 'logout', true);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setTwitchError(message);
+      // Twitchログアウト失敗をトラッキング
+      trackAuth('twitch', 'logout', false);
     } finally {
       setTwitchLoading(false);
     }

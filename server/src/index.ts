@@ -52,6 +52,8 @@ import { systemMetricsCollector } from './services/systemMetricsCollector';
 import { initializeSession, detectSessionHijacking, checkSessionTimeout, includeCSRFToken } from './middleware/sessionSecurity';
 import { PVTracker } from './services/pvTracker';
 import { createPVCounterMiddleware } from './middleware/pvCounter';
+import { AnalyticsTracker } from './services/analyticsTracker';
+import { analyticsRouter, setAnalyticsTracker } from './routes/analytics';
 
 const app = express();
 
@@ -78,6 +80,11 @@ redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...
 // PV計測サービスの初期化
 export const pvTracker = new PVTracker(redisClient);
 console.log('[PVTracker] PV tracking service initialized');
+
+// アナリティクストラッキングサービスの初期化
+export const analyticsTracker = new AnalyticsTracker(redisClient);
+setAnalyticsTracker(analyticsTracker);
+console.log('[AnalyticsTracker] Analytics tracking service initialized');
 
 // CORS設定（モバイル対応 + 本番環境）
 const allowedOrigins = [
@@ -191,6 +198,7 @@ app.use('/api/admin/eventsub', adminApiAuth, eventsubRouter);
 app.use('/api/admin/cache', adminApiAuth, cacheRouter);
 app.use('/api/admin/streams', adminApiAuth, adminStreamsRouter);
 app.use('/api/admin', adminApiAuth, adminRouter);
+app.use('/api/analytics', apiRateLimiter, analyticsRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);

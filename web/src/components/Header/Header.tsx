@@ -18,6 +18,7 @@ import { useUserStore } from '../../stores/userStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useMobileMenuStore } from '../../stores/mobileMenuStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import { useAnalytics } from '../../hooks/useAnalytics';
 import { apiFetch } from '../../utils/api';
 import type { ChannelSearchResult, LayoutPreset } from '../../types';
 import { config } from '../../config';
@@ -52,6 +53,8 @@ interface TwitchChannelResult {
 }
 
 export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
+  const { trackButton } = useAnalytics();
+
   const mutedAll = useLayoutStore((state) => state.mutedAll);
   const toggleMuteAll = useLayoutStore((state) => state.toggleMuteAll);
   const masterVolume = useLayoutStore((state) => state.masterVolume);
@@ -146,6 +149,8 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
       if (!element) return;
       await element.requestFullscreen();
       setFullscreen(true);
+      // フルスクリーン開始をトラッキング
+      trackButton('fullscreen', 'header');
     } catch (error) {
       console.error('Failed to enter fullscreen', error);
     }
@@ -157,6 +162,8 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
         await document.exitFullscreen();
       }
       setFullscreen(false);
+      // フルスクリーン終了をトラッキング
+      trackButton('fullscreen', 'header');
     } catch (error) {
       console.error('Failed to exit fullscreen', error);
     }
@@ -503,6 +510,10 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                   max={100}
                   value={masterVolume}
                   onChange={(e) => setMasterVolume(Number(e.target.value))}
+                  onMouseUp={() => {
+                    // マスター音量変更をトラッキング
+                    trackButton('mute_all', 'header');
+                  }}
                   className={styles.volumeSlider}
                 />
               </div>
@@ -511,7 +522,11 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
               <button
                 type="button"
                 className={styles.volumeMuteAllButton}
-                onClick={toggleMuteAll}
+                onClick={() => {
+                  toggleMuteAll();
+                  // 全体ミュートをトラッキング
+                  trackButton('mute_all', 'header');
+                }}
               >
                 {mutedAll ? <SpeakerWaveIcon /> : <SpeakerXMarkIcon />}
                 <span>{mutedAll ? '全体ミュート解除' : '全体ミュート'}</span>

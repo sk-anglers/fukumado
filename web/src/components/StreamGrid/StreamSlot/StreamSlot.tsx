@@ -10,6 +10,7 @@ import { type CSSProperties, memo, useEffect, useMemo, useRef, useState } from '
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { useLayoutStore } from '../../../stores/layoutStore';
+import { useAnalytics } from '../../../hooks/useAnalytics';
 import type { StreamSlot, VideoQuality } from '../../../types';
 import { loadYouTubeIframeApi } from '../../../hooks/useYouTubeIframeApi';
 import { loadTwitchEmbedApi, type TwitchPlayer, type TwitchQuality } from '../../../hooks/useTwitchEmbed';
@@ -82,6 +83,8 @@ const formatViewerLabel = (viewerCount?: number): string =>
   viewerCount != null ? `${viewerCount.toLocaleString()} 人視聴中` : '視聴者数 -';
 
 const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelection, onSelect }: StreamSlotCardProps): JSX.Element => {
+  const { trackStream } = useAnalytics();
+
   const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen, userInteracted, masterSlotId } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     setVolume: state.setVolume,
     toggleSlotMute: state.toggleSlotMute,
@@ -679,6 +682,14 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                   onClick={(event) => {
                     event.stopPropagation();
                     clearSlot(slot.id);
+                    // 配信削除をトラッキング
+                    if (assignedStream) {
+                      trackStream({
+                        actionType: 'clear',
+                        platform: assignedStream.platform,
+                        slotId: slot.id
+                      });
+                    }
                   }}
                   aria-label="配信を削除"
                   style={{
@@ -738,6 +749,14 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                       onClick={(event) => {
                         event.stopPropagation();
                         clearSlot(slot.id);
+                        // 配信削除をトラッキング
+                        if (assignedStream) {
+                          trackStream({
+                            actionType: 'clear',
+                            platform: assignedStream.platform,
+                            slotId: slot.id
+                          });
+                        }
                       }}
                     >
                       <XMarkIcon />
@@ -775,6 +794,14 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                       onClick={(event) => {
                         event.stopPropagation();
                         toggleSlotMute(slot.id);
+                        // ミュート/ミュート解除をトラッキング
+                        if (assignedStream) {
+                          trackStream({
+                            actionType: slot.muted ? 'unmute' : 'mute',
+                            platform: assignedStream.platform,
+                            slotId: slot.id
+                          });
+                        }
                       }}
                     >
                       {slot.muted ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
@@ -791,6 +818,17 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                           setVolume(slot.id, nextVolume);
                           if (slot.muted && nextVolume > 0) {
                             toggleSlotMute(slot.id);
+                          }
+                        }}
+                        onMouseUp={() => {
+                          // 音量変更完了時にトラッキング
+                          if (assignedStream) {
+                            trackStream({
+                              actionType: 'volume_change',
+                              platform: assignedStream.platform,
+                              slotId: slot.id,
+                              value: slot.volume
+                            });
                           }
                         }}
                         onClick={(event) => event.stopPropagation()}
