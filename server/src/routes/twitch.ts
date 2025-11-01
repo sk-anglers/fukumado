@@ -292,9 +292,9 @@ twitchRouter.post('/eventsub/subscribe', async (req, res) => {
   }
 });
 
-twitchRouter.get('/eventsub/status', (req, res) => {
+twitchRouter.get('/eventsub/status', async (req, res) => {
   // 新: EventSubManager（3本接続）の統計情報を取得
-  const stats = twitchEventSubManager.getStats();
+  const stats = await twitchEventSubManager.getStats();
   const capacity = twitchEventSubManager.getCapacity();
   const subscribedUserIds = twitchEventSubManager.getSubscribedUserIds();
 

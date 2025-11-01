@@ -91,11 +91,20 @@ export interface ConnectionStats {
  * EventSubManager の統計情報
  */
 export interface ManagerStats {
+  mode: 'websocket' | 'conduit';
   totalConnections: number;
   activeConnections: number;
   totalSubscriptions: number;
   subscribedChannelCount: number;
   connections: ConnectionStats[];
+  conduitStats?: {
+    conduitId: string | null;
+    totalShards: number;
+    enabledShards: number;
+    disabledShards: number;
+    totalSubscriptions: number;
+    usagePercentage: number;
+  };
 }
 
 /**

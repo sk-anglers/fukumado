@@ -56,7 +56,7 @@ exports.eventsubRouter.get('/stats', async (req, res) => {
 exports.eventsubRouter.get('/subscriptions', async (req, res) => {
     try {
         const channelIds = twitchEventSubManager_1.twitchEventSubManager.getSubscribedUserIds();
-        const stats = twitchEventSubManager_1.twitchEventSubManager.getStats();
+        const stats = await twitchEventSubManager_1.twitchEventSubManager.getStats();
         const allocationStats = dynamicChannelAllocator_1.dynamicChannelAllocator.getStats();
         // 各接続の購読チャンネル情報を収集
         const subscriptions = stats.connections.map((conn) => ({
