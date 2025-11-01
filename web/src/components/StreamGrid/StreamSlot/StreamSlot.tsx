@@ -667,11 +667,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
               <div
                 className={styles.selectableOverlay}
                 style={{
-                  pointerEvents: isMobile ? 'none' : 'auto'
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelect();
+                  pointerEvents: 'none'
                 }}
               />
               {!playerReady && (
