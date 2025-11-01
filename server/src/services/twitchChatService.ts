@@ -110,54 +110,58 @@ class TwitchChatService {
       this.client = new tmi.Client(clientOptions);
 
       this.client.on('message', (channel, tags, message, self) => {
+        // メッセージIDを最初に取得（追跡用）
+        const msgId = tags.id || `${Date.now()}-${Math.random()}`;
+        const logPrefix = `[CHAT_MSG:${msgId.substring(0, 8)}]`;
+
         // メッセージイベント発火の確認（最優先ログ）
-        console.log(`[Twitch Chat Service] >>> MESSAGE EVENT FIRED <<< Channel: ${channel}, User: ${tags.username}, Self: ${self}`);
+        console.log(`${logPrefix} >>> MESSAGE EVENT FIRED <<< Channel: ${channel}, User: ${tags.username}, Self: ${self}`);
 
         try {
-          console.log('[Twitch Chat Service] Entering try block...');
+          console.log(`${logPrefix} Entering try block...`);
 
           // メッセージ受信時刻を記録
           this.lastMessageReceivedAt = new Date();
-          console.log('[Twitch Chat Service] Timestamp recorded');
+          console.log(`${logPrefix} Timestamp recorded`);
 
           const channelLogin = channel.replace('#', '');
-          console.log('[Twitch Chat Service] Channel login extracted:', channelLogin);
+          console.log(`${logPrefix} Channel login extracted: ${channelLogin}`);
 
-          console.log(`[Twitch Chat] Message from ${tags.username} in ${channelLogin}: ${message}${self ? ' (self)' : ''}`);
+          console.log(`${logPrefix} Message from ${tags.username} in ${channelLogin}: ${message}${self ? ' (self)' : ''}`);
 
           // エモート情報をパース
-          console.log('[Twitch Chat Service] Parsing emotes...');
+          console.log(`${logPrefix} Parsing emotes...`);
           const emotes: TwitchEmote[] = [];
           if (tags.emotes) {
-            console.log('[Twitch Chat] Raw emotes:', tags.emotes);
+            console.log(`${logPrefix} Raw emotes:`, tags.emotes);
             Object.entries(tags.emotes).forEach(([emoteId, positions]) => {
               const parsedPositions = positions.map((pos) => {
                 const [start, end] = pos.split('-').map(Number);
                 return { start, end };
               });
               emotes.push({ id: emoteId, positions: parsedPositions });
-              console.log('[Twitch Chat] Parsed emote:', { id: emoteId, positions: parsedPositions });
+              console.log(`${logPrefix} Parsed emote:`, { id: emoteId, positions: parsedPositions });
             });
           }
 
           // バッジ情報をパース
-          console.log('[Twitch Chat Service] Parsing badges...');
+          console.log(`${logPrefix} Parsing badges...`);
           const badges: TwitchBadge[] = [];
           const channelId = this.channelIdMap.get(channelLogin);
-          console.log('[Twitch Chat] Raw badges:', tags.badges, 'channelId:', channelId);
+          console.log(`${logPrefix} Raw badges:`, tags.badges, 'channelId:', channelId);
           if (tags.badges) {
             Object.entries(tags.badges).forEach(([setId, version]) => {
               const imageUrl = badgeService.getBadgeUrl(setId, version || '1', channelId);
-              console.log(`[Twitch Chat] Badge lookup: ${setId}/${version} -> ${imageUrl || 'NOT FOUND'}`);
+              console.log(`${logPrefix} Badge lookup: ${setId}/${version} -> ${imageUrl || 'NOT FOUND'}`);
               badges.push({
                 setId,
                 version: version || '1',
                 imageUrl: imageUrl || undefined
               });
             });
-            console.log('[Twitch Chat] Parsed badges:', badges);
+            console.log(`${logPrefix} Parsed badges:`, badges);
           }
-          console.log('[Twitch Chat Service] Badges parsed successfully');
+          console.log(`${logPrefix} Badges parsed successfully`);
 
           // Bits情報を抽出
           const bits = tags.bits ? parseInt(tags.bits, 10) : undefined;
@@ -167,9 +171,9 @@ class TwitchChatService {
           const isModerator = tags.mod || false;
           const isVip = tags.badges?.vip !== undefined;
 
-          console.log('[Twitch Chat Service] Creating chat message object...');
+          console.log(`${logPrefix} Creating chat message object...`);
           const chatMessage: TwitchChatMessage = {
-            id: tags.id || `${Date.now()}-${Math.random()}`,
+            id: msgId,
             platform: 'twitch',
             author: tags['display-name'] || tags.username || 'Anonymous',
             message: message,
@@ -187,35 +191,35 @@ class TwitchChatService {
             isModerator,
             isVip
           };
-          console.log('[Twitch Chat Service] Chat message object created successfully');
+          console.log(`${logPrefix} Chat message object created successfully`);
 
           // すべてのハンドラーに通知
-          console.log(`[Twitch Chat Service] About to notify ${this.messageHandlers.size} handlers with message from ${chatMessage.author}`);
+          console.log(`${logPrefix} About to notify ${this.messageHandlers.size} handlers with message from ${chatMessage.author}`);
 
           if (this.messageHandlers.size === 0) {
-            console.warn('[Twitch Chat Service] WARNING: No message handlers registered!');
+            console.warn(`${logPrefix} WARNING: No message handlers registered!`);
           }
 
           this.messageHandlers.forEach((handler) => {
             try {
-              console.log('[Twitch Chat Service] Calling handler...');
+              console.log(`${logPrefix} Calling handler...`);
               handler(chatMessage);
-              console.log('[Twitch Chat Service] Handler executed successfully');
+              console.log(`${logPrefix} Handler executed successfully`);
             } catch (error) {
-              console.error('[Twitch Chat Service] Error in message handler:', error);
+              console.error(`${logPrefix} Error in message handler:`, error);
               if (error instanceof Error) {
-                console.error('[Twitch Chat Service] Error stack:', error.stack);
+                console.error(`${logPrefix} Error stack:`, error.stack);
               }
             }
           });
-          console.log('[Twitch Chat Service] All handlers notified');
+          console.log(`${logPrefix} All handlers notified`);
         } catch (error) {
-          console.error('[Twitch Chat Service] !!! CRITICAL ERROR processing message !!!');
-          console.error('[Twitch Chat Service] Error details:', error);
+          console.error(`${logPrefix} !!! CRITICAL ERROR processing message !!!`);
+          console.error(`${logPrefix} Error details:`, error);
           if (error instanceof Error) {
-            console.error('[Twitch Chat Service] Error name:', error.name);
-            console.error('[Twitch Chat Service] Error message:', error.message);
-            console.error('[Twitch Chat Service] Error stack:', error.stack);
+            console.error(`${logPrefix} Error name:`, error.name);
+            console.error(`${logPrefix} Error message:`, error.message);
+            console.error(`${logPrefix} Error stack:`, error.stack);
           }
         }
       });
