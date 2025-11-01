@@ -13,7 +13,7 @@ export const eventsubRouter = Router();
  */
 eventsubRouter.get('/stats', async (req, res) => {
   try {
-    const stats = twitchEventSubManager.getStats();
+    const stats = await twitchEventSubManager.getStats();
     const capacity = twitchEventSubManager.getCapacity();
     const metrics = metricsCollector.getStats();
 
