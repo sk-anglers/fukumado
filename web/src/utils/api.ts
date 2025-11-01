@@ -4,7 +4,12 @@ export const backendOrigin =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   (window.location.origin.includes('5173')
     ? window.location.origin.replace('5173', '4000')
-    : window.location.origin);
+    : // 本番環境フォールバック: ドメインに応じて適切なAPIエンドポイントを推測
+      window.location.origin.includes('beta.fukumado.jp')
+      ? 'https://beta-api.fukumado.jp'
+      : window.location.origin.includes('fukumado.jp')
+      ? 'https://api.fukumado.jp'
+      : window.location.origin);
 
 export const apiUrl = (path: string): string => {
   if (path.startsWith('http://') || path.startsWith('https://')) {
