@@ -85,7 +85,7 @@ const formatViewerLabel = (viewerCount?: number): string =>
 const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelection, onSelect }: StreamSlotCardProps): JSX.Element => {
   const { trackStream } = useAnalytics();
 
-  const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen, userInteracted, masterSlotId } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
+  const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen, userInteracted, masterSlotId, setSlotReady } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     setVolume: state.setVolume,
     toggleSlotMute: state.toggleSlotMute,
     preset: state.preset,
@@ -96,7 +96,8 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
     swapSlots: state.swapSlots,
     setModalOpen: state.setModalOpen,
     userInteracted: state.userInteracted,
-    masterSlotId: state.masterSlotId
+    masterSlotId: state.masterSlotId,
+    setSlotReady: state.setSlotReady
   }), shallow);
 
   const isMobile = useIsMobile();
@@ -152,6 +153,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
 
   useEffect(() => {
     setPlayerReady(false);
+    setSlotReady(slot.id, false); // スロット準備状態をリセット
     let isMounted = true;
     let initTimeout: number | undefined;
 
@@ -167,6 +169,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
           playerContainerRef.current.style.zIndex = '-9999';
         }
         setPlayerReady(false);
+        setSlotReady(slot.id, false); // スロット準備状態をリセット
         return;
       }
 
@@ -282,6 +285,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
           const readyHandler = () => {
             if (!isMounted) return;
             setPlayerReady(true);
+            setSlotReady(slot.id, true); // プレイヤー準備完了を通知
 
             // 初期音量設定
             if (!slot.muted) {
@@ -355,6 +359,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
               onReady: (event: any) => {
                 if (!isMounted) return;
                 setPlayerReady(true);
+                setSlotReady(slot.id, true); // プレイヤー準備完了を通知
 
                 // 初期音量設定
                 if (!slot.muted) {

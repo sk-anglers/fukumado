@@ -61,6 +61,8 @@ export interface LayoutState {
   autoQualityEnabled: boolean;
   isModalOpen: boolean;
   userInteracted: boolean;
+  slotReadyStates: Record<string, boolean>;
+  autoUnmutedApplied: boolean;
   setPreset: (preset: LayoutPreset) => void;
   setUserInteracted: (value: boolean) => void;
   setShowSelection: (value: boolean) => void;
@@ -92,6 +94,8 @@ export interface LayoutState {
   setPendingStream: (stream: Streamer | null) => void;
   setModalOpen: (isOpen: boolean) => void;
   getMaxSlots: () => number;
+  setSlotReady: (slotId: string, ready: boolean) => void;
+  resetAutoUnmuted: () => void;
 }
 
 const initialSlots = createInitialSlots();
@@ -120,6 +124,8 @@ export const useLayoutStore = create<LayoutState>()(
       userInteracted: false,
       showSelection: false,
       masterSlotId: null,
+      slotReadyStates: {},
+      autoUnmutedApplied: false,
       setPreset: (preset) => set({ preset }),
       setUserInteracted: (value) => set({ userInteracted: value }),
       setShowSelection: (value) => set({ showSelection: value }),
@@ -337,7 +343,15 @@ export const useLayoutStore = create<LayoutState>()(
       setFullscreen: (value) => set({ fullscreen: value }),
       setPendingStream: (stream) => set({ pendingStream: stream }),
       setModalOpen: (isOpen) => set({ isModalOpen: isOpen }),
-      getMaxSlots: () => getMaxSlotsForDevice()
+      getMaxSlots: () => getMaxSlotsForDevice(),
+      setSlotReady: (slotId, ready) =>
+        set((state) => ({
+          slotReadyStates: {
+            ...state.slotReadyStates,
+            [slotId]: ready
+          }
+        })),
+      resetAutoUnmuted: () => set({ autoUnmutedApplied: false })
     }),
     {
       name: 'fukumado-layout',

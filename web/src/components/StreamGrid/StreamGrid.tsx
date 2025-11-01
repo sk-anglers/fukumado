@@ -64,7 +64,7 @@ const renderMessageWithEmotes = (message: ChatMessage) => {
 };
 
 export const StreamGrid = (): JSX.Element => {
-  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen, setActiveSlotsCount, toggleMuteAll, mutedAll } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
+  const { slots, preset, selectedSlotId, showSelection, selectSlot, setShowSelection, activeSlotsCount, fullscreen, setFullscreen, clearSelection, isModalOpen, setActiveSlotsCount, toggleMuteAll, mutedAll, slotReadyStates, autoUnmutedApplied } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     slots: state.slots,
     preset: state.preset,
     selectedSlotId: state.selectedSlotId,
@@ -78,7 +78,9 @@ export const StreamGrid = (): JSX.Element => {
     isModalOpen: state.isModalOpen,
     setActiveSlotsCount: state.setActiveSlotsCount,
     toggleMuteAll: state.toggleMuteAll,
-    mutedAll: state.mutedAll
+    mutedAll: state.mutedAll,
+    slotReadyStates: state.slotReadyStates,
+    autoUnmutedApplied: state.autoUnmutedApplied
   }), shallow);
 
   const isMobile = useIsMobile();
@@ -101,6 +103,8 @@ export const StreamGrid = (): JSX.Element => {
       if (!mutedAll) {
         toggleMuteAll();
       }
+      // 自動ミュート解除フラグをリセット
+      useLayoutStore.getState().resetAutoUnmuted();
     }
   }, [isMobile, mutedAll, toggleMuteAll]);
 
@@ -118,6 +122,26 @@ export const StreamGrid = (): JSX.Element => {
       }
     }
   }, [isMobile, isLandscape, setActiveSlotsCount, setFullscreen]);
+
+  // モバイルで全スロット再生確認後の自動ミュート解除
+  useEffect(() => {
+    if (!isMobile || !mutedAll || autoUnmutedApplied) return;
+
+    // 配信が割り当てられているスロットを取得
+    const assignedSlots = slots.slice(0, activeSlotsCount).filter((slot) => slot.assignedStream);
+
+    // 配信がない場合は何もしない
+    if (assignedSlots.length === 0) return;
+
+    // 全ての配信が割り当てられたスロットが再生準備完了しているかチェック
+    const allReady = assignedSlots.every((slot) => slotReadyStates[slot.id] === true);
+
+    if (allReady) {
+      console.log('[StreamGrid] 全スロット再生準備完了 - 自動ミュート解除を実行');
+      toggleMuteAll(); // 全ミュート解除
+      useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる
+    }
+  }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotReadyStates, toggleMuteAll]);
 
   // activeSlotsをメモ化（slots配列またはactiveSlotsCountが変わったときのみ再計算）
   const activeSlots = useMemo(() => slots.slice(0, activeSlotsCount), [slots, activeSlotsCount]);
