@@ -475,17 +475,26 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
     const player = playerInstanceRef.current;
     if (!playerReady || !player || !assignedStream) return;
 
+    console.log(`[StreamSlot ${slot.id}] 音声設定変更`, {
+      muted: slot.muted,
+      volume: slot.volume,
+      masterVolume,
+      platform: assignedStream.platform
+    });
+
     try {
       // YouTubeプレイヤーの場合
       if (assignedStream.platform === 'youtube' && 'isMuted' in player) {
         const ytPlayer = player as YT.Player;
         if (slot.muted) {
+          console.log(`[StreamSlot ${slot.id}] YouTube ミュート実行`);
           if (!ytPlayer.isMuted()) {
             ytPlayer.mute();
           }
         } else {
-          ytPlayer.unMute();
           const combinedVolume = Math.round(slot.volume * (masterVolume / 100));
+          console.log(`[StreamSlot ${slot.id}] YouTube ミュート解除 & 音量設定: ${combinedVolume}`);
+          ytPlayer.unMute();
           ytPlayer.setVolume(combinedVolume);
         }
       }
@@ -493,10 +502,12 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
       else if (assignedStream.platform === 'twitch' && 'setMuted' in player) {
         const twitchPlayer = player as TwitchPlayer;
         if (slot.muted) {
+          console.log(`[StreamSlot ${slot.id}] Twitch ミュート実行`);
           twitchPlayer.setMuted(true);
         } else {
-          twitchPlayer.setMuted(false);
           const combinedVolume = (slot.volume * (masterVolume / 100)) / 100; // 0.0-1.0に変換
+          console.log(`[StreamSlot ${slot.id}] Twitch ミュート解除 & 音量設定: ${combinedVolume}`);
+          twitchPlayer.setMuted(false);
           twitchPlayer.setVolume(combinedVolume);
         }
       }
@@ -504,7 +515,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
       // プレイヤーが無効な状態でも処理を継続
       console.warn('[StreamSlot] 音量設定エラー:', e);
     }
-  }, [slot.muted, slot.volume, playerReady, masterVolume, assignedStream?.platform]);
+  }, [slot.id, slot.muted, slot.volume, playerReady, masterVolume, assignedStream?.platform]);
 
   // Twitch画質変更時の処理（プレイヤーを再生成せずに画質のみ変更）
   useEffect(() => {

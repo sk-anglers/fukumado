@@ -169,7 +169,16 @@ export const StreamGrid = (): JSX.Element => {
       // 5秒後に自動ミュート解除
       autoUnmuteTimerRef.current = window.setTimeout(() => {
         console.log('[StreamGrid] 自動ミュート解除を実行');
+        const beforeMutedAll = useLayoutStore.getState().mutedAll;
+        console.log('[StreamGrid] 実行前 mutedAll:', beforeMutedAll);
+
         toggleMuteAll(); // 全ミュート解除
+
+        const afterMutedAll = useLayoutStore.getState().mutedAll;
+        const afterSlots = useLayoutStore.getState().slots;
+        console.log('[StreamGrid] 実行後 mutedAll:', afterMutedAll);
+        console.log('[StreamGrid] 実行後 スロットミュート状態:', afterSlots.map(s => ({ id: s.id, muted: s.muted })));
+
         useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる
       }, 5000);
     }
