@@ -96,6 +96,7 @@ export const StreamGrid = (): JSX.Element => {
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [showReadyNotification, setShowReadyNotification] = useState(false);
   const [showLoadingPopup, setShowLoadingPopup] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   const messages = useChatStore((state) => state.messages);
 
@@ -137,13 +138,17 @@ export const StreamGrid = (): JSX.Element => {
 
     // 配信が割り当てられているスロットを取得
     const assignedSlots = slots.slice(0, activeSlotsCount).filter((slot) => slot.assignedStream);
+    const remainingSlots = activeSlotsCount - assignedSlots.length;
 
-    // 配信がない場合は何もしない
-    if (assignedSlots.length === 0) {
-      setShowLoadingPopup(false);
+    // 全スロットに配信が割り当てられていない場合
+    if (remainingSlots > 0) {
+      setShowLoadingPopup(true);
+      setLoadingMessage(`残り${remainingSlots}枠をセットしてください`);
+      setShowReadyNotification(false);
       return;
     }
 
+    // 全スロットに配信が割り当てられている場合
     // 全ての配信が割り当てられたスロットが再生開始しているかチェック
     const allPlaying = assignedSlots.every((slot) => slotPlayingStates[slot.id] === true);
 
@@ -155,6 +160,7 @@ export const StreamGrid = (): JSX.Element => {
     } else if (!allPlaying && !autoUnmutedApplied) {
       // まだ全スロット再生開始していない - 準備中ポップアップを表示
       setShowLoadingPopup(true);
+      setLoadingMessage('配信を読み込んでいます...');
       setShowReadyNotification(false);
     }
   }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotPlayingStates]);
@@ -308,8 +314,10 @@ export const StreamGrid = (): JSX.Element => {
       {isMobile && showLoadingPopup && (
         <div className={styles.loadingPopup}>
           <div className={styles.loadingPopupContent}>
-            <div className={styles.loadingSpinner}></div>
-            <p className={styles.loadingPopupText}>配信を読み込んでいます...</p>
+            {loadingMessage === '配信を読み込んでいます...' && (
+              <div className={styles.loadingSpinner}></div>
+            )}
+            <p className={styles.loadingPopupText}>{loadingMessage}</p>
           </div>
         </div>
       )}
