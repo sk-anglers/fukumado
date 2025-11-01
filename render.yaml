@@ -201,25 +201,22 @@ services:
         sync: false # Renderダッシュボードで手動設定（メインサーバーのADMIN_API_KEYと同じ値）
 
   # ===================================
-  # ベータクライアントフロントエンド（プロキシサーバー付き）
+  # ベータクライアントフロントエンド（静的サイト）
   # ===================================
   - type: web
     name: fukumado-web-beta
-    runtime: node
+    runtime: static
     rootDir: web
     buildCommand: npm ci && npm run build
-    startCommand: npm start
-    healthCheckPath: /
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
-      - key: PORT
-        value: 4000
-      - key: NODE_ENV
-        value: production
-      # プロキシ先のバックエンドAPI
-      - key: API_TARGET
-        value: https://beta-api.fukumado.jp
       # Vite環境変数（ビルド時に使用）
-      # 注意: VITE_API_URLは設定しない（プロキシ経由で同一オリジンからアクセスするため）
+      - key: VITE_API_URL
+        value: https://beta-api.fukumado.jp
       - key: VITE_IS_BETA
         value: true
 

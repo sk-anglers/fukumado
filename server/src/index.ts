@@ -150,7 +150,7 @@ const sessionMiddleware = session({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // 本番環境のみHTTPS必須
-    sameSite: 'lax', // プロキシ経由で同一オリジンとなるため'lax'で十分（Safari対応完了）
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Safari対応：本番環境では'none'、開発環境では'lax'
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
 });
@@ -607,26 +607,12 @@ wss.on('connection', (ws, request) => {
       }
     }
 
-    // 現在の接続を削除
+    // StreamSyncServiceからユーザーを削除
+    streamSyncService.unregisterUser(clientData.userId);
+    console.log(`[WebSocket] Unregistered user ${clientData.userId} from StreamSyncService`);
+
     clients.delete(ws);
     console.log(`[WebSocket] Total clients: ${clients.size}`);
-
-    // 同じuserIdを持つ他の接続が存在するかチェック
-    let hasOtherConnection = false;
-    for (const [, otherData] of clients) {
-      if (otherData.userId === clientData.userId) {
-        hasOtherConnection = true;
-        break;
-      }
-    }
-
-    // 他の接続がない場合のみStreamSyncServiceからユーザーを削除
-    if (!hasOtherConnection) {
-      streamSyncService.unregisterUser(clientData.userId);
-      console.log(`[WebSocket] Unregistered user ${clientData.userId} from StreamSyncService`);
-    } else {
-      console.log(`[WebSocket] User ${clientData.userId} has other active connections, keeping registered`);
-    }
   });
 
   ws.on('error', (error) => {
