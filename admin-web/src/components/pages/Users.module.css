@@ -110,6 +110,8 @@
 /* テーブル */
 .tableContainer {
   overflow-x: auto;
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 .table {
@@ -220,6 +222,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
 }
 
 .loginCard {
