@@ -159,6 +159,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
   useEffect(() => {
     setPlayerReady(false);
     setSlotReady(slot.id, false); // スロット準備状態をリセット
+    setSlotPlaying(slot.id, false); // スロット再生状態をリセット
     let isMounted = true;
     let initTimeout: number | undefined;
 
@@ -175,6 +176,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
         }
         setPlayerReady(false);
         setSlotReady(slot.id, false); // スロット準備状態をリセット
+        setSlotPlaying(slot.id, false); // スロット再生状態をリセット
         return;
       }
 

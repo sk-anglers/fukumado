@@ -160,7 +160,10 @@ export const useLayoutStore = create<LayoutState>()(
             assignedStream: independentStream
           };
 
-          return { slots: nextSlots };
+          return {
+            slots: nextSlots,
+            autoUnmutedApplied: false // 新しいストリーム割り当て時に通知フラグをリセット
+          };
         }),
       clearSlot: (slotId) =>
         set((state) => {
@@ -176,7 +179,18 @@ export const useLayoutStore = create<LayoutState>()(
             assignedStream: undefined
           };
 
-          return { slots: nextSlots };
+          // スロット状態をリセット
+          const nextReadyStates = { ...state.slotReadyStates };
+          const nextPlayingStates = { ...state.slotPlayingStates };
+          delete nextReadyStates[slotId];
+          delete nextPlayingStates[slotId];
+
+          return {
+            slots: nextSlots,
+            slotReadyStates: nextReadyStates,
+            slotPlayingStates: nextPlayingStates,
+            autoUnmutedApplied: false // 通知フラグをリセット
+          };
         }),
       toggleMuteAll: () =>
         set((state) => {
