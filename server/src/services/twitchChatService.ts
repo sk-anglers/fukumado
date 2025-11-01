@@ -38,6 +38,10 @@ class TwitchChatService {
   private connectionPromise: Promise<void> | null = null;
   private accessToken: string | null = null;
   private username: string | null = null;
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 10;
+  private lastConnectedAt: Date | null = null;
+  private isManualDisconnect: boolean = false;
 
   constructor() {
     console.log('[Twitch Chat Service] Initializing');
@@ -172,11 +176,27 @@ class TwitchChatService {
 
       this.client.on('connected', () => {
         console.log('[Twitch Chat Service] Connected to Twitch IRC');
+        this.reconnectAttempts = 0; // 接続成功したらカウンターをリセット
+        this.lastConnectedAt = new Date();
+        console.log(`[Twitch Chat Service] Connection established at ${this.lastConnectedAt.toISOString()}`);
       });
 
       this.client.on('disconnected', (reason) => {
         console.log('[Twitch Chat Service] Disconnected:', reason);
         this.connectionPromise = null;
+
+        // 手動切断の場合は再接続しない
+        if (this.isManualDisconnect) {
+          console.log('[Twitch Chat Service] Manual disconnect - not reconnecting');
+          return;
+        }
+
+        // 再接続を試行
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.attemptReconnect();
+        } else {
+          console.error('[Twitch Chat Service] Max reconnect attempts reached. Giving up.');
+        }
       });
 
       // 接続が完了するまで待機
@@ -293,14 +313,69 @@ class TwitchChatService {
     }
   }
 
+  /**
+   * 再接続を試行（指数バックオフ付き）
+   */
+  private attemptReconnect(): void {
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000); // 最大30秒
+
+    console.log(`[Twitch Chat Service] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+    setTimeout(async () => {
+      try {
+        console.log(`[Twitch Chat Service] Reconnection attempt ${this.reconnectAttempts} starting...`);
+
+        // 既存のクライアントを破棄
+        if (this.client) {
+          this.client.removeAllListeners();
+          this.client = null;
+        }
+
+        // 参加していたチャンネルのリストを保存
+        const channelsToRejoin = Array.from(this.joinedChannels);
+        const channelIdMapBackup = new Map(this.channelIdMap);
+
+        // クライアントを再作成して接続
+        await this.ensureClient();
+
+        console.log(`[Twitch Chat Service] Reconnection successful. Rejoining ${channelsToRejoin.length} channels...`);
+
+        // 以前参加していたチャンネルに再参加
+        for (const channelLogin of channelsToRejoin) {
+          try {
+            const channelId = channelIdMapBackup.get(channelLogin);
+            await this.joinChannel(channelLogin, channelId);
+            console.log(`[Twitch Chat Service] Rejoined channel: ${channelLogin}`);
+          } catch (error) {
+            console.error(`[Twitch Chat Service] Failed to rejoin ${channelLogin}:`, error);
+          }
+        }
+
+        console.log('[Twitch Chat Service] Reconnection process completed');
+      } catch (error) {
+        console.error(`[Twitch Chat Service] Reconnection attempt ${this.reconnectAttempts} failed:`, error);
+
+        // 再接続に失敗した場合、さらに試行
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.attemptReconnect();
+        } else {
+          console.error('[Twitch Chat Service] Max reconnect attempts reached after failure');
+        }
+      }
+    }, delay);
+  }
+
   public async disconnect(): Promise<void> {
     if (!this.client) return;
 
     console.log('[Twitch Chat Service] Disconnecting...');
+    this.isManualDisconnect = true; // 手動切断フラグを設定
     await this.client.disconnect();
     this.client = null;
     this.joinedChannels.clear();
     this.messageHandlers.clear();
+    this.isManualDisconnect = false; // フラグをリセット
   }
 }
 
