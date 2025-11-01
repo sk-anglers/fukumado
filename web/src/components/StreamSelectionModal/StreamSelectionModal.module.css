@@ -162,15 +162,30 @@
   aspect-ratio: 16 / 9;
   background: rgba(15, 23, 42, 0.8);
   overflow: hidden;
+  min-height: 150px;
+}
+
+@media (max-width: 768px) {
+  .streamThumbnail {
+    min-height: 180px;
+    height: auto;
+  }
 }
 
 .streamThumbnail img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .thumbnailPlaceholder {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   display: flex;
@@ -197,6 +212,7 @@
   pointer-events: auto;
   transition: opacity 0.2s ease, transform 0.2s ease;
   border: none;
+  z-index: 1;
 }
 
 .platformBadge:hover {
