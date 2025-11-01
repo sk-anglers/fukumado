@@ -369,6 +369,17 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
           >
             <ChatBubbleLeftRightIcon />
           </button>
+          <button
+            type="button"
+            className={clsx(styles.mobileMenuButton, !mutedAll && styles.mobileMenuButtonActive)}
+            onClick={() => {
+              toggleMuteAll();
+              trackButton('mute_all', 'header_mobile');
+            }}
+            title={mutedAll ? '一括ミュート解除' : '一括ミュート'}
+          >
+            {mutedAll ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
+          </button>
         </div>
       )}
       <div className={styles.brand}>
