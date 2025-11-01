@@ -11,6 +11,23 @@ export const backendOrigin =
       ? 'https://api.fukumado.jp'
       : window.location.origin);
 
+// デバッグ用にグローバルに公開
+(window as any).__BACKEND_ORIGIN__ = backendOrigin;
+
+// APIログを記録
+const logApiRequest = (method: string, url: string, status?: number, error?: string) => {
+  const event = new CustomEvent('api-log', {
+    detail: {
+      timestamp: new Date().toLocaleTimeString('ja-JP'),
+      method,
+      url,
+      status,
+      error
+    }
+  });
+  window.dispatchEvent(event);
+};
+
 export const apiUrl = (path: string): string => {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
@@ -36,10 +53,25 @@ export const apiFetch = async (input: string, init?: RequestInit): Promise<Respo
     ? `${url}${url.includes('?') ? '&' : '?'}bypass=${bypassToken}`
     : url;
 
-  const response = await fetch(finalUrl, {
-    credentials: 'include',
-    ...init
-  });
+  const method = init?.method || 'GET';
+
+  // リクエストをログに記録
+  logApiRequest(method, finalUrl);
+
+  let response: Response;
+  try {
+    response = await fetch(finalUrl, {
+      credentials: 'include',
+      ...init
+    });
+
+    // レスポンスをログに記録
+    logApiRequest(method, finalUrl, response.status);
+  } catch (error) {
+    // エラーをログに記録
+    logApiRequest(method, finalUrl, undefined, error instanceof Error ? error.message : 'Unknown error');
+    throw error;
+  }
 
   // 503エラーの場合、メンテナンス情報を抽出してストアに保存
   if (response.status === 503) {

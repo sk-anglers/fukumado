@@ -1,0 +1,155 @@
+.toggleButton {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10000;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-height: 44px;
+  min-width: 100px;
+}
+
+.toggleButton:active {
+  transform: scale(0.95);
+}
+
+.panel {
+  position: fixed;
+  bottom: 4rem;
+  right: 1rem;
+  left: 1rem;
+  max-width: 600px;
+  margin-left: auto;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.header button {
+  padding: 0.25rem 0.75rem;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-radius: 6px;
+  color: rgba(248, 113, 113, 0.95);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.section {
+  margin-bottom: 1rem;
+}
+
+.section strong {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.9);
+  margin-bottom: 0.25rem;
+}
+
+.value {
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.95);
+  background: rgba(30, 41, 59, 0.5);
+  padding: 0.5rem;
+  border-radius: 6px;
+  word-break: break-all;
+}
+
+.logs {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.noLogs {
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.7);
+  text-align: center;
+  padding: 1rem;
+}
+
+.logItem {
+  font-size: 0.75rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  border-left: 3px solid;
+}
+
+.logSuccess {
+  background: rgba(34, 197, 94, 0.1);
+  border-left-color: rgba(34, 197, 94, 0.8);
+}
+
+.logError {
+  background: rgba(239, 68, 68, 0.1);
+  border-left-color: rgba(239, 68, 68, 0.8);
+}
+
+.logTime {
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 0.7rem;
+  margin-bottom: 0.25rem;
+}
+
+.logMethod {
+  display: inline-block;
+  color: rgba(56, 189, 248, 0.9);
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.logUrl {
+  display: inline;
+  color: rgba(226, 232, 240, 0.9);
+  word-break: break-all;
+}
+
+.logStatus {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  background: rgba(34, 197, 94, 0.2);
+  border-radius: 4px;
+  color: rgba(34, 197, 94, 0.95);
+  font-weight: 600;
+}
+
+.logErrorText {
+  margin-top: 0.25rem;
+  color: rgba(248, 113, 113, 0.95);
+  font-size: 0.7rem;
+}
+
+@media (min-width: 769px) {
+  .panel {
+    left: auto;
+    max-width: 500px;
+  }
+}
