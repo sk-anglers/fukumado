@@ -48,6 +48,7 @@ import {
 import { requestLogger, recordAccessStats, SecurityLogger } from './middleware/logging';
 import { anomalyDetectionService } from './services/anomalyDetection';
 import { metricsCollector } from './services/metricsCollector';
+import { systemMetricsCollector } from './services/systemMetricsCollector';
 import { initializeSession, detectSessionHijacking, checkSessionTimeout, includeCSRFToken } from './middleware/sessionSecurity';
 import { PVTracker } from './services/pvTracker';
 import { createPVCounterMiddleware } from './middleware/pvCounter';
@@ -638,6 +639,9 @@ server.listen(env.port, async () => {
   // eslint-disable-next-line no-console
   console.log(`[server] listening on http://localhost:${env.port}`);
   console.log('[server] StreamSyncService will start automatically when clients connect');
+
+  // SystemMetricsCollectorを開始
+  systemMetricsCollector.start();
 
   // EventSubが有効な場合の通知（接続は管理者ログイン時に実行）
   if (env.enableEventSub) {

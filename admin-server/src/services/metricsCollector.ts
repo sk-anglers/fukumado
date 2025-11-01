@@ -51,19 +51,16 @@ class MetricsCollector {
    */
   private async collectSystemMetrics() {
     try {
-      const cpuUsage = process.cpuUsage();
-      const memoryUsage = process.memoryUsage();
-
-      // CPU使用率を計算（簡易的な方法）
-      const cpuPercent = (cpuUsage.user + cpuUsage.system) / 1000000; // マイクロ秒→秒
+      // メインサーバーからシステムメトリクスを取得
+      const systemMetrics = await this.getSystemMetricsFromMainServer();
 
       // WebSocket統計を取得
       const wsStats = await this.getWebSocketStats();
 
       const metrics: SystemMetrics = {
-        cpu: Math.round(cpuPercent * 100) / 100, // 小数点2桁
-        memory: Math.round(memoryUsage.heapUsed / 1024 / 1024 * 100) / 100, // バイト→MB
-        uptime: Math.round(process.uptime()),
+        cpu: systemMetrics.cpu,
+        memory: systemMetrics.memory,
+        uptime: systemMetrics.uptime,
         wsConnections: wsStats.totalConnections,
         activeWsConnections: wsStats.activeConnections,
         streamSyncCount: await this.getStreamSyncCount(),
@@ -107,6 +104,46 @@ class MetricsCollector {
       // console.log('[MetricsCollector] Metrics collected:', metrics);
     } catch (error) {
       console.error('[MetricsCollector] Error collecting metrics:', error);
+    }
+  }
+
+  /**
+   * メインサーバーからシステムメトリクス（CPU、メモリ、稼働時間）を取得
+   */
+  private async getSystemMetricsFromMainServer(): Promise<{ cpu: number; memory: number; uptime: number }> {
+    try {
+      const response = await fetch(`${env.mainBackendUrl}/api/admin/system/metrics`, {
+        headers: {
+          'X-Admin-API-Key': env.mainApiKey
+        }
+      });
+
+      if (!response.ok) {
+        console.warn('[MetricsCollector] Failed to fetch system metrics:', response.status);
+        return { cpu: 0, memory: 0, uptime: 0 };
+      }
+
+      const result = await response.json() as {
+        success: boolean;
+        data: {
+          cpu: number;
+          memory: number;
+          uptime: number;
+        };
+      };
+
+      if (!result.success || !result.data) {
+        return { cpu: 0, memory: 0, uptime: 0 };
+      }
+
+      return {
+        cpu: result.data.cpu,
+        memory: result.data.memory,
+        uptime: result.data.uptime
+      };
+    } catch (error) {
+      console.error('[MetricsCollector] Error getting system metrics from main server:', error);
+      return { cpu: 0, memory: 0, uptime: 0 };
     }
   }
 

@@ -3,8 +3,41 @@ import { followedChannelsCacheService } from '../services/followedChannelsCacheS
 import { emoteCacheService } from '../services/emoteCacheService';
 import { apiLogStore } from '../utils/apiLogStore';
 import { getWebSocketStats, pvTracker } from '../index';
+import { systemMetricsCollector } from '../services/systemMetricsCollector';
 
 export const adminRouter = Router();
+
+/**
+ * GET /api/admin/system/metrics
+ * システムメトリクス（CPU、メモリ、稼働時間）を取得
+ */
+adminRouter.get('/system/metrics', (req: Request, res: Response) => {
+  try {
+    const metrics = systemMetricsCollector.getLatestMetrics();
+
+    if (!metrics) {
+      return res.status(404).json({
+        success: false,
+        error: 'No metrics available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: metrics,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting system metrics:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 /**
  * GET /api/admin/memory-cache/stats
