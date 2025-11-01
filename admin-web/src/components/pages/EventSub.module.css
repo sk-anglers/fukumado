@@ -441,6 +441,69 @@
   color: #8a8886;
 }
 
+/* Conduits情報 */
+.conduitInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.conduitCard {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.conduitHeader {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #334155;
+}
+
+.conduitTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.conduitBody {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.conduitStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.conduitLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.conduitValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-family: monospace;
+}
+
+.conduitNote {
+  padding: 16px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
 /* レスポンシブ */
 @media (max-width: 768px) {
   .container {
@@ -459,6 +522,10 @@
 
   .connectionsGrid,
   .channelList {
+    grid-template-columns: 1fr;
+  }
+
+  .conduitBody {
     grid-template-columns: 1fr;
   }
 }

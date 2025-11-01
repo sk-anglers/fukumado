@@ -481,14 +481,28 @@ export interface EventSubConnectionStats {
 }
 
 /**
+ * Conduits統計情報
+ */
+export interface ConduitStats {
+  conduitId: string | null;
+  totalShards: number;
+  enabledShards: number;
+  disabledShards: number;
+  totalSubscriptions: number;
+  usagePercentage: number;
+}
+
+/**
  * EventSubManager統計
  */
 export interface EventSubManagerStats {
+  mode: 'websocket' | 'conduit';
   totalConnections: number;
   activeConnections: number;
   totalSubscriptions: number;
   subscribedChannelCount: number;
   connections: EventSubConnectionStats[];
+  conduitStats?: ConduitStats;
 }
 
 /**

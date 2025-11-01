@@ -137,10 +137,14 @@ export const EventSub: React.FC = () => {
       {statsData && (
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
-            <div className={styles.statLabel}>総接続数</div>
-            <div className={styles.statValue}>{statsData.stats.totalConnections}</div>
+            <div className={styles.statLabel}>モード</div>
+            <div className={styles.statValue}>
+              {statsData.stats.mode === 'conduit' ? '🚀 Conduits' : '📡 WebSocket'}
+            </div>
             <div className={styles.statSubtext}>
-              アクティブ: {statsData.stats.activeConnections}
+              {statsData.stats.mode === 'conduit'
+                ? '最大100,000サブスクリプション'
+                : '最大900サブスクリプション'}
             </div>
           </div>
 
@@ -172,38 +176,95 @@ export const EventSub: React.FC = () => {
       {statsData && (
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>接続状況</h2>
-          <div className={styles.connectionsGrid}>
-            {statsData.stats.connections.map((conn) => (
-              <div key={conn.index} className={styles.connectionCard}>
-                <div className={styles.connectionHeader}>
-                  <span className={styles.connectionIndex}>接続 #{conn.index}</span>
-                  <span className={`${styles.connectionStatus} ${styles[conn.status]}`}>
-                    {conn.status}
-                  </span>
-                </div>
-                <div className={styles.connectionBody}>
-                  <div className={styles.connectionStat}>
-                    <span className={styles.connectionLabel}>購読数:</span>
-                    <span className={styles.connectionValue}>{conn.subscriptionCount}</span>
+
+          {/* WebSocketモード */}
+          {statsData.stats.mode === 'websocket' && (
+            <div className={styles.connectionsGrid}>
+              {statsData.stats.connections.map((conn) => (
+                <div key={conn.index} className={styles.connectionCard}>
+                  <div className={styles.connectionHeader}>
+                    <span className={styles.connectionIndex}>接続 #{conn.index}</span>
+                    <span className={`${styles.connectionStatus} ${styles[conn.status]}`}>
+                      {conn.status}
+                    </span>
                   </div>
-                  {conn.sessionId && (
+                  <div className={styles.connectionBody}>
                     <div className={styles.connectionStat}>
-                      <span className={styles.connectionLabel}>セッションID:</span>
-                      <span className={styles.connectionValue}>{conn.sessionId.substring(0, 12)}...</span>
+                      <span className={styles.connectionLabel}>購読数:</span>
+                      <span className={styles.connectionValue}>{conn.subscriptionCount}</span>
                     </div>
-                  )}
-                  {conn.connectedAt && (
-                    <div className={styles.connectionStat}>
-                      <span className={styles.connectionLabel}>接続時刻:</span>
-                      <span className={styles.connectionValue}>
-                        {new Date(conn.connectedAt).toLocaleString('ja-JP')}
-                      </span>
-                    </div>
-                  )}
+                    {conn.sessionId && (
+                      <div className={styles.connectionStat}>
+                        <span className={styles.connectionLabel}>セッションID:</span>
+                        <span className={styles.connectionValue}>{conn.sessionId.substring(0, 12)}...</span>
+                      </div>
+                    )}
+                    {conn.connectedAt && (
+                      <div className={styles.connectionStat}>
+                        <span className={styles.connectionLabel}>接続時刻:</span>
+                        <span className={styles.connectionValue}>
+                          {new Date(conn.connectedAt).toLocaleString('ja-JP')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Conduitsモード */}
+          {statsData.stats.mode === 'conduit' && statsData.stats.conduitStats && (
+            <div className={styles.conduitInfo}>
+              <div className={styles.conduitCard}>
+                <div className={styles.conduitHeader}>
+                  <span className={styles.conduitTitle}>🚀 Conduit Information</span>
+                </div>
+                <div className={styles.conduitBody}>
+                  <div className={styles.conduitStat}>
+                    <span className={styles.conduitLabel}>Conduit ID:</span>
+                    <span className={styles.conduitValue}>
+                      {statsData.stats.conduitStats.conduitId || 'N/A'}
+                    </span>
+                  </div>
+                  <div className={styles.conduitStat}>
+                    <span className={styles.conduitLabel}>総シャード数:</span>
+                    <span className={styles.conduitValue}>
+                      {statsData.stats.conduitStats.totalShards}
+                    </span>
+                  </div>
+                  <div className={styles.conduitStat}>
+                    <span className={styles.conduitLabel}>有効シャード:</span>
+                    <span className={styles.conduitValue}>
+                      {statsData.stats.conduitStats.enabledShards}
+                    </span>
+                  </div>
+                  <div className={styles.conduitStat}>
+                    <span className={styles.conduitLabel}>無効シャード:</span>
+                    <span className={styles.conduitValue}>
+                      {statsData.stats.conduitStats.disabledShards}
+                    </span>
+                  </div>
+                  <div className={styles.conduitStat}>
+                    <span className={styles.conduitLabel}>サブスクリプション:</span>
+                    <span className={styles.conduitValue}>
+                      {statsData.stats.conduitStats.totalSubscriptions}
+                    </span>
+                  </div>
+                  <div className={styles.conduitStat}>
+                    <span className={styles.conduitLabel}>使用率:</span>
+                    <span className={styles.conduitValue}>
+                      {statsData.stats.conduitStats.usagePercentage.toFixed(3)}%
+                    </span>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className={styles.conduitNote}>
+                💡 Conduitsモードでは、Twitchが自動的にシャードを管理します。<br />
+                最大100,000サブスクリプションまで対応可能です。
+              </div>
+            </div>
+          )}
         </section>
       )}
 
