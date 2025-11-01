@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { followedChannelsCacheService } from '../services/followedChannelsCacheService';
 import { emoteCacheService } from '../services/emoteCacheService';
 import { apiLogStore } from '../utils/apiLogStore';
-import { getWebSocketStats, pvTracker } from '../index';
+import { getWebSocketStats, pvTracker, analyticsTracker } from '../index';
 import { systemMetricsCollector } from '../services/systemMetricsCollector';
 
 export const adminRouter = Router();
@@ -392,6 +392,92 @@ adminRouter.post('/pv/backup', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[Admin] Error backing up PV stats:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ========================================
+// アナリティクス統計API
+// ========================================
+
+/**
+ * GET /api/admin/analytics/stats
+ * アナリティクス統計を取得
+ */
+adminRouter.get('/analytics/stats', async (req: Request, res: Response) => {
+  try {
+    const daysParam = req.query.days as string | undefined;
+    const days = daysParam ? parseInt(daysParam, 10) : 30;
+
+    if (!analyticsTracker) {
+      return res.status(503).json({
+        success: false,
+        error: 'Analytics service not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const stats = await analyticsTracker.getStats(days);
+
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting analytics stats:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/analytics/export
+ * アナリティクス統計をエクスポート（CSV/JSON）
+ */
+adminRouter.get('/analytics/export', async (req: Request, res: Response) => {
+  try {
+    const format = req.query.format as string || 'json';
+    const daysParam = req.query.days as string | undefined;
+    const days = daysParam ? parseInt(daysParam, 10) : 30;
+
+    if (!analyticsTracker) {
+      return res.status(503).json({
+        success: false,
+        error: 'Analytics service not available'
+      });
+    }
+
+    const stats = await analyticsTracker.getStats(days);
+
+    if (format === 'csv') {
+      // CSV形式でエクスポート
+      let csv = 'Date,Events,Sessions,Unique Users\n';
+
+      stats.timeline.daily.forEach((day: any) => {
+        csv += `${day.date},${day.events},${day.sessions},${day.uniqueUsers}\n`;
+      });
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="analytics-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csv);
+    } else {
+      // JSON形式でエクスポート
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="analytics-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(stats);
+    }
+  } catch (error) {
+    console.error('[Admin] Error exporting analytics stats:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       success: false,
