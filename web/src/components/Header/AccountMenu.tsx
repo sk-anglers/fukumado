@@ -631,40 +631,6 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
 
   return (
     <div className={styles.menu}>
-      {config.enableYoutube && (
-      <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>YouTube連携</h3>
-        <div className={styles.authStatus}>
-          {authLoading ? (
-            <span>ステータス確認中…</span>
-          ) : authenticated ? (
-            <>
-              <span>接続中: {authUser?.name ?? 'YouTube'}</span>
-              {authUser?.email && <span className={styles.authSubtext}>{authUser.email}</span>}
-            </>
-          ) : (
-            <span>未接続</span>
-          )}
-        </div>
-        <div className={styles.actions}>
-          {!authenticated ? (
-            <button type="button" onClick={handleLogin} disabled={authLoading}>
-              Googleでサインイン
-            </button>
-          ) : (
-            <button type="button" onClick={handleLogout} disabled={authLoading}>
-              ログアウト
-            </button>
-          )}
-          <button type="button" onClick={handleSubscriptionsSync} disabled={!authenticated || syncLoading || !canFollowChannelSync()}>
-            {followChannelCooldownRemaining > 0 ? `あと${followChannelCooldownRemaining}秒` : '購読チャンネルを同期'}
-          </button>
-        </div>
-        {syncMessage && <div className={styles.syncMessage}>{syncMessage}</div>}
-        {syncError && <div className={styles.syncError}>{syncError}</div>}
-      </section>
-      )}
-
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Twitch連携</h3>
         <div className={styles.authStatus}>
