@@ -62,6 +62,7 @@ class WebSocketService {
 
         try {
           const data = JSON.parse(event.data);
+          console.log('[WebSocketService] Parsed message type:', data.type, 'platform:', data.platform, 'channelLogin:', data.channelLogin);
 
           // 全てのメッセージハンドラーに通知
           this.messageHandlers.forEach(handler => {
