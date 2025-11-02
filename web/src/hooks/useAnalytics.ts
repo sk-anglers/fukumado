@@ -29,6 +29,23 @@ export function useAnalytics() {
     }
   }, []);
 
+  // 画面遷移を監視（popstate/hashchange）
+  useEffect(() => {
+    const handleNavigation = () => {
+      sessionManager.incrementPageView();
+    };
+
+    // ブラウザの戻る/進むボタンを監視
+    window.addEventListener('popstate', handleNavigation);
+    // hash変更を監視
+    window.addEventListener('hashchange', handleNavigation);
+
+    return () => {
+      window.removeEventListener('popstate', handleNavigation);
+      window.removeEventListener('hashchange', handleNavigation);
+    };
+  }, []);
+
   // レイアウト変更を追跡
   const trackLayout = useCallback((data: {
     slotsCount: number;
