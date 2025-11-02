@@ -122,6 +122,57 @@ export const StreamGrid = (): JSX.Element => {
     }
   }, [isMobile, activeSlotsCount, setActiveSlotsCount]);
 
+  // モバイルでFullscreen APIを使用した完全なフルスクリーン表示
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const enterFullscreen = async () => {
+      try {
+        const element = document.documentElement;
+        if (element.requestFullscreen) {
+          await element.requestFullscreen();
+        }
+        // iOS Safari用: スクロールでアドレスバーを隠す
+        window.scrollTo(0, 1);
+      } catch (error) {
+        console.error('[StreamGrid] Failed to enter fullscreen:', error);
+      }
+    };
+
+    const exitFullscreen = async () => {
+      try {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        }
+      } catch (error) {
+        console.error('[StreamGrid] Failed to exit fullscreen:', error);
+      }
+    };
+
+    if (fullscreen) {
+      enterFullscreen();
+    } else if (document.fullscreenElement) {
+      exitFullscreen();
+    }
+  }, [fullscreen, isMobile]);
+
+  // Fullscreen APIのイベントをリッスンして状態を同期
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!document.fullscreenElement;
+      if (fullscreen !== isCurrentlyFullscreen) {
+        setFullscreen(isCurrentlyFullscreen);
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [fullscreen, setFullscreen, isMobile]);
+
   // モバイルで準備中ポップアップと再生開始通知を管理
   useEffect(() => {
     if (!isMobile || !mutedAll) {
