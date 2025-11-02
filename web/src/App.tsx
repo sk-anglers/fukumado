@@ -109,7 +109,7 @@ function App(): JSX.Element {
     twitchFollowedChannelIds
   );
 
-  console.log('[App] Calling useTwitchChat with activeTwitchChannels:', activeTwitchChannels);
+  console.error('🔥🔥🔥 [App] CALLING useTwitchChat - DEPLOY CHECK:', new Date().toISOString(), 'channels:', activeTwitchChannels);
   useTwitchChat(activeTwitchChannels);
 
   useEffect(() => {

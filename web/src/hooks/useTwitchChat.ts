@@ -12,7 +12,7 @@ interface TwitchChannel {
 }
 
 export const useTwitchChat = (channels: TwitchChannel[]): void => {
-  console.log('[useTwitchChat] Hook called, channels:', channels);
+  console.error('🔥🔥🔥 [useTwitchChat] HOOK CALLED - DEPLOY CHECK:', new Date().toISOString(), 'channels:', channels);
 
   const wsRef = useRef<WebSocket | null>(null);
   const previousChannelsRef = useRef<string>('');
@@ -22,21 +22,21 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
   const channelsKey = JSON.stringify(channels.map(ch => ch.login).sort());
 
   useEffect(() => {
-    console.log('[useTwitchChat] useEffect triggered, channels.length:', channels.length);
+    console.error('⚠️⚠️⚠️ [useTwitchChat] useEffect TRIGGERED, channels.length:', channels.length);
 
     // WebSocket接続を確立（初回のみ）
     if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
-      console.log('[useTwitchChat] Creating new WebSocket connection to:', WS_URL);
+      console.error('🔥 [useTwitchChat] Creating NEW WebSocket connection to:', WS_URL);
       const ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
-        console.log('[useTwitchChat] WebSocket connection OPENED');
+        console.error('✅✅✅ [useTwitchChat] WebSocket connection OPENED');
         wsRef.current = ws;
 
         // チャンネル購読を送信
-        console.log('[useTwitchChat] Checking channels to subscribe, channels.length:', channels.length);
+        console.warn('⚠️ [useTwitchChat] Checking channels to subscribe, channels.length:', channels.length);
         if (channels.length > 0) {
-          console.log('[useTwitchChat] Sending subscribe message for channels:', channels.map(ch => ch.login));
+          console.error('📤📤📤 [useTwitchChat] SENDING subscribe message for channels:', channels.map(ch => ch.login));
           ws.send(JSON.stringify({
             type: 'subscribe',
             channels: channels.map(ch => ch.login),
@@ -54,22 +54,22 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
           const message = JSON.parse(event.data);
 
           // 受信メッセージの詳細をログ出力（デバッグ用）
-          console.log('[useTwitchChat] Received raw message:', message);
+          console.error('📨📨📨 [useTwitchChat] MESSAGE RECEIVED:', message);
 
           // チャットメッセージのみを処理（typeフィールドがない、またはplatformがtwitchのメッセージ）
           // EventSub通知、配信リスト更新、優先度変更などは無視する
           if (message.type && message.type !== 'chat') {
-            console.log('[useTwitchChat] Ignoring non-chat message:', message.type);
+            console.warn('⚠️ [useTwitchChat] Ignoring non-chat message:', message.type);
             return;
           }
 
           // チャットメッセージかどうかを確認（platformまたはchannelLoginフィールドの存在）
           if (!message.platform && !message.channelLogin) {
-            console.log('[useTwitchChat] Ignoring message without platform/channelLogin');
+            console.warn('⚠️ [useTwitchChat] Ignoring message without platform/channelLogin');
             return;
           }
 
-          console.log('[useTwitchChat] Processing chat message fields:', {
+          console.error('💬 [useTwitchChat] PROCESSING chat message:', {
             id: message.id,
             author: message.author,
             message: message.message,
@@ -95,15 +95,15 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
             isVip: message.isVip
           };
 
-          console.log('[useTwitchChat] Converted ChatMessage:', chatMessage);
+          console.error('✅ [useTwitchChat] ADDING MESSAGE TO STORE:', chatMessage);
           addMessage(chatMessage);
         } catch (error) {
-          console.error('[useTwitchChat] Error parsing message:', error);
+          console.error('❌❌❌ [useTwitchChat] ERROR parsing message:', error);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('[useTwitchChat] WebSocket error:', error);
+        console.error('❌❌❌ [useTwitchChat] WEBSOCKET ERROR:', error);
       };
 
       ws.onclose = () => {
