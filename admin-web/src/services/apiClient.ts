@@ -27,7 +27,8 @@ import {
   CacheKeysResponse,
   CacheKeyValueResponse,
   PVStats,
-  AnalyticsStats
+  AnalyticsStats,
+  ThresholdInfo
 } from '../types';
 
 /**
@@ -417,6 +418,13 @@ export const reconnectEventSub = async (): Promise<void> => {
   await fetchAPI('/eventsub/reconnect', {
     method: 'POST'
   });
+};
+
+/**
+ * 動的閾値情報を取得
+ */
+export const getThresholdInfo = async (): Promise<ThresholdInfo> => {
+  return fetchAPI<ThresholdInfo>('/threshold/info');
 };
 
 // ========================================

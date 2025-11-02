@@ -666,6 +666,26 @@ export interface EventSubEventsResponse {
   totalEvents: number;
 }
 
+/**
+ * EventSub使用状況
+ */
+export interface EventSubUsage {
+  total: number;
+  totalCost: number;
+  maxTotalCost: number;
+  usageRate: number;
+}
+
+/**
+ * 動的閾値情報
+ */
+export interface ThresholdInfo {
+  currentThreshold: number;
+  eventSubUsage: EventSubUsage;
+  lastUpdated: string;
+  thresholdReason: string;
+}
+
 // ========================================
 // 配信情報型定義
 // ========================================

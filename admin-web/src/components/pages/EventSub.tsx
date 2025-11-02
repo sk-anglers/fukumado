@@ -4,12 +4,14 @@ import {
   getEventSubSubscriptions,
   getEventSubEvents,
   unsubscribeEventSub,
-  reconnectEventSub
+  reconnectEventSub,
+  getThresholdInfo
 } from '../../services/apiClient';
 import {
   EventSubStatsResponse,
   EventSubSubscriptionsResponse,
-  EventSubEventsResponse
+  EventSubEventsResponse,
+  ThresholdInfo
 } from '../../types';
 import styles from './EventSub.module.css';
 
@@ -17,6 +19,7 @@ export const EventSub: React.FC = () => {
   const [statsData, setStatsData] = useState<EventSubStatsResponse | null>(null);
   const [subsData, setSubsData] = useState<EventSubSubscriptionsResponse | null>(null);
   const [eventsData, setEventsData] = useState<EventSubEventsResponse | null>(null);
+  const [thresholdData, setThresholdData] = useState<ThresholdInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [twitchUsername, setTwitchUsername] = useState<string | null>(null);
@@ -28,14 +31,16 @@ export const EventSub: React.FC = () => {
         setLoading(true);
       }
       setError(null);
-      const [stats, subs, events] = await Promise.all([
+      const [stats, subs, events, threshold] = await Promise.all([
         getEventSubStats(),
         getEventSubSubscriptions(),
-        getEventSubEvents(20) // 最新20件を取得
+        getEventSubEvents(20), // 最新20件を取得
+        getThresholdInfo()
       ]);
       setStatsData(stats);
       setSubsData(subs);
       setEventsData(events);
+      setThresholdData(threshold);
     } catch (err) {
       console.error('Failed to load EventSub data:', err);
       setError(err instanceof Error ? err.message : 'データの読み込みに失敗しました');
@@ -273,6 +278,59 @@ export const EventSub: React.FC = () => {
         </section>
       )}
 
+      {/* 動的閾値情報 */}
+      {thresholdData && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>動的閾値設定</h2>
+
+          <div className={styles.thresholdInfo}>
+            <div className={styles.thresholdCard}>
+              <div className={styles.thresholdHeader}>
+                <span className={styles.thresholdTitle}>⚙️ 現在の閾値設定</span>
+              </div>
+              <div className={styles.thresholdBody}>
+                <div className={styles.thresholdMain}>
+                  <span className={styles.thresholdLabel}>EventSub監視開始:</span>
+                  <span className={styles.thresholdValue}>
+                    {thresholdData.currentThreshold}人以上視聴時
+                  </span>
+                </div>
+                <div className={styles.thresholdReason}>
+                  {thresholdData.thresholdReason}
+                </div>
+                <div className={styles.thresholdUsage}>
+                  <div className={styles.usageRow}>
+                    <span className={styles.usageLabel}>EventSub使用状況:</span>
+                    <span className={styles.usageValue}>
+                      {thresholdData.eventSubUsage.totalCost} / {thresholdData.eventSubUsage.maxTotalCost}
+                      <span className={styles.usagePercent}>
+                        ({thresholdData.eventSubUsage.usageRate.toFixed(2)}%)
+                      </span>
+                    </span>
+                  </div>
+                  <div className={styles.usageRow}>
+                    <span className={styles.usageLabel}>サブスクリプション数:</span>
+                    <span className={styles.usageValue}>
+                      {thresholdData.eventSubUsage.total}
+                    </span>
+                  </div>
+                  <div className={styles.usageRow}>
+                    <span className={styles.usageLabel}>最終更新:</span>
+                    <span className={styles.usageValue}>
+                      {new Date(thresholdData.lastUpdated).toLocaleString('ja-JP')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.thresholdNote}>
+              💡 EventSubの使用率に応じて自動的に閾値が調整されます（5分ごとに更新）。<br />
+              使用率が高い場合は閾値が引き上げられ、低い場合は引き下げられます。
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 監視チャンネル */}
       {subsData && (
         <section className={styles.section}>
@@ -308,7 +366,9 @@ export const EventSub: React.FC = () => {
                   🔴 EventSub監視中 ({subsData.allChannels.realtime.length})
                 </h3>
                 <p className={styles.channelSectionDesc}>
-                  2人以上が視聴中のチャンネル（リアルタイム監視）
+                  {thresholdData
+                    ? `${thresholdData.currentThreshold}人以上が視聴中のチャンネル（リアルタイム監視）`
+                    : '複数人が視聴中のチャンネル（リアルタイム監視）'}
                 </p>
 
                 {subsData.allChannels.realtime.length === 0 ? (
@@ -350,7 +410,9 @@ export const EventSub: React.FC = () => {
                   🟡 ポーリング監視中 ({subsData.allChannels.delayed.length})
                 </h3>
                 <p className={styles.channelSectionDesc}>
-                  1人のみが視聴中のチャンネル（60秒間隔でポーリング）
+                  {thresholdData
+                    ? `${thresholdData.currentThreshold}人未満が視聴中のチャンネル（60秒間隔でポーリング）`
+                    : '少数が視聴中のチャンネル（60秒間隔でポーリング）'}
                 </p>
 
                 {subsData.allChannels.delayed.length === 0 ? (
