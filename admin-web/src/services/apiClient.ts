@@ -424,7 +424,7 @@ export const reconnectEventSub = async (): Promise<void> => {
  * 動的閾値情報を取得
  */
 export const getThresholdInfo = async (): Promise<ThresholdInfo> => {
-  return fetchAPI<ThresholdInfo>('/threshold/info');
+  return fetchAPI<ThresholdInfo>('/eventsub/threshold/info');
 };
 
 // ========================================

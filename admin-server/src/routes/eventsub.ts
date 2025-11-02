@@ -270,3 +270,52 @@ eventsubRouter.get('/events', async (req, res) => {
     res.status(500).json(response);
   }
 });
+
+/**
+ * GET /admin/api/eventsub/threshold/info
+ * 動的閾値情報取得
+ */
+eventsubRouter.get('/threshold/info', async (req, res) => {
+  try {
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
+      data: {
+        currentThreshold: number;
+        eventSubUsage: {
+          total: number;
+          totalCost: number;
+          maxTotalCost: number;
+          usageRate: number;
+        };
+        lastUpdated: string;
+        thresholdReason: string;
+      };
+      timestamp: string;
+    }>('/api/admin/threshold/info');
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to fetch threshold info from main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('[API] Error getting threshold info:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});
