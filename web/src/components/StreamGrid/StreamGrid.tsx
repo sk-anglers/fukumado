@@ -322,7 +322,7 @@ export const StreamGrid = (): JSX.Element => {
 
   return (
     <div
-      className={clsx(styles.gridContainer, fullscreen && styles.gridContainerFullscreen, fullscreen && showChat && styles.gridContainerWithChat)}
+      className={clsx(styles.gridContainer, fullscreen && styles.gridContainerFullscreen, fullscreen && showChat && styles.gridContainerWithChat, isMobile && (showLoadingPopup || showReadyNotification || showReloadPopup) && styles.gridContainerWithPopup)}
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
     >

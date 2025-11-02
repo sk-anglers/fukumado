@@ -16,6 +16,11 @@
   gap: 0;
 }
 
+/* モバイル用: ポップアップ表示時に配信グリッドを下げてスペースを確保 */
+.gridContainerWithPopup {
+  margin-top: 120px;
+}
+
 .gridWrapper {
   flex: 1;
   display: flex;
