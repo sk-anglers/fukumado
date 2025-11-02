@@ -322,7 +322,13 @@ export const StreamGrid = (): JSX.Element => {
 
   return (
     <div
-      className={clsx(styles.gridContainer, fullscreen && styles.gridContainerFullscreen, fullscreen && showChat && styles.gridContainerWithChat, isMobile && (showLoadingPopup || showReadyNotification || showReloadPopup) && styles.gridContainerWithPopup)}
+      className={clsx(
+        styles.gridContainer,
+        fullscreen && !isMobile && styles.gridContainerFullscreen,
+        fullscreen && isMobile && styles.gridContainerFullscreenMobile,
+        fullscreen && showChat && styles.gridContainerWithChat,
+        isMobile && !fullscreen && (showLoadingPopup || showReadyNotification || showReloadPopup) && styles.gridContainerWithPopup
+      )}
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
     >
@@ -385,7 +391,14 @@ export const StreamGrid = (): JSX.Element => {
           />
         ))}
         </div>
-        {fullscreen && (
+        {fullscreen && isMobile && (
+          <div className={styles.fullscreenToggle}>
+            <button type="button" onClick={() => setFullscreen(false)}>
+              全画面を終了
+            </button>
+          </div>
+        )}
+        {fullscreen && !isMobile && (
           <div className={styles.fullscreenToggle}>
             <button type="button" onClick={() => setShowChat(!showChat)} className={clsx(showChat && styles.chatButtonActive)}>
               <ChatBubbleLeftRightIcon />
