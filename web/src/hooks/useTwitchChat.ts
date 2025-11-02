@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
 import { backendOrigin } from '../utils/api';
+import { debugLog, debugWarn, debugError } from '../utils/debugLog';
 
 const WS_URL = backendOrigin.replace(/^http/, 'ws') + '/chat';
 
@@ -15,6 +16,7 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
   const wsRef = useRef<WebSocket | null>(null);
   const previousChannelsRef = useRef<string>('');
   const addMessage = useChatStore((state) => state.addMessage);
+  const lastChatMessageTimeRef = useRef<number>(0);
 
   // チャンネルリストを文字列化して比較用に保持
   const channelsKey = JSON.stringify(channels.map(ch => ch.login).sort());
@@ -22,46 +24,67 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
   useEffect(() => {
     // WebSocket接続を確立（初回のみ）
     if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+      debugLog('[useTwitchChat]', '==== CREATING NEW WEBSOCKET CONNECTION ====');
+      debugLog('[useTwitchChat]', 'WS_URL:', WS_URL);
+      debugLog('[useTwitchChat]', 'Channels to subscribe:', channels.map(ch => ch.login));
+
       const ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
+        debugLog('[useTwitchChat]', '<<<< WEBSOCKET CONNECTION OPENED >>>>');
+        debugLog('[useTwitchChat]', 'ReadyState:', ws.readyState);
         wsRef.current = ws;
 
         // チャンネル購読を送信
         if (channels.length > 0) {
-          ws.send(JSON.stringify({
+          const subscribeMessage = {
             type: 'subscribe',
             channels: channels.map(ch => ch.login),
             channelMapping: Object.fromEntries(channels.map(ch => [ch.login, ch.displayName])),
             channelIdMapping: Object.fromEntries(
               channels.filter(ch => ch.channelId).map(ch => [ch.login, ch.channelId!])
             )
-          }));
+          };
+          debugLog('[useTwitchChat]', '→ Sending subscribe message:', subscribeMessage);
+          ws.send(JSON.stringify(subscribeMessage));
           previousChannelsRef.current = channelsKey;
+          debugLog('[useTwitchChat]', '✓ Subscribe message sent successfully');
         }
       };
 
       ws.onmessage = (event) => {
+        debugLog('[useTwitchChat]', '<<<< MESSAGE RECEIVED >>>>');
+        debugLog('[useTwitchChat]', 'Event object:', event);
+        debugLog('[useTwitchChat]', 'Raw data:', event.data);
+        debugLog('[useTwitchChat]', 'Data type:', typeof event.data);
+
         try {
           const message = JSON.parse(event.data);
 
-          // 受信メッセージの詳細をログ出力（デバッグ用）
-          console.log('[useTwitchChat] Received raw message:', message);
+          debugLog('[useTwitchChat]', 'Parsed message:', message);
+          debugLog('[useTwitchChat]', 'Message type:', message.type || 'undefined');
 
           // チャットメッセージのみを処理（typeフィールドがない、またはplatformがtwitchのメッセージ）
           // EventSub通知、配信リスト更新、優先度変更などは無視する
           if (message.type && message.type !== 'chat') {
-            console.log('[useTwitchChat] Ignoring non-chat message:', message.type);
+            debugLog('[useTwitchChat]', '⊘ Ignoring non-chat message:', message.type);
             return;
           }
 
           // チャットメッセージかどうかを確認（platformまたはchannelLoginフィールドの存在）
           if (!message.platform && !message.channelLogin) {
-            console.log('[useTwitchChat] Ignoring message without platform/channelLogin');
+            debugLog('[useTwitchChat]', '⊘ Ignoring message without platform/channelLogin');
             return;
           }
 
-          console.log('[useTwitchChat] Processing chat message fields:', {
+          // チャットメッセージ受信時刻を記録
+          const now = performance.now();
+          const timeSinceLastChat = lastChatMessageTimeRef.current ? now - lastChatMessageTimeRef.current : 0;
+          lastChatMessageTimeRef.current = now;
+
+          debugLog('[useTwitchChat]', '💬 CHAT MESSAGE DETECTED');
+          debugLog('[useTwitchChat]', `Time since last chat: ${timeSinceLastChat.toFixed(2)}ms`);
+          debugLog('[useTwitchChat]', 'Chat message fields:', {
             id: message.id,
             author: message.author,
             message: message.message,
@@ -87,33 +110,48 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
             isVip: message.isVip
           };
 
-          console.log('[useTwitchChat] Converted ChatMessage:', chatMessage);
+          debugLog('[useTwitchChat]', '✓ Converted to ChatMessage:', chatMessage);
           addMessage(chatMessage);
+          debugLog('[useTwitchChat]', '✓ Message added to store successfully');
         } catch (error) {
-          console.error('[useTwitchChat] Error parsing message:', error);
+          debugError('[useTwitchChat]', 'Error parsing message:', error);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('[useTwitchChat] WebSocket error:', error);
+        debugError('[useTwitchChat]', '<<<< WEBSOCKET ERROR OCCURRED >>>>');
+        debugError('[useTwitchChat]', 'Error event:', error);
+        debugError('[useTwitchChat]', 'ReadyState:', ws.readyState);
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
+        debugLog('[useTwitchChat]', '<<<< WEBSOCKET CONNECTION CLOSED >>>>');
+        debugLog('[useTwitchChat]', 'Close code:', event.code);
+        debugLog('[useTwitchChat]', 'Close reason:', event.reason);
+        debugLog('[useTwitchChat]', 'Was clean:', event.wasClean);
+        debugLog('[useTwitchChat]', 'ReadyState:', ws.readyState);
         wsRef.current = null;
       };
 
       wsRef.current = ws;
     } else if (wsRef.current.readyState === WebSocket.OPEN && previousChannelsRef.current !== channelsKey) {
       // 既に接続済みで、チャンネルリストが実際に変更された場合のみ購読を更新
-      wsRef.current.send(JSON.stringify({
+      debugLog('[useTwitchChat]', '==== RESUBSCRIBING TO CHANNELS ====');
+      debugLog('[useTwitchChat]', 'Previous channels:', previousChannelsRef.current);
+      debugLog('[useTwitchChat]', 'New channels:', channelsKey);
+
+      const resubscribeMessage = {
         type: 'subscribe',
         channels: channels.map(ch => ch.login),
         channelMapping: Object.fromEntries(channels.map(ch => [ch.login, ch.displayName])),
         channelIdMapping: Object.fromEntries(
           channels.filter(ch => ch.channelId).map(ch => [ch.login, ch.channelId!])
         )
-      }));
+      };
+      debugLog('[useTwitchChat]', '→ Sending resubscribe message:', resubscribeMessage);
+      wsRef.current.send(JSON.stringify(resubscribeMessage));
       previousChannelsRef.current = channelsKey;
+      debugLog('[useTwitchChat]', '✓ Resubscribe message sent successfully');
     }
 
     // クリーンアップ関数：コンポーネントアンマウント時のみ実行
