@@ -33,6 +33,8 @@ const twitchService_1 = require("./services/twitchService");
 const maintenanceService_1 = require("./services/maintenanceService");
 const twitchEventSubManager_1 = require("./services/twitchEventSubManager");
 const twitchEventSubWebhookService_1 = require("./services/twitchEventSubWebhookService");
+const twitchConduitManager_1 = require("./services/twitchConduitManager");
+const liveStreamsCacheService_1 = require("./services/liveStreamsCacheService");
 const priorityManager_1 = require("./services/priorityManager");
 const security_2 = require("./middleware/security");
 const maintenanceMode_1 = require("./middleware/maintenanceMode");
@@ -258,6 +260,41 @@ priorityManager_1.priorityManager.onChange((event) => {
 // Webhookサービスのイベントハンドラー（Webhook経由のイベントも全クライアントに通知）
 twitchEventSubWebhookService_1.twitchEventSubWebhookService.onStreamEvent((event) => {
     console.log('[EventSub Webhook] Stream event received:', event);
+    // 全クライアントに通知（EventSubManagerと同じ形式）
+    const payload = JSON.stringify({
+        type: 'eventsub_stream_event',
+        event
+    });
+    clients.forEach((_, ws) => {
+        if (ws.readyState === ws_1.WebSocket.OPEN) {
+            ws.send(payload);
+        }
+    });
+});
+// Conduit Managerのイベントハンドラー（Conduits経由のイベント + キャッシュ更新）
+twitchConduitManager_1.twitchConduitManager.onStreamEvent((event) => {
+    console.log('[Conduit Manager] Stream event received:', event);
+    // キャッシュを即時更新
+    if (event.type === 'online') {
+        // 配信開始：キャッシュに追加
+        const streamInfo = {
+            id: '', // IDは後でAPI呼び出しで取得される
+            userId: event.broadcasterId,
+            login: event.broadcasterLogin,
+            displayName: event.broadcasterName,
+            title: '', // タイトルは後でAPI呼び出しで取得される
+            viewerCount: 0,
+            thumbnailUrl: '',
+            startedAt: event.startedAt || new Date().toISOString()
+        };
+        liveStreamsCacheService_1.liveStreamsCacheService.addLiveStream(streamInfo);
+        console.log(`[Conduit Manager] Added stream to cache: ${event.broadcasterName}`);
+    }
+    else if (event.type === 'offline') {
+        // 配信終了：キャッシュから削除
+        liveStreamsCacheService_1.liveStreamsCacheService.removeLiveStream(event.broadcasterId);
+        console.log(`[Conduit Manager] Removed stream from cache: ${event.broadcasterName}`);
+    }
     // 全クライアントに通知（EventSubManagerと同じ形式）
     const payload = JSON.stringify({
         type: 'eventsub_stream_event',

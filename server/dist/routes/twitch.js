@@ -14,7 +14,7 @@ const followedChannelsCacheService_1 = require("../services/followedChannelsCach
 const env_1 = require("../config/env");
 exports.twitchRouter = (0, express_1.Router)();
 const channelSearchCache = new Map();
-const SEARCH_CACHE_TTL_MS = 300000; // 5分
+const SEARCH_CACHE_TTL_MS = 30 * 60 * 1000; // 30分
 exports.twitchRouter.get('/subscriptions', async (req, res) => {
     try {
         const accessToken = await (0, auth_1.ensureTwitchAccessToken)(req);

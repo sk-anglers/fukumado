@@ -28,6 +28,8 @@ import { maintenanceService } from './services/maintenanceService';
 import { twitchEventSubService } from './services/twitchEventSubService';
 import { twitchEventSubManager } from './services/twitchEventSubManager';
 import { twitchEventSubWebhookService } from './services/twitchEventSubWebhookService';
+import { twitchConduitManager } from './services/twitchConduitManager';
+import { liveStreamsCacheService } from './services/liveStreamsCacheService';
 import { priorityManager } from './services/priorityManager';
 import { dynamicChannelAllocator } from './services/dynamicChannelAllocator';
 import { getTwitchAppAccessToken } from './services/twitchAppAuth';
@@ -327,6 +329,44 @@ priorityManager.onChange((event) => {
 // Webhookサービスのイベントハンドラー（Webhook経由のイベントも全クライアントに通知）
 twitchEventSubWebhookService.onStreamEvent((event) => {
   console.log('[EventSub Webhook] Stream event received:', event);
+
+  // 全クライアントに通知（EventSubManagerと同じ形式）
+  const payload = JSON.stringify({
+    type: 'eventsub_stream_event',
+    event
+  });
+
+  clients.forEach((_, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+    }
+  });
+});
+
+// Conduit Managerのイベントハンドラー（Conduits経由のイベント + キャッシュ更新）
+twitchConduitManager.onStreamEvent((event) => {
+  console.log('[Conduit Manager] Stream event received:', event);
+
+  // キャッシュを即時更新
+  if (event.type === 'online') {
+    // 配信開始：キャッシュに追加
+    const streamInfo = {
+      id: '', // IDは後でAPI呼び出しで取得される
+      userId: event.broadcasterId,
+      login: event.broadcasterLogin,
+      displayName: event.broadcasterName,
+      title: '', // タイトルは後でAPI呼び出しで取得される
+      viewerCount: 0,
+      thumbnailUrl: '',
+      startedAt: event.startedAt || new Date().toISOString()
+    };
+    liveStreamsCacheService.addLiveStream(streamInfo);
+    console.log(`[Conduit Manager] Added stream to cache: ${event.broadcasterName}`);
+  } else if (event.type === 'offline') {
+    // 配信終了：キャッシュから削除
+    liveStreamsCacheService.removeLiveStream(event.broadcasterId);
+    console.log(`[Conduit Manager] Removed stream from cache: ${event.broadcasterName}`);
+  }
 
   // 全クライアントに通知（EventSubManagerと同じ形式）
   const payload = JSON.stringify({

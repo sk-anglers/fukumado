@@ -13,14 +13,14 @@ import { env } from '../config/env';
 
 export const twitchRouter = Router();
 
-// チャンネル検索キャッシュ（5分TTL）
+// チャンネル検索キャッシュ（30分TTL）
 interface CacheEntry {
   data: any;
   timestamp: number;
 }
 
 const channelSearchCache = new Map<string, CacheEntry>();
-const SEARCH_CACHE_TTL_MS = 300000; // 5分
+const SEARCH_CACHE_TTL_MS = 30 * 60 * 1000; // 30分
 
 twitchRouter.get('/subscriptions', async (req, res) => {
   try {

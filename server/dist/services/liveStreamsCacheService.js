@@ -1,15 +1,16 @@
 "use strict";
 /**
- * フォローチャンネルキャッシュサービス
- * Twitch APIへの負荷を軽減するため、フォローチャンネル情報をメモリ上にキャッシュします
+ * 配信情報キャッシュサービス
+ * Twitch APIへの負荷を軽減するため、配信情報をメモリ上にキャッシュします
+ * Conduitsイベント（stream.online/offline）と連携して即時更新を実現
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.followedChannelsCacheService = exports.FollowedChannelsCacheService = void 0;
+exports.liveStreamsCacheService = exports.LiveStreamsCacheService = void 0;
 /**
  * LRU (Least Recently Used) キャッシュの実装
  */
 class LRUCache {
-    constructor(maxSize = 100) {
+    constructor(maxSize = 1000) {
         this.cache = new Map();
         this.hits = 0;
         this.misses = 0;
@@ -22,7 +23,7 @@ class LRUCache {
         const entry = this.cache.get(key);
         if (!entry) {
             this.misses++;
-            console.log(`[Followed Channels Cache] Cache MISS: ${key}`);
+            console.log(`[Live Streams Cache] Cache MISS: ${key}`);
             return null;
         }
         // TTLチェック
@@ -32,14 +33,14 @@ class LRUCache {
             // 期限切れ
             this.cache.delete(key);
             this.misses++;
-            console.log(`[Followed Channels Cache] Cache EXPIRED: ${key} (age: ${Math.round(age / 1000)}s)`);
+            console.log(`[Live Streams Cache] Cache EXPIRED: ${key} (age: ${Math.round(age / 1000)}s)`);
             return null;
         }
         // ヒット
         entry.hits++;
         entry.lastAccessed = new Date();
         this.hits++;
-        console.log(`[Followed Channels Cache] Cache HIT: ${key} (hits: ${entry.hits}, age: ${Math.round(age / 1000)}s)`);
+        console.log(`[Live Streams Cache] Cache HIT: ${key} (hits: ${entry.hits}, age: ${Math.round(age / 1000)}s)`);
         // LRU: アクセスされたエントリを末尾に移動
         this.cache.delete(key);
         this.cache.set(key, entry);
@@ -54,7 +55,7 @@ class LRUCache {
             const oldestKey = this.cache.keys().next().value;
             if (oldestKey) {
                 this.cache.delete(oldestKey);
-                console.log(`[Followed Channels Cache] Evicted oldest entry: ${oldestKey}`);
+                console.log(`[Live Streams Cache] Evicted oldest entry: ${oldestKey}`);
             }
         }
         const entry = {
@@ -65,7 +66,7 @@ class LRUCache {
             lastAccessed: new Date()
         };
         this.cache.set(key, entry);
-        console.log(`[Followed Channels Cache] Cached: ${key} (TTL: ${Math.round(ttl / 1000)}s, size: ${this.cache.size}/${this.maxSize})`);
+        console.log(`[Live Streams Cache] Cached: ${key} (TTL: ${Math.round(ttl / 1000)}s, size: ${this.cache.size}/${this.maxSize})`);
     }
     /**
      * キャッシュから削除
@@ -73,7 +74,7 @@ class LRUCache {
     delete(key) {
         const deleted = this.cache.delete(key);
         if (deleted) {
-            console.log(`[Followed Channels Cache] Deleted: ${key}`);
+            console.log(`[Live Streams Cache] Deleted: ${key}`);
         }
         return deleted;
     }
@@ -85,7 +86,7 @@ class LRUCache {
         this.cache.clear();
         this.hits = 0;
         this.misses = 0;
-        console.log(`[Followed Channels Cache] Cleared ${size} entries`);
+        console.log(`[Live Streams Cache] Cleared ${size} entries`);
     }
     /**
      * 期限切れエントリをクリーンアップ
@@ -101,7 +102,7 @@ class LRUCache {
             }
         }
         if (removed > 0) {
-            console.log(`[Followed Channels Cache] Cleanup: removed ${removed} expired entries`);
+            console.log(`[Live Streams Cache] Cleanup: removed ${removed} expired entries`);
         }
         return removed;
     }
@@ -132,35 +133,49 @@ class LRUCache {
     }
 }
 /**
- * フォローチャンネルキャッシュ管理サービス
+ * 配信情報キャッシュ管理サービス
  */
-class FollowedChannelsCacheService {
-    constructor(maxCacheSize = 100) {
+class LiveStreamsCacheService {
+    constructor(maxCacheSize = 1000) {
         this.cleanupInterval = null;
         // キャッシュTTL設定
-        this.FOLLOWED_CHANNELS_TTL = 6 * 60 * 60 * 1000; // 6時間
-        this.CLEANUP_INTERVAL = 30 * 60 * 1000; // 30分ごとにクリーンアップ
+        this.LIVE_STREAM_TTL = 3 * 60 * 1000; // 3分（配信詳細情報）
+        this.CLEANUP_INTERVAL = 5 * 60 * 1000; // 5分ごとにクリーンアップ
         this.cache = new LRUCache(maxCacheSize);
-        console.log('[Followed Channels Cache Service] Initialized with max size:', maxCacheSize);
+        console.log('[Live Streams Cache Service] Initialized with max size:', maxCacheSize);
         this.startPeriodicCleanup();
     }
     /**
-     * ユーザーのフォローチャンネルを取得（キャッシュ優先）
+     * 配信情報を取得（キャッシュ優先）
      */
-    getFollowedChannels(userId) {
-        return this.cache.get(`user:${userId}`);
+    getLiveStream(userId) {
+        return this.cache.get(`stream:${userId}`);
     }
     /**
-     * ユーザーのフォローチャンネルをキャッシュに保存
+     * 配信情報をキャッシュに保存
      */
-    setFollowedChannels(userId, channels) {
-        this.cache.set(`user:${userId}`, channels, this.FOLLOWED_CHANNELS_TTL);
+    setLiveStream(userId, stream) {
+        this.cache.set(`stream:${userId}`, stream, this.LIVE_STREAM_TTL);
     }
     /**
-     * 特定ユーザーのキャッシュを削除
+     * 配信開始時にキャッシュに追加（Conduitsイベント用）
      */
-    invalidateUser(userId) {
-        return this.cache.delete(`user:${userId}`);
+    addLiveStream(stream) {
+        console.log(`[Live Streams Cache] Stream ONLINE: ${stream.displayName} (${stream.userId})`);
+        this.setLiveStream(stream.userId, stream);
+    }
+    /**
+     * 配信終了時にキャッシュから削除（Conduitsイベント用）
+     */
+    removeLiveStream(userId) {
+        console.log(`[Live Streams Cache] Stream OFFLINE: ${userId}`);
+        this.cache.delete(`stream:${userId}`);
+    }
+    /**
+     * 特定の配信のキャッシュを削除
+     */
+    invalidateStream(userId) {
+        return this.cache.delete(`stream:${userId}`);
     }
     /**
      * すべてのキャッシュをクリア
@@ -201,16 +216,16 @@ class FollowedChannelsCacheService {
      */
     startPeriodicCleanup() {
         this.cleanupInterval = setInterval(() => {
-            console.log('[Followed Channels Cache Service] Running periodic cleanup...');
+            console.log('[Live Streams Cache Service] Running periodic cleanup...');
             const removed = this.cache.cleanup();
             const stats = this.getStats();
-            console.log('[Followed Channels Cache Service] Cleanup complete:', {
+            console.log('[Live Streams Cache Service] Cleanup complete:', {
                 removed,
                 remaining: stats.totalEntries,
                 hitRate: `${stats.hitRate.toFixed(2)}%`
             });
         }, this.CLEANUP_INTERVAL);
-        console.log('[Followed Channels Cache Service] Periodic cleanup scheduled (every 30 minutes)');
+        console.log('[Live Streams Cache Service] Periodic cleanup scheduled (every 5 minutes)');
     }
     /**
      * クリーンアップを停止（テスト用）
@@ -219,7 +234,7 @@ class FollowedChannelsCacheService {
         if (this.cleanupInterval) {
             clearInterval(this.cleanupInterval);
             this.cleanupInterval = null;
-            console.log('[Followed Channels Cache Service] Periodic cleanup stopped');
+            console.log('[Live Streams Cache Service] Periodic cleanup stopped');
         }
     }
     /**
@@ -229,7 +244,7 @@ class FollowedChannelsCacheService {
         return this.cache.cleanup();
     }
 }
-exports.FollowedChannelsCacheService = FollowedChannelsCacheService;
+exports.LiveStreamsCacheService = LiveStreamsCacheService;
 // シングルトンインスタンス
-exports.followedChannelsCacheService = new FollowedChannelsCacheService(100);
-//# sourceMappingURL=followedChannelsCacheService.js.map
+exports.liveStreamsCacheService = new LiveStreamsCacheService(1000);
+//# sourceMappingURL=liveStreamsCacheService.js.map
