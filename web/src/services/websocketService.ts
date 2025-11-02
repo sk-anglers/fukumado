@@ -58,11 +58,8 @@ class WebSocketService {
       };
 
       this.ws.onmessage = (event) => {
-        console.error('📨📨📨 [WebSocketService] MESSAGE RECEIVED:', event.data);
-
         try {
           const data = JSON.parse(event.data);
-          console.error('🔍 [WebSocketService] PARSED - type:', data.type, 'platform:', data.platform, 'channelLogin:', data.channelLogin);
 
           // 全てのメッセージハンドラーに通知
           this.messageHandlers.forEach(handler => {
@@ -78,7 +75,7 @@ class WebSocketService {
       };
 
       this.ws.onerror = (error) => {
-        console.error('❌❌❌ [WebSocketService] WEBSOCKET ERROR:', error);
+        console.error('[WebSocketService] Error:', error);
 
         // エラーハンドラーを実行
         this.errorHandlers.forEach(handler => {
@@ -91,7 +88,7 @@ class WebSocketService {
       };
 
       this.ws.onclose = () => {
-        console.error('🔌 [WebSocketService] CONNECTION CLOSED');
+        console.log('[WebSocketService] Connection closed');
         this.ws = null;
 
         // ハートビートを停止
@@ -148,20 +145,17 @@ class WebSocketService {
    * メッセージを送信
    */
   send(data: any): boolean {
-    console.error('📤 [WebSocketService] SEND called, ws exists:', !!this.ws, 'readyState:', this.ws?.readyState);
-
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.error('❌ [WebSocketService] Cannot send message: not connected');
+      console.warn('[WebSocketService] Cannot send message: not connected');
       return false;
     }
 
     try {
       const message = typeof data === 'string' ? data : JSON.stringify(data);
       this.ws.send(message);
-      console.error('✅ [WebSocketService] Message SENT:', message);
       return true;
     } catch (error) {
-      console.error('❌❌❌ [WebSocketService] Error sending message:', error);
+      console.error('[WebSocketService] Error sending message:', error);
       return false;
     }
   }
@@ -251,13 +245,9 @@ class WebSocketService {
     // 既存のタイマーをクリア
     this.stopHeartbeat();
 
-    console.error('💓 [WebSocketService] STARTING heartbeat (interval: 30s)');
-
     // 定期的にハートビートを送信
     this.heartbeatTimer = setInterval(() => {
-      console.error('💓 [WebSocketService] HEARTBEAT TICK - isConnected:', this.isConnected());
       if (this.isConnected()) {
-        console.error('💓 [WebSocketService] Sending heartbeat');
         this.send({ type: 'heartbeat' });
       }
     }, this.heartbeatInterval);
@@ -268,7 +258,6 @@ class WebSocketService {
    */
   private stopHeartbeat(): void {
     if (this.heartbeatTimer) {
-      console.log('[WebSocketService] Stopping heartbeat');
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
