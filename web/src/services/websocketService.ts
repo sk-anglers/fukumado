@@ -4,7 +4,6 @@
  */
 
 import { backendOrigin } from '../utils/api';
-import { debugLog, debugWarn, debugError } from '../utils/debugLog';
 
 const WS_URL = backendOrigin.replace(/^http/, 'ws') + '/chat';
 
@@ -31,25 +30,21 @@ class WebSocketService {
   connect(): void {
     // 既に接続されている場合は何もしない
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      debugLog('[WebSocketService]', 'Already connected or connecting, readyState:', this.ws.readyState);
+      console.log('[WebSocketService] Already connected or connecting');
       return;
     }
 
-    debugLog('[WebSocketService]', '==== ESTABLISHING CONNECTION ====');
-    debugLog('[WebSocketService]', 'WS_URL:', WS_URL);
+    console.log('[WebSocketService] Establishing connection...');
     this.isIntentionallyClosed = false;
 
     try {
       this.ws = new WebSocket(WS_URL);
-      debugLog('[WebSocketService]', 'WebSocket instance created');
 
       this.ws.onopen = () => {
-        debugLog('[WebSocketService]', '<<<< CONNECTION OPENED >>>>');
-        debugLog('[WebSocketService]', 'ReadyState:', this.ws?.readyState);
+        console.log('[WebSocketService] Connected successfully');
         this.reconnectAttempts = 0;
 
         // ハートビートを開始
-        debugLog('[WebSocketService]', 'About to start heartbeat...');
         this.startHeartbeat();
 
         // 接続ハンドラーを実行
@@ -63,14 +58,10 @@ class WebSocketService {
       };
 
       this.ws.onmessage = (event) => {
-        debugLog('[WebSocketService]', '<<<< MESSAGE RECEIVED >>>>');
-        debugLog('[WebSocketService]', 'Event:', event);
-        debugLog('[WebSocketService]', 'Raw data:', event.data);
+        console.log('[WebSocketService] Message received:', event.data);
 
         try {
           const data = JSON.parse(event.data);
-          debugLog('[WebSocketService]', 'Parsed data:', data);
-          debugLog('[WebSocketService]', 'Message type:', data.type || 'undefined');
 
           // 全てのメッセージハンドラーに通知
           this.messageHandlers.forEach(handler => {
@@ -86,26 +77,20 @@ class WebSocketService {
       };
 
       this.ws.onerror = (error) => {
-        debugError('[WebSocketService]', '<<<< ERROR OCCURRED >>>>');
-        debugError('[WebSocketService]', 'Error event:', error);
-        debugError('[WebSocketService]', 'ReadyState:', this.ws?.readyState);
+        console.error('[WebSocketService] Error:', error);
 
         // エラーハンドラーを実行
         this.errorHandlers.forEach(handler => {
           try {
             handler(error);
           } catch (err) {
-            debugError('[WebSocketService]', 'Error in error handler:', err);
+            console.error('[WebSocketService] Error in error handler:', err);
           }
         });
       };
 
-      this.ws.onclose = (event) => {
-        debugLog('[WebSocketService]', '<<<< CONNECTION CLOSED >>>>');
-        debugLog('[WebSocketService]', 'Close code:', event.code);
-        debugLog('[WebSocketService]', 'Close reason:', event.reason);
-        debugLog('[WebSocketService]', 'Was clean:', event.wasClean);
-        debugLog('[WebSocketService]', 'ReadyState:', this.ws?.readyState);
+      this.ws.onclose = () => {
+        console.log('[WebSocketService] Connection closed');
         this.ws = null;
 
         // ハートビートを停止
@@ -162,25 +147,18 @@ class WebSocketService {
    * メッセージを送信
    */
   send(data: any): boolean {
-    debugLog('[WebSocketService]', '==== SEND CALLED ====');
-    debugLog('[WebSocketService]', 'WS exists:', !!this.ws);
-    debugLog('[WebSocketService]', 'ReadyState:', this.ws?.readyState);
-    debugLog('[WebSocketService]', 'Data to send:', data);
-
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      debugWarn('[WebSocketService]', 'Cannot send message: not connected');
+      console.warn('[WebSocketService] Cannot send message: not connected');
       return false;
     }
 
     try {
       const message = typeof data === 'string' ? data : JSON.stringify(data);
-      debugLog('[WebSocketService]', 'Stringified message:', message);
-      debugLog('[WebSocketService]', 'About to call ws.send()...');
       this.ws.send(message);
-      debugLog('[WebSocketService]', '✓ ws.send() completed successfully');
+      console.log('[WebSocketService] Message sent:', message);
       return true;
     } catch (error) {
-      debugError('[WebSocketService]', 'Error sending message:', error);
+      console.error('[WebSocketService] Error sending message:', error);
       return false;
     }
   }
@@ -270,25 +248,15 @@ class WebSocketService {
     // 既存のタイマーをクリア
     this.stopHeartbeat();
 
-    debugLog('[WebSocketService]', '🫀 STARTING HEARTBEAT');
-    debugLog('[WebSocketService]', 'Heartbeat interval:', this.heartbeatInterval, 'ms');
+    console.log('[WebSocketService] Starting heartbeat (interval: 30s)');
 
     // 定期的にハートビートを送信
     this.heartbeatTimer = setInterval(() => {
-      debugLog('[WebSocketService]', '==== HEARTBEAT TICK ====');
-      debugLog('[WebSocketService]', 'isConnected():', this.isConnected());
-      debugLog('[WebSocketService]', 'ReadyState:', this.ws?.readyState);
-
       if (this.isConnected()) {
-        debugLog('[WebSocketService]', '→ Sending heartbeat...');
-        const result = this.send({ type: 'heartbeat' });
-        debugLog('[WebSocketService]', 'Heartbeat send result:', result);
-      } else {
-        debugWarn('[WebSocketService]', '⊘ Cannot send heartbeat - not connected');
+        console.log('[WebSocketService] Sending heartbeat');
+        this.send({ type: 'heartbeat' });
       }
     }, this.heartbeatInterval);
-
-    debugLog('[WebSocketService]', '✓ Heartbeat timer started');
   }
 
   /**
@@ -296,10 +264,9 @@ class WebSocketService {
    */
   private stopHeartbeat(): void {
     if (this.heartbeatTimer) {
-      debugLog('[WebSocketService]', '🫀 STOPPING HEARTBEAT');
+      console.log('[WebSocketService] Stopping heartbeat');
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
-      debugLog('[WebSocketService]', '✓ Heartbeat timer cleared');
     }
   }
 }
