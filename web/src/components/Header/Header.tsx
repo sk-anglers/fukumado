@@ -10,9 +10,7 @@ import {
   StarIcon,
   BellAlertIcon,
   Bars3Icon,
-  ChatBubbleLeftRightIcon,
-  ArrowsPointingOutIcon,
-  ArrowsPointingInIcon
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { MAX_ACTIVE_SLOTS, useLayoutStore } from '../../stores/layoutStore';
@@ -381,17 +379,6 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
             title={mutedAll ? '一括ミュート解除' : '一括ミュート'}
           >
             {mutedAll ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
-          </button>
-          <button
-            type="button"
-            className={clsx(styles.mobileMenuButton, fullscreen && styles.mobileMenuButtonActive)}
-            onClick={() => {
-              setFullscreen(!fullscreen);
-              trackButton('fullscreen_mobile', 'header_mobile');
-            }}
-            title={fullscreen ? '全画面を終了' : '全画面表示'}
-          >
-            {fullscreen ? <ArrowsPointingInIcon /> : <ArrowsPointingOutIcon />}
           </button>
         </div>
       )}

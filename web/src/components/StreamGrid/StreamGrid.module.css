@@ -21,18 +21,6 @@
   margin-top: 120px;
 }
 
-/* モバイル用: 擬似フルスクリーン表示 */
-.gridContainerFullscreenMobile {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 10001;
-  background: rgba(0, 0, 0, 0.95);
-  margin-top: 0;
-}
-
 .gridWrapper {
   flex: 1;
   display: flex;
