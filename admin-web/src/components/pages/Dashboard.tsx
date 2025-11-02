@@ -3,7 +3,7 @@ import { Card, MetricCard, Loader } from '../common';
 import { useMetricsStore } from '../../stores/metricsStore';
 import { useSecurityStore } from '../../stores/securityStore';
 import { usePVStore } from '../../stores/pvStore';
-import { getApiStats, getPVStats, exportPVStats } from '../../services/apiClient';
+import { getApiStats, getPVStats, exportPVStats, getTwitchRateLimit, getYouTubeQuota } from '../../services/apiClient';
 import {
   ResponsiveContainer,
   LineChart,
@@ -33,6 +33,8 @@ export const Dashboard: React.FC = () => {
 
   // setter関数だけ取得（useEffectで使用）
   const setApiStats = useMetricsStore(state => state.setApiStats);
+  const setTwitchRateLimit = useMetricsStore(state => state.setTwitchRateLimit);
+  const setYoutubeQuota = useMetricsStore(state => state.setYoutubeQuota);
   const setPVStats = usePVStore(state => state.setPVStats);
   const setPVLoading = usePVStore(state => state.setLoading);
   const [exportingPV, setExportingPV] = useState(false);
@@ -42,7 +44,12 @@ export const Dashboard: React.FC = () => {
     console.log('[DEBUG] Dashboard: API stats useEffect RUNNING');
     const fetchApiStats = async () => {
       try {
-        const statsData = await getApiStats();
+        const [statsData, twitchData, youtubeData] = await Promise.all([
+          getApiStats().catch(() => null),
+          getTwitchRateLimit().catch(() => null),
+          getYouTubeQuota().catch(() => null)
+        ]);
+
         if (statsData) {
           setApiStats({
             totalCalls: statsData.totalCalls || 0,
@@ -50,6 +57,14 @@ export const Dashboard: React.FC = () => {
             failedCalls: statsData.failedCalls || 0,
             averageResponseTime: statsData.averageResponseTime || 0
           });
+        }
+
+        if (twitchData) {
+          setTwitchRateLimit(twitchData);
+        }
+
+        if (youtubeData) {
+          setYoutubeQuota(youtubeData);
         }
       } catch (error) {
         console.error('[Dashboard] Failed to fetch API stats:', error);
