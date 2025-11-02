@@ -109,8 +109,6 @@ function App(): JSX.Element {
     twitchFollowedChannelIds
   );
 
-  // デバッグ: activeTwitchChannelsの内容を確認
-  console.log('[App] activeTwitchChannels:', activeTwitchChannels);
   useTwitchChat(activeTwitchChannels);
 
   useEffect(() => {
