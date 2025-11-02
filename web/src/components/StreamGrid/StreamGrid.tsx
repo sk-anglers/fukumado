@@ -142,21 +142,21 @@ export const StreamGrid = (): JSX.Element => {
     }
 
     // 全スロットに配信が割り当てられている場合
-    // 全ての配信が割り当てられたスロットが再生開始しているかチェック
-    const allPlaying = assignedSlots.every((slot) => slotPlayingStates[slot.id] === true);
+    // 全ての配信が割り当てられたスロットの準備が完了しているかチェック（ツイッチ情報が消えた状態）
+    const allReady = assignedSlots.every((slot) => slotReadyStates[slot.id] === true);
 
-    if (allPlaying && !autoUnmutedApplied) {
-      // 全スロット再生開始 - 通知を表示し、準備中ポップアップを非表示
+    if (allReady && !autoUnmutedApplied) {
+      // 全スロット準備完了 - 通知を表示し、準備中ポップアップを非表示
       setShowReadyNotification(true);
       setShowLoadingPopup(false);
       useLayoutStore.setState({ autoUnmutedApplied: true }); // フラグを立てる（通知は一度だけ）
-    } else if (!allPlaying && !autoUnmutedApplied) {
-      // まだ全スロット再生開始していない - 準備中ポップアップを表示
+    } else if (!allReady) {
+      // まだ全スロット準備完了していない - 準備中ポップアップを表示
       setShowLoadingPopup(true);
       setLoadingMessage('配信を読み込んでいます...');
       setShowReadyNotification(false);
     }
-  }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotPlayingStates]);
+  }, [isMobile, mutedAll, autoUnmutedApplied, slots, activeSlotsCount, slotReadyStates]);
 
   // ミュート解除されたら通知を非表示
   useEffect(() => {

@@ -199,7 +199,8 @@ export const useLayoutStore = create<LayoutState>()(
             slots: state.slots.map((slot) => ({
               ...slot,
               muted: nextMuted
-            }))
+            })),
+            autoUnmutedApplied: false // 全ミュート切り替え時に通知フラグをリセット
           };
         }),
       toggleSlotMute: (slotId) =>
