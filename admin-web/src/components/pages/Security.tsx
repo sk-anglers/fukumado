@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, MetricCard } from '../common';
 import { useSecurityStore } from '../../stores/securityStore';
 import {
+  getSecurityMetrics,
   getMainServiceStats,
   getMainServiceHealth,
   getMainServiceAlerts,
@@ -28,6 +29,7 @@ export const Security: React.FC = () => {
   const mainServiceSummary = useSecurityStore(state => state.mainServiceSummary);
 
   // setter関数だけ取得（useEffectで使用）
+  const setSecurityMetrics = useSecurityStore(state => state.setSecurityMetrics);
   const setMainServiceStats = useSecurityStore(state => state.setMainServiceStats);
   const setMainServiceHealth = useSecurityStore(state => state.setMainServiceHealth);
   const setMainServiceAlerts = useSecurityStore(state => state.setMainServiceAlerts);
@@ -140,6 +142,16 @@ export const Security: React.FC = () => {
     }
   };
 
+  // 管理ダッシュボードのセキュリティメトリクスを取得
+  const fetchDashboardMetrics = async () => {
+    try {
+      const metrics = await getSecurityMetrics();
+      setSecurityMetrics(metrics);
+    } catch (error) {
+      console.error('[Security] Failed to fetch dashboard metrics:', error);
+    }
+  };
+
   // 本サービスのセキュリティデータを取得
   useEffect(() => {
     console.log('[DEBUG] Security: Main service data useEffect RUNNING');
@@ -165,12 +177,14 @@ export const Security: React.FC = () => {
       }
     };
 
+    fetchDashboardMetrics();
     fetchMainServiceData();
     fetchBlockedIPs();
     fetchWhitelistedIPs();
 
     // 30秒ごとに更新
     const interval = setInterval(() => {
+      fetchDashboardMetrics();
       fetchMainServiceData();
       fetchBlockedIPs();
       fetchWhitelistedIPs();
