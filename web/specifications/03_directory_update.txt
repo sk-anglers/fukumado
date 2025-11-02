@@ -1,0 +1,53 @@
+# 更新が必要な箇所
+
+## フロントエンドコンポーネントの追加:
+- ConsentManager/ (Cookie同意管理)
+- MaintenancePage/ (メンテナンスページ)
+- MobileRestriction/ (モバイル制限画面)
+- GlobalControls/ (グローバル操作)
+- StreamSelectionModal/ (配信選択モーダル)
+
+## ストアの追加:
+- maintenanceStore.ts (メンテナンス状態管理)
+- mobileMenuStore.ts (モバイルメニュー管理)
+
+## フックの追加:
+- useMediaQuery.ts (メディアクエリ判定)
+- useStreamUpdates.ts (配信更新統合)
+
+## サーバールートの更新(14個):
+- admin.ts
+- adminStreams.ts
+- cache.ts
+- consent.ts
+- eventsub.ts
+- legal.ts
+- logs.ts
+- maintenance.ts
+- security.ts
+- streams.ts
+- users.ts
+
+## サーバーサービスの追加:
+- pvTracker.ts
+- consentManager.ts
+- maintenanceService.ts
+- systemMetricsCollector.ts
+- badgeService.ts
+- emoteCacheService.ts
+- followedChannelsCacheService.ts
+- anomalyDetection.ts
+- metricsCollector.ts
+- priorityManager.ts
+- securityReporter.ts
+- dynamicChannelAllocator.ts
+- twitchEventSubConnection.ts
+- twitchEventSubManager.ts
+- twitchEventSubService.ts
+- twitchEventSubWebhookService.ts
+- twitchAppAuth.ts
+
+## エントリーポイントの変更:
+- server.ts → index.ts
+
+## websocket/ディレクトリは存在せず、index.tsに統合

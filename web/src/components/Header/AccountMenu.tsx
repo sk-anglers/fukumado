@@ -463,7 +463,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
     setTwitchSyncError(null);
     try {
       const beforeCount = useUserStore.getState().followedChannels.length;
-      const response = await apiFetch('/api/twitch/subscriptions');
+      // refresh=true を付けてキャッシュを無効化し、最新のフォローチャンネルを取得
+      const response = await apiFetch('/api/twitch/subscriptions?refresh=true');
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Twitchアカウントへの接続が必要です');

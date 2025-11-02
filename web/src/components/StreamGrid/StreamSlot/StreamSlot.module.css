@@ -380,7 +380,7 @@
 /* モバイル用のコントロールボタン */
 .mobileCloseButton {
   position: absolute;
-  top: 4rem;
+  top: 0.5rem;
   right: 0.5rem;
   width: 32px;
   height: 32px;
@@ -409,7 +409,7 @@
 
 .mobileMuteButton {
   position: absolute;
-  top: 4rem;
+  top: 0.5rem;
   left: 0.5rem;
   width: 32px;
   height: 32px;
