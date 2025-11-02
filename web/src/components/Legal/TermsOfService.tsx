@@ -2,7 +2,7 @@ export function TermsOfService(): JSX.Element {
   return (
     <div className="legal-content">
       <h1>利用規約</h1>
-      <p className="last-updated">最終更新日: 2025年1月20日</p>
+      <p className="last-updated">最終更新日: 2025年11月1日</p>
 
       <p>
         本利用規約（以下「本規約」といいます）は、ふくまど！（以下「本サービス」といいます）の利用条件を定めるものです。本サービスをご利用いただくにあたり、本規約の全文をお読みいただき、同意いただく必要があります。

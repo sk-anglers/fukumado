@@ -2,7 +2,7 @@ export function PrivacyPolicy(): JSX.Element {
   return (
     <div className="legal-content">
       <h1>プライバシーポリシー</h1>
-      <p className="last-updated">最終更新日: 2025年1月20日</p>
+      <p className="last-updated">最終更新日: 2025年11月1日</p>
 
       <p>
         ふくまど！（以下「本サービス」といいます）は、ユーザーのプライバシーを尊重し、個人情報の保護に努めます。本プライバシーポリシー（以下「本ポリシー」といいます）は、本サービスがどのような情報を収集し、どのように利用・管理するかを説明するものです。
