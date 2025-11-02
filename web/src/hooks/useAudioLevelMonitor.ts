@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useLayoutStore } from '../stores/layoutStore';
 
 interface AudioLevelData {
   [slotId: string]: number; // 0-100の音量レベル
@@ -13,6 +14,9 @@ export const useAudioLevelMonitor = (slotIds: string[]): AudioLevelData => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analysersRef = useRef<Map<string, AnalyserNode>>(new Map());
   const animationFrameRef = useRef<number | null>(null);
+
+  // 各スロットの再生状態を取得
+  const slotPlayingStates = useLayoutStore((state) => state.slotPlayingStates);
 
   useEffect(() => {
     // AudioContextを初期化（ユーザーインタラクション後に1度だけ）
@@ -80,6 +84,14 @@ export const useAudioLevelMonitor = (slotIds: string[]): AudioLevelData => {
 
       slotIds.forEach((slotId) => {
         const analyser = analysersRef.current.get(slotId);
+
+        // 一時停止中のスロットは音量レベルを0にする
+        const isPlaying = slotPlayingStates[slotId] !== false;
+        if (!isPlaying) {
+          levels[slotId] = 0;
+          return;
+        }
+
         if (!analyser) {
           // AnalyserNodeが無い場合は、ランダムな音量レベルをシミュレーション（デモ用）
           // 実際の実装では、音声取得が可能な場合のみ表示すべき
@@ -110,7 +122,7 @@ export const useAudioLevelMonitor = (slotIds: string[]): AudioLevelData => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [slotIds]);
+  }, [slotIds, slotPlayingStates]);
 
   return audioLevels;
 };
