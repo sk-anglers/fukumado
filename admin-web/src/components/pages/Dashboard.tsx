@@ -39,10 +39,16 @@ export const Dashboard: React.FC = () => {
   const setPVLoading = usePVStore(state => state.setLoading);
   const [exportingPV, setExportingPV] = useState(false);
 
+  // API状態の取得状況管理
+  const [apiDataFetching, setApiDataFetching] = useState(false);
+  const [lastApiDataFetch, setLastApiDataFetch] = useState<Date | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   // API統計データを定期的に取得 - useEffectは条件分岐の前に配置
   useEffect(() => {
     console.log('[DEBUG] Dashboard: API stats useEffect RUNNING');
     const fetchApiStats = async () => {
+      setApiDataFetching(true);
       try {
         const [statsData, twitchData, youtubeData] = await Promise.all([
           getApiStats().catch(() => null),
@@ -66,8 +72,13 @@ export const Dashboard: React.FC = () => {
         if (youtubeData) {
           setYoutubeQuota(youtubeData);
         }
+
+        // 取得成功時に最終取得時刻を更新
+        setLastApiDataFetch(new Date());
       } catch (error) {
         console.error('[Dashboard] Failed to fetch API stats:', error);
+      } finally {
+        setApiDataFetching(false);
       }
     };
 
@@ -82,6 +93,15 @@ export const Dashboard: React.FC = () => {
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 現在時刻を1秒ごとに更新（リセット時刻の残り時間表示用）
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // PV統計データを定期的に取得
@@ -167,6 +187,40 @@ export const Dashboard: React.FC = () => {
     return 'normal';
   };
 
+  // 最終取得からの経過時間を取得
+  const getTimeSinceLastFetch = () => {
+    if (!lastApiDataFetch) return '未取得';
+    const diffMs = currentTime.getTime() - lastApiDataFetch.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+
+    if (diffSec < 60) return `${diffSec}秒前`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}分前`;
+    const diffHour = Math.floor(diffMin / 60);
+    return `${diffHour}時間前`;
+  };
+
+  // リセット時刻までの残り時間を取得
+  const getTimeUntilReset = (resetAt: string) => {
+    const resetTime = new Date(resetAt);
+    const diffMs = resetTime.getTime() - currentTime.getTime();
+
+    if (diffMs <= 0) return 'リセット済み';
+
+    const diffSec = Math.floor(diffMs / 1000);
+    const hours = Math.floor(diffSec / 3600);
+    const minutes = Math.floor((diffSec % 3600) / 60);
+    const seconds = diffSec % 60;
+
+    if (hours > 0) {
+      return `あと${hours}時間${minutes}分${seconds}秒`;
+    } else if (minutes > 0) {
+      return `あと${minutes}分${seconds}秒`;
+    } else {
+      return `あと${seconds}秒`;
+    }
+  };
+
   return (
     <div className={styles.dashboard}>
       <h1 className={styles.pageTitle}>ダッシュボード</h1>
@@ -241,7 +295,18 @@ export const Dashboard: React.FC = () => {
                   <p>
                     リセット時刻:{' '}
                     {new Date(twitchRateLimit.resetAt).toLocaleTimeString('ja-JP')}
+                    <span style={{ marginLeft: '8px', color: '#94a3b8' }}>
+                      ({getTimeUntilReset(twitchRateLimit.resetAt)})
+                    </span>
                   </p>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+                    {apiDataFetching ? '🔄 取得中...' : `✓ 最終取得: ${getTimeSinceLastFetch()}`}
+                  </p>
+                  {lastApiDataFetch && (
+                    <p style={{ fontSize: '11px', color: '#64748b' }}>
+                      {lastApiDataFetch.toLocaleTimeString('ja-JP')}
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -262,7 +327,18 @@ export const Dashboard: React.FC = () => {
                   <p>
                     リセット時刻:{' '}
                     {new Date(youtubeQuota.resetAt).toLocaleTimeString('ja-JP')}
+                    <span style={{ marginLeft: '8px', color: '#94a3b8' }}>
+                      ({getTimeUntilReset(youtubeQuota.resetAt)})
+                    </span>
                   </p>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+                    {apiDataFetching ? '🔄 取得中...' : `✓ 最終取得: ${getTimeSinceLastFetch()}`}
+                  </p>
+                  {lastApiDataFetch && (
+                    <p style={{ fontSize: '11px', color: '#64748b' }}>
+                      {lastApiDataFetch.toLocaleTimeString('ja-JP')}
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
