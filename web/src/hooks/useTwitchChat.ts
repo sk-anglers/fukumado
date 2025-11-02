@@ -16,6 +16,7 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
 
   const wsRef = useRef<WebSocket | null>(null);
   const previousChannelsRef = useRef<string>('');
+  const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
   const addMessage = useChatStore((state) => state.addMessage);
 
   // チャンネルリストを文字列化して比較用に保持
@@ -23,6 +24,33 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
 
   useEffect(() => {
     console.error('⚠️⚠️⚠️ [useTwitchChat] useEffect TRIGGERED, channels.length:', channels.length);
+
+    // ハートビート送信を開始
+    const startHeartbeat = () => {
+      // 既存のタイマーをクリア
+      if (heartbeatTimerRef.current) {
+        clearInterval(heartbeatTimerRef.current);
+      }
+
+      console.error('💓 [useTwitchChat] STARTING heartbeat (interval: 30s)');
+
+      // 定期的にハートビートを送信
+      heartbeatTimerRef.current = setInterval(() => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          console.error('💓 [useTwitchChat] Sending heartbeat');
+          wsRef.current.send(JSON.stringify({ type: 'heartbeat' }));
+        }
+      }, 30000); // 30秒
+    };
+
+    // ハートビート送信を停止
+    const stopHeartbeat = () => {
+      if (heartbeatTimerRef.current) {
+        console.error('💓 [useTwitchChat] STOPPING heartbeat');
+        clearInterval(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = null;
+      }
+    };
 
     // WebSocket接続を確立（初回のみ）
     if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
@@ -32,6 +60,9 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
       ws.onopen = () => {
         console.error('✅✅✅ [useTwitchChat] WebSocket connection OPENED');
         wsRef.current = ws;
+
+        // ハートビートを開始
+        startHeartbeat();
 
         // チャンネル購読を送信
         console.warn('⚠️ [useTwitchChat] Checking channels to subscribe, channels.length:', channels.length);
@@ -107,6 +138,8 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
       };
 
       ws.onclose = () => {
+        console.error('🔌 [useTwitchChat] CONNECTION CLOSED');
+        stopHeartbeat();
         wsRef.current = null;
       };
 
@@ -133,6 +166,13 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
   // コンポーネントアンマウント時のクリーンアップ
   useEffect(() => {
     return () => {
+      // ハートビートを停止
+      if (heartbeatTimerRef.current) {
+        clearInterval(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = null;
+      }
+
+      // WebSocket接続を切断
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.close();
         wsRef.current = null;
