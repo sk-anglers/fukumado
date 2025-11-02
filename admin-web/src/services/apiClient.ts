@@ -28,7 +28,8 @@ import {
   CacheKeyValueResponse,
   PVStats,
   AnalyticsStats,
-  ThresholdInfo
+  ThresholdInfo,
+  BlockedIPsResponse
 } from '../types';
 
 /**
@@ -690,4 +691,25 @@ export const exportAnalyticsStats = async (format: 'json' | 'csv', days: number 
     console.error('[API] Failed to export analytics stats:', error);
     throw error;
   }
+};
+
+// ========================================
+// IPブロック管理API
+// ========================================
+
+/**
+ * ブロックされているIPリストを取得
+ */
+export const getBlockedIPs = async (): Promise<BlockedIPsResponse> => {
+  return fetchAPI<BlockedIPsResponse>('/security/blocked-ips');
+};
+
+/**
+ * すべてのIPブロックを解除
+ */
+export const clearAllBlocks = async (): Promise<void> => {
+  await fetchAPI('/security/clear-all-blocks', {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
 };

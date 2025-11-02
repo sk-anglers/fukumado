@@ -8,15 +8,17 @@ export const securityRouter = Router();
 /**
  * 本サービスのAPIを呼び出すヘルパー関数
  */
-async function fetchMainServiceAPI<T>(endpoint: string): Promise<T | null> {
+async function fetchMainServiceAPI<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
   try {
     const url = `${env.mainBackendUrl}${endpoint}`;
     const response = await fetch(url, {
-      method: 'GET',
+      method: options?.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'X-Admin-API-Key': env.mainApiKey
-      }
+        'X-Admin-API-Key': env.mainApiKey,
+        ...options?.headers
+      },
+      ...options
     });
 
     if (!response.ok) {
@@ -104,8 +106,44 @@ securityRouter.post('/block-ip', async (req, res) => {
 });
 
 /**
+ * GET /admin/api/security/blocked-ips
+ * ブロックされているIPリストを取得（本サービスから）
+ */
+securityRouter.get('/blocked-ips', async (req, res) => {
+  try {
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
+      data: {
+        blockedIPs: Array<{ ip: string; until: Date; reason: string }>;
+        count: number;
+      };
+      timestamp: string;
+    }>('/api/admin/security/blocked-ips');
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to fetch blocked IPs from main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('[API] Error getting blocked IPs:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
  * POST /admin/api/security/unblock-ip
- * IPブロック解除
+ * IPブロック解除（本サービスにproxy）
  */
 securityRouter.post('/unblock-ip', async (req, res) => {
   try {
@@ -120,21 +158,69 @@ securityRouter.post('/unblock-ip', async (req, res) => {
       return res.status(400).json(response);
     }
 
-    await securityMonitor.unblockIP(ip);
-
-    const response: ApiResponse = {
-      success: true,
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
       data: {
-        ip,
-        unblocked: true,
-        unblockedAt: new Date().toISOString()
-      },
-      timestamp: new Date().toISOString()
-    };
+        ip: string;
+        wasBlocked: boolean;
+        message: string;
+      };
+      timestamp: string;
+    }>('/api/admin/security/unblock-ip', {
+      method: 'POST',
+      body: JSON.stringify({ ip })
+    });
 
-    res.json(response);
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to unblock IP on main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    res.json(data);
   } catch (error) {
     console.error('[API] Error unblocking IP:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
+ * POST /admin/api/security/clear-all-blocks
+ * すべてのIPブロックを解除（本サービスにproxy）
+ */
+securityRouter.post('/clear-all-blocks', async (req, res) => {
+  try {
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
+      data: {
+        message: string;
+      };
+      timestamp: string;
+    }>('/api/admin/security/clear-all-blocks', {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to clear all blocks on main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('[API] Error clearing all blocks:', error);
     const response: ApiResponse = {
       success: false,
       error: 'Internal server error',

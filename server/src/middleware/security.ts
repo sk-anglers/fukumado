@@ -157,6 +157,39 @@ class IPBlocklist {
   }
 
   /**
+   * 特定のIPのブロックを解除
+   */
+  public unblock(ip: string): boolean {
+    const wasBlocked = this.blockedIPs.has(ip);
+    this.blockedIPs.delete(ip);
+    this.violationCount.delete(ip);
+
+    if (wasBlocked) {
+      console.log(`[Security] Unblocked IP: ${ip}`);
+    }
+
+    return wasBlocked;
+  }
+
+  /**
+   * ブロックされているIPのリストを取得
+   */
+  public getBlockedIPs(): Array<{ ip: string; until: Date; reason: string }> {
+    const blocked: Array<{ ip: string; until: Date; reason: string }> = [];
+
+    for (const [ip, data] of this.blockedIPs.entries()) {
+      // 期限切れのブロックは除外
+      if (data.until >= new Date()) {
+        blocked.push({ ip, ...data });
+      } else {
+        this.blockedIPs.delete(ip);
+      }
+    }
+
+    return blocked;
+  }
+
+  /**
    * ブロックされたIPの統計を取得
    */
   public getStats(): { blockedCount: number; violationCount: number } {

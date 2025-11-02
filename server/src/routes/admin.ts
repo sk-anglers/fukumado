@@ -5,6 +5,7 @@ import { apiLogStore } from '../utils/apiLogStore';
 import { getWebSocketStats, pvTracker, analyticsTracker, streamSyncService } from '../index';
 import { systemMetricsCollector } from '../services/systemMetricsCollector';
 import { priorityManager } from '../services/priorityManager';
+import { ipBlocklist } from '../middleware/security';
 
 export const adminRouter = Router();
 
@@ -511,6 +512,101 @@ adminRouter.get('/threshold/info', (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[Admin] Error getting threshold info:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ========================================
+// セキュリティ管理API
+// ========================================
+
+/**
+ * GET /api/admin/security/blocked-ips
+ * ブロックされているIPリストを取得
+ */
+adminRouter.get('/security/blocked-ips', (req: Request, res: Response) => {
+  try {
+    const blockedIPs = ipBlocklist.getBlockedIPs();
+
+    res.json({
+      success: true,
+      data: {
+        blockedIPs,
+        count: blockedIPs.length
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting blocked IPs:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/security/unblock-ip
+ * 特定のIPのブロックを解除
+ */
+adminRouter.post('/security/unblock-ip', (req: Request, res: Response) => {
+  try {
+    const { ip } = req.body;
+
+    if (!ip) {
+      return res.status(400).json({
+        success: false,
+        error: 'IP address is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const wasBlocked = ipBlocklist.unblock(ip);
+
+    res.json({
+      success: true,
+      data: {
+        ip,
+        wasBlocked,
+        message: wasBlocked ? `IP ${ip} has been unblocked` : `IP ${ip} was not blocked`
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error unblocking IP:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/security/clear-all-blocks
+ * すべてのIPブロックを解除
+ */
+adminRouter.post('/security/clear-all-blocks', (req: Request, res: Response) => {
+  try {
+    ipBlocklist.clear();
+
+    res.json({
+      success: true,
+      data: {
+        message: 'All IP blocks have been cleared'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error clearing all blocks:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       success: false,

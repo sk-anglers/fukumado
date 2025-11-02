@@ -7,8 +7,12 @@ import {
   getMainServiceAlerts,
   getMainServiceSessions,
   getMainServiceWebSocket,
-  getMainServiceSummary
+  getMainServiceSummary,
+  getBlockedIPs,
+  unblockIP,
+  clearAllBlocks
 } from '../../services/apiClient';
+import { BlockedIP } from '../../types';
 import styles from './Security.module.css';
 
 export const Security: React.FC = () => {
@@ -29,6 +33,56 @@ export const Security: React.FC = () => {
   const setMainServiceSummary = useSecurityStore(state => state.setMainServiceSummary);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'main-service'>('dashboard');
+  const [blockedIPs, setBlockedIPs] = useState<BlockedIP[]>([]);
+  const [loadingBlocks, setLoadingBlocks] = useState(false);
+
+  // ブロックリストを取得
+  const fetchBlockedIPs = async () => {
+    try {
+      const result = await getBlockedIPs();
+      setBlockedIPs(result.blockedIPs || []);
+    } catch (error) {
+      console.error('[Security] Failed to fetch blocked IPs:', error);
+    }
+  };
+
+  // 特定のIPをブロック解除
+  const handleUnblockIP = async (ip: string) => {
+    if (!confirm(`IP ${ip} のブロックを解除しますか?`)) {
+      return;
+    }
+
+    setLoadingBlocks(true);
+    try {
+      await unblockIP(ip);
+      await fetchBlockedIPs();
+      alert(`IP ${ip} のブロックを解除しました`);
+    } catch (error) {
+      console.error('[Security] Failed to unblock IP:', error);
+      alert('ブロック解除に失敗しました');
+    } finally {
+      setLoadingBlocks(false);
+    }
+  };
+
+  // すべてのブロックを解除
+  const handleClearAllBlocks = async () => {
+    if (!confirm('すべてのIPブロックを解除しますか?')) {
+      return;
+    }
+
+    setLoadingBlocks(true);
+    try {
+      await clearAllBlocks();
+      await fetchBlockedIPs();
+      alert('すべてのIPブロックを解除しました');
+    } catch (error) {
+      console.error('[Security] Failed to clear all blocks:', error);
+      alert('ブロック解除に失敗しました');
+    } finally {
+      setLoadingBlocks(false);
+    }
+  };
 
   // 本サービスのセキュリティデータを取得
   useEffect(() => {
@@ -56,9 +110,13 @@ export const Security: React.FC = () => {
     };
 
     fetchMainServiceData();
+    fetchBlockedIPs();
 
     // 30秒ごとに更新
-    const interval = setInterval(fetchMainServiceData, 30000);
+    const interval = setInterval(() => {
+      fetchMainServiceData();
+      fetchBlockedIPs();
+    }, 30000);
     return () => {
       console.log('[DEBUG] Security: Main service data useEffect CLEANUP');
       clearInterval(interval);
@@ -571,6 +629,80 @@ export const Security: React.FC = () => {
               </Card>
             </section>
           )}
+
+          {/* ブロックされたIPリスト */}
+          <section className={styles.section}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 className={styles.sectionTitle} style={{ margin: 0 }}>ブロックされたIP ({blockedIPs.length})</h2>
+              <button
+                onClick={handleClearAllBlocks}
+                disabled={loadingBlocks || blockedIPs.length === 0}
+                style={{
+                  padding: '8px 16px',
+                  background: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: blockedIPs.length === 0 ? 'not-allowed' : 'pointer',
+                  opacity: blockedIPs.length === 0 ? 0.5 : 1
+                }}
+              >
+                {loadingBlocks ? '処理中...' : 'すべて解除'}
+              </button>
+            </div>
+            <Card>
+              {blockedIPs.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
+                  ブロックされているIPはありません
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {blockedIPs.map((blocked) => (
+                    <div
+                      key={blocked.ip}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px',
+                        background: '#0f172a',
+                        border: '1px solid #334155',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>
+                          {blocked.ip}
+                        </span>
+                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          理由: {blocked.reason}
+                        </span>
+                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          解除予定: {new Date(blocked.until).toLocaleString('ja-JP')}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleUnblockIP(blocked.ip)}
+                        disabled={loadingBlocks}
+                        style={{
+                          padding: '6px 12px',
+                          background: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: 500
+                        }}
+                      >
+                        解除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </section>
         </>
       )}
     </div>

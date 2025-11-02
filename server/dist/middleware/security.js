@@ -151,6 +151,34 @@ class IPBlocklist {
         }, 5 * 60 * 1000);
     }
     /**
+     * 特定のIPのブロックを解除
+     */
+    unblock(ip) {
+        const wasBlocked = this.blockedIPs.has(ip);
+        this.blockedIPs.delete(ip);
+        this.violationCount.delete(ip);
+        if (wasBlocked) {
+            console.log(`[Security] Unblocked IP: ${ip}`);
+        }
+        return wasBlocked;
+    }
+    /**
+     * ブロックされているIPのリストを取得
+     */
+    getBlockedIPs() {
+        const blocked = [];
+        for (const [ip, data] of this.blockedIPs.entries()) {
+            // 期限切れのブロックは除外
+            if (data.until >= new Date()) {
+                blocked.push({ ip, ...data });
+            }
+            else {
+                this.blockedIPs.delete(ip);
+            }
+        }
+        return blocked;
+    }
+    /**
      * ブロックされたIPの統計を取得
      */
     getStats() {

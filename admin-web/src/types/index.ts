@@ -321,6 +321,23 @@ export interface SecuritySummary {
   recommendations: string[];
 }
 
+/**
+ * ブロックされたIP情報
+ */
+export interface BlockedIP {
+  ip: string;
+  until: Date;
+  reason: string;
+}
+
+/**
+ * ブロックされたIPリスト
+ */
+export interface BlockedIPsResponse {
+  blockedIPs: BlockedIP[];
+  count: number;
+}
+
 // ========================================
 // ユーザー/セッション管理型定義
 // ========================================
