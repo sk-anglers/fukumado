@@ -7,6 +7,7 @@ const emoteCacheService_1 = require("../services/emoteCacheService");
 const apiLogStore_1 = require("../utils/apiLogStore");
 const index_1 = require("../index");
 const systemMetricsCollector_1 = require("../services/systemMetricsCollector");
+const priorityManager_1 = require("../services/priorityManager");
 exports.adminRouter = (0, express_1.Router)();
 /**
  * GET /api/admin/system/metrics
@@ -451,6 +452,32 @@ exports.adminRouter.get('/analytics/export', async (req, res) => {
     }
     catch (error) {
         console.error('[Admin] Error exporting analytics stats:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        res.status(500).json({
+            success: false,
+            error: message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+// ========================================
+// 動的閾値API
+// ========================================
+/**
+ * GET /api/admin/threshold/info
+ * 動的閾値情報を取得
+ */
+exports.adminRouter.get('/threshold/info', (req, res) => {
+    try {
+        const thresholdInfo = priorityManager_1.priorityManager.getThresholdInfo();
+        res.json({
+            success: true,
+            data: thresholdInfo,
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('[Admin] Error getting threshold info:', error);
         const message = error instanceof Error ? error.message : 'Unknown error';
         res.status(500).json({
             success: false,

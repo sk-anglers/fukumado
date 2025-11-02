@@ -36,6 +36,7 @@ const twitchEventSubWebhookService_1 = require("./services/twitchEventSubWebhook
 const twitchConduitManager_1 = require("./services/twitchConduitManager");
 const liveStreamsCacheService_1 = require("./services/liveStreamsCacheService");
 const priorityManager_1 = require("./services/priorityManager");
+const twitchAppAuth_1 = require("./services/twitchAppAuth");
 const security_2 = require("./middleware/security");
 const maintenanceMode_1 = require("./middleware/maintenanceMode");
 const adminAuth_1 = require("./middleware/adminAuth");
@@ -564,6 +565,17 @@ server.listen(env_1.env.port, async () => {
     console.log('[server] StreamSyncService will start automatically when clients connect');
     // SystemMetricsCollectorを開始
     systemMetricsCollector_1.systemMetricsCollector.start();
+    // 動的閾値モニタリングを開始
+    try {
+        const appAccessToken = await (0, twitchAppAuth_1.getTwitchAppAccessToken)();
+        priorityManager_1.priorityManager.setAccessToken(appAccessToken);
+        priorityManager_1.priorityManager.startDynamicThresholdMonitoring();
+        console.log('[server] Dynamic threshold monitoring started');
+    }
+    catch (error) {
+        console.error('[server] Failed to start dynamic threshold monitoring:', error);
+        console.log('[server] Using default threshold (10 viewers)');
+    }
     // EventSubが有効な場合の処理
     if (env_1.env.enableEventSub) {
         console.log('[server] EventSub is enabled');

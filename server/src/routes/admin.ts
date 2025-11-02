@@ -4,6 +4,7 @@ import { emoteCacheService } from '../services/emoteCacheService';
 import { apiLogStore } from '../utils/apiLogStore';
 import { getWebSocketStats, pvTracker, analyticsTracker } from '../index';
 import { systemMetricsCollector } from '../services/systemMetricsCollector';
+import { priorityManager } from '../services/priorityManager';
 
 export const adminRouter = Router();
 
@@ -478,6 +479,34 @@ adminRouter.get('/analytics/export', async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error('[Admin] Error exporting analytics stats:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ========================================
+// 動的閾値API
+// ========================================
+
+/**
+ * GET /api/admin/threshold/info
+ * 動的閾値情報を取得
+ */
+adminRouter.get('/threshold/info', (req: Request, res: Response) => {
+  try {
+    const thresholdInfo = priorityManager.getThresholdInfo();
+
+    res.json({
+      success: true,
+      data: thresholdInfo,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting threshold info:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       success: false,
