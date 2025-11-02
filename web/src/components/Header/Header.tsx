@@ -26,11 +26,6 @@ import { AccountMenu } from './AccountMenu';
 import { NotificationMenu } from './NotificationMenu';
 import styles from './Header.module.css';
 
-const presetLabels: Record<LayoutPreset, string> = {
-  twoByTwo: '2×2',
-  oneByTwo: '1×2 + サブ'
-};
-
 interface HeaderProps {
   onOpenPresetModal: () => void;
 }
@@ -661,37 +656,6 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                   </button>
                 ))}
               </div>
-              <div className={styles.layoutMenuDivider} />
-              <div className={styles.slotMenuTitle}>プリセット</div>
-              <div className={styles.layoutMenuButtons}>
-                {(Object.keys(presetLabels) as LayoutPreset[]).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={clsx(
-                      styles.layoutMenuButton,
-                      preset === key && styles.layoutMenuButtonActive
-                    )}
-                    onClick={() => {
-                      // 同じプリセットがクリックされた場合は2×2に戻す、それ以外はそのプリセットに設定
-                      setPreset(preset === key ? 'twoByTwo' : key);
-                    }}
-                  >
-                    {presetLabels[key]}
-                  </button>
-                ))}
-              </div>
-              <div className={styles.layoutMenuDivider} />
-              <button
-                type="button"
-                className={styles.layoutMenuAction}
-                onClick={() => {
-                  setShowLayoutMenu(false);
-                  onOpenPresetModal();
-                }}
-              >
-                プリセットを編集
-              </button>
             </div>
           )}
         </div>
