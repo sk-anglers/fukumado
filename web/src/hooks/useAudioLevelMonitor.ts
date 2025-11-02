@@ -87,6 +87,12 @@ export const useAudioLevelMonitor = (slotIds: string[]): AudioLevelData => {
 
         // 一時停止中のスロットは音量レベルを0にする
         const isPlaying = slotPlayingStates[slotId] !== false;
+
+        // デバッグログ（後で削除）
+        if (slotPlayingStates[slotId] === false) {
+          console.log(`[AudioLevel] Slot ${slotId} is paused, setting level to 0`);
+        }
+
         if (!isPlaying) {
           levels[slotId] = 0;
           return;

@@ -343,6 +343,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
 
           const pauseHandler = () => {
             if (!isMounted) return;
+            console.log(`[Twitch] Pause event detected for slot ${slot.id}`);
             setSlotPlaying(slot.id, false); // 再生停止を通知
 
             // 一時停止時にプレイヤーをミュート
@@ -427,6 +428,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                     }
                   }
                 } else if (event.data === 2) {
+                  console.log(`[YouTube] Pause event detected for slot ${slot.id}`);
                   setSlotPlaying(slot.id, false); // 一時停止
 
                   // 一時停止時にプレイヤーをミュート
