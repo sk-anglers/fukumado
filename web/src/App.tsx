@@ -109,6 +109,7 @@ function App(): JSX.Element {
     twitchFollowedChannelIds
   );
 
+  console.log('[App] Calling useTwitchChat with activeTwitchChannels:', activeTwitchChannels);
   useTwitchChat(activeTwitchChannels);
 
   useEffect(() => {

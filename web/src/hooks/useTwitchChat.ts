@@ -12,6 +12,8 @@ interface TwitchChannel {
 }
 
 export const useTwitchChat = (channels: TwitchChannel[]): void => {
+  console.log('[useTwitchChat] Hook called, channels:', channels);
+
   const wsRef = useRef<WebSocket | null>(null);
   const previousChannelsRef = useRef<string>('');
   const addMessage = useChatStore((state) => state.addMessage);
@@ -20,15 +22,21 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
   const channelsKey = JSON.stringify(channels.map(ch => ch.login).sort());
 
   useEffect(() => {
+    console.log('[useTwitchChat] useEffect triggered, channels.length:', channels.length);
+
     // WebSocket接続を確立（初回のみ）
     if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+      console.log('[useTwitchChat] Creating new WebSocket connection to:', WS_URL);
       const ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
+        console.log('[useTwitchChat] WebSocket connection OPENED');
         wsRef.current = ws;
 
         // チャンネル購読を送信
+        console.log('[useTwitchChat] Checking channels to subscribe, channels.length:', channels.length);
         if (channels.length > 0) {
+          console.log('[useTwitchChat] Sending subscribe message for channels:', channels.map(ch => ch.login));
           ws.send(JSON.stringify({
             type: 'subscribe',
             channels: channels.map(ch => ch.login),
