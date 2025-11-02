@@ -61,7 +61,7 @@ export interface ChatMessage {
   isVip?: boolean;
 }
 
-export type LayoutPreset = 'twoByTwo' | 'focus';
+export type LayoutPreset = 'twoByTwo' | 'oneByTwo';
 
 export interface ChannelSearchResult {
   id: string;

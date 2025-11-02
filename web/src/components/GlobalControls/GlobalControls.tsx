@@ -12,8 +12,7 @@ interface GlobalControlsProps {
 
 const presetLabels: Record<LayoutPreset, string> = {
   twoByTwo: '2×2',
-  oneByTwo: '1×2 + サブ',
-  focus: 'フォーカス'
+  oneByTwo: '1×2 + サブ'
 };
 
 export const GlobalControls = ({ onOpenPresetModal }: GlobalControlsProps): JSX.Element => {

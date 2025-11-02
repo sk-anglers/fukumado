@@ -12,7 +12,7 @@ export type EventType =
   | 'session_start'
   | 'session_end';
 
-export type LayoutPreset = 'twoByTwo' | 'oneByTwo' | 'focus';
+export type LayoutPreset = 'twoByTwo' | 'oneByTwo';
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 export type Platform = 'youtube' | 'twitch' | 'niconico';
 

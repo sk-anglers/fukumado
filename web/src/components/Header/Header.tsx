@@ -28,8 +28,7 @@ import styles from './Header.module.css';
 
 const presetLabels: Record<LayoutPreset, string> = {
   twoByTwo: '2×2',
-  oneByTwo: '1×2 + サブ',
-  focus: 'フォーカス'
+  oneByTwo: '1×2 + サブ'
 };
 
 interface HeaderProps {
