@@ -12,6 +12,8 @@ interface TwitchChannel {
 }
 
 export const useTwitchChat = (channels: TwitchChannel[]): void => {
+  console.log('[useTwitchChat] Hook called with channels:', channels);
+
   const wsRef = useRef<WebSocket | null>(null);
   const previousChannelsRef = useRef<string>('');
   const addMessage = useChatStore((state) => state.addMessage);
@@ -20,24 +22,36 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
   const channelsKey = JSON.stringify(channels.map(ch => ch.login).sort());
 
   useEffect(() => {
+    console.log('[useTwitchChat] useEffect triggered, channels.length:', channels.length);
+    console.log('[useTwitchChat] wsRef.current:', wsRef.current);
+    console.log('[useTwitchChat] readyState:', wsRef.current?.readyState);
+
     // WebSocket接続を確立（初回のみ）
     if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+      console.log('[useTwitchChat] Creating new WebSocket connection to:', WS_URL);
       const ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
+        console.log('[useTwitchChat] WebSocket connection OPENED');
         wsRef.current = ws;
 
         // チャンネル購読を送信
+        console.log('[useTwitchChat] Attempting to subscribe, channels.length:', channels.length);
         if (channels.length > 0) {
-          ws.send(JSON.stringify({
+          console.log('[useTwitchChat] Sending subscribe message for channels:', channels.map(ch => ch.login));
+          const subscribeMessage = {
             type: 'subscribe',
             channels: channels.map(ch => ch.login),
             channelMapping: Object.fromEntries(channels.map(ch => [ch.login, ch.displayName])),
             channelIdMapping: Object.fromEntries(
               channels.filter(ch => ch.channelId).map(ch => [ch.login, ch.channelId!])
             )
-          }));
+          };
+          ws.send(JSON.stringify(subscribeMessage));
+          console.log('[useTwitchChat] Subscribe message SENT successfully');
           previousChannelsRef.current = channelsKey;
+        } else {
+          console.log('[useTwitchChat] No channels to subscribe (channels.length === 0)');
         }
       };
 
