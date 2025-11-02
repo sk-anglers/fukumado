@@ -4,6 +4,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useChatStore } from '../../stores/chatStore';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useMobileMenuStore } from '../../stores/mobileMenuStore';
+import { useAuthStore } from '../../stores/authStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { config } from '../../config';
 import { apiFetch } from '../../utils/api';
@@ -73,15 +74,17 @@ const filterLabels: Record<ChatFilter, string> = {
 };
 
 export const ChatPanel = (): JSX.Element => {
-  const { filter, messages, setFilter, highlightedCount, selectedChannelId, setSelectedChannelId } = useChatStore((state) => ({
+  const { filter, messages, setFilter, highlightedCount, selectedChannelId, setSelectedChannelId, addMessage } = useChatStore((state) => ({
     filter: state.filter,
     messages: state.messages,
     setFilter: state.setFilter,
     highlightedCount: state.highlightedCount,
     selectedChannelId: state.selectedChannelId,
-    setSelectedChannelId: state.setSelectedChannelId
+    setSelectedChannelId: state.setSelectedChannelId,
+    addMessage: state.addMessage
   }));
 
+  const twitchUser = useAuthStore((state) => state.twitchUser);
   const slots = useLayoutStore((state) => state.slots);
   const isMobile = useIsMobile();
   const setChatOpen = useMobileMenuStore((state) => state.setChatOpen);
@@ -162,6 +165,29 @@ export const ChatPanel = (): JSX.Element => {
         throw new Error(errorData.error || 'メッセージの送信に失敗しました');
       }
 
+      // レスポンスからエモート情報を取得
+      const responseData = await response.json();
+      const emotes = responseData.emotes || [];
+
+      // 送信したメッセージをチャットストアに追加
+      if (selectedStream.platform === 'twitch' && twitchUser) {
+        const sentMessage: ChatMessage = {
+          id: `${Date.now()}-${Math.random()}`,
+          platform: 'twitch',
+          author: twitchUser.displayName,
+          message: messageInput.trim(),
+          timestamp: new Date().toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Tokyo'
+          }),
+          avatarColor: getRandomColor(),
+          channelName: selectedStream.displayName || selectedStream.channelLogin,
+          emotes: emotes.length > 0 ? emotes : undefined
+        };
+        addMessage(sentMessage);
+      }
+
       // 送信成功：入力欄をクリア
       setMessageInput('');
     } catch (error) {
@@ -186,6 +212,15 @@ export const ChatPanel = (): JSX.Element => {
       const spaceBefore = prev.length > 0 && !prev.endsWith(' ') ? ' ' : '';
       return `${prev}${spaceBefore}${emoteName} `;
     });
+  };
+
+  // ランダムなアバターカラーを生成
+  const getRandomColor = (): string => {
+    const colors = [
+      '#38bdf8', '#a855f7', '#f97316', '#facc15',
+      '#22d3ee', '#ec4899', '#10b981', '#f59e0b'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
   };
 
   return (

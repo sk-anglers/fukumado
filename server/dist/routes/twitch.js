@@ -142,7 +142,9 @@ exports.twitchRouter.post('/chat/send', async (req, res) => {
         twitchChatService_1.twitchChatService.setCredentials(accessToken, user.login);
         // メッセージを送信
         await twitchChatService_1.twitchChatService.sendMessage(channelLogin, message.trim());
-        res.json({ success: true });
+        // エモート情報をパース
+        const emotes = await parseEmotesFromMessage(accessToken, channelId, message.trim());
+        res.json({ success: true, emotes });
     }
     catch (error) {
         console.error('[Twitch Chat] Send message error:', error);
@@ -150,6 +152,57 @@ exports.twitchRouter.post('/chat/send', async (req, res) => {
         res.status(500).json({ error: message });
     }
 });
+/**
+ * メッセージテキストからエモート情報をパース
+ */
+async function parseEmotesFromMessage(accessToken, broadcasterId, message) {
+    try {
+        // グローバルエモートとチャンネルエモートを取得
+        const [globalEmotes, channelEmotes] = await Promise.all([
+            (0, twitchService_1.fetchGlobalEmotes)(accessToken),
+            (0, twitchService_1.fetchChannelEmotes)(accessToken, broadcasterId)
+        ]);
+        // エモート名をIDにマッピング
+        const emoteMap = new Map();
+        [...globalEmotes, ...channelEmotes].forEach((emote) => {
+            emoteMap.set(emote.name, emote.id);
+        });
+        // メッセージをトークンに分割してエモートを検出
+        const emotePositions = new Map();
+        let currentPos = 0;
+        // スペースで分割してトークンを処理
+        const tokens = message.split(' ');
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+            const emoteId = emoteMap.get(token);
+            if (emoteId) {
+                // エモートが見つかった
+                const start = currentPos;
+                const end = currentPos + token.length - 1;
+                if (!emotePositions.has(emoteId)) {
+                    emotePositions.set(emoteId, []);
+                }
+                emotePositions.get(emoteId).push({ start, end });
+            }
+            // 次のトークンの開始位置を計算（トークン長 + スペース1文字）
+            currentPos += token.length;
+            if (i < tokens.length - 1) {
+                currentPos += 1; // スペース
+            }
+        }
+        // 結果を配列に変換
+        const result = [];
+        emotePositions.forEach((positions, id) => {
+            result.push({ id, positions });
+        });
+        return result;
+    }
+    catch (error) {
+        console.error('[Twitch Chat] Error parsing emotes:', error);
+        // エモートのパースに失敗しても、メッセージ送信自体は成功しているので空配列を返す
+        return [];
+    }
+}
 exports.twitchRouter.get('/emotes/global', async (req, res) => {
     try {
         const accessToken = await (0, auth_1.ensureTwitchAccessToken)(req);

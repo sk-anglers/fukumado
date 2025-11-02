@@ -80,6 +80,32 @@ class MetricsCollector {
             value: 0,
             labels: new Map()
         });
+        // Conduits関連メトリクス
+        // Conduitシャード作成失敗カウンター
+        this.counters.set('conduit_shard_failures_total', {
+            value: 0,
+            labels: new Map()
+        });
+        // Conduit WebSocketエラーカウンター
+        this.counters.set('conduit_websocket_errors_total', {
+            value: 0,
+            labels: new Map()
+        });
+        // Conduit再接続成功カウンター
+        this.counters.set('conduit_reconnections_total', {
+            value: 0,
+            labels: new Map()
+        });
+        // Conduit再接続失敗カウンター
+        this.counters.set('conduit_reconnection_failures_total', {
+            value: 0,
+            labels: new Map()
+        });
+        // Conduit APIエラーカウンター
+        this.counters.set('conduit_api_errors_total', {
+            value: 0,
+            labels: new Map()
+        });
         // レスポンス時間ヒストグラム
         this.histograms.set('http_request_duration_ms', {
             sum: 0,
@@ -386,7 +412,12 @@ class MetricsCollector {
             twitchApiErrors: this.counters.get('twitch_api_errors_total')?.value || 0,
             eventsubWebSocketErrors: this.counters.get('eventsub_websocket_errors_total')?.value || 0,
             eventsubSubscriptionAttempts: this.counters.get('eventsub_subscription_attempts_total')?.value || 0,
-            eventsubSubscriptionFailures: this.counters.get('eventsub_subscription_failures_total')?.value || 0
+            eventsubSubscriptionFailures: this.counters.get('eventsub_subscription_failures_total')?.value || 0,
+            conduitShardFailures: this.counters.get('conduit_shard_failures_total')?.value || 0,
+            conduitWebSocketErrors: this.counters.get('conduit_websocket_errors_total')?.value || 0,
+            conduitReconnections: this.counters.get('conduit_reconnections_total')?.value || 0,
+            conduitReconnectionFailures: this.counters.get('conduit_reconnection_failures_total')?.value || 0,
+            conduitApiErrors: this.counters.get('conduit_api_errors_total')?.value || 0
         };
     }
     /**

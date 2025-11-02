@@ -119,7 +119,7 @@ const sessionMiddleware = (0, express_session_1.default)({
     cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production', // 本番環境のみHTTPS必須
-        sameSite: 'lax', // Safari ITP対策（同一サイト内でのCookie送信を許可）
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Safari対応：本番環境では'none'、開発環境では'lax'
         maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
     }
 });
@@ -306,8 +306,8 @@ wss.on('connection', (ws, request) => {
     websocketSecurity_1.wsConnectionManager.registerConnection(clientIP);
     metricsCollector_1.metricsCollector.recordWebSocketConnection(true); // メトリクス記録
     console.log('[WebSocket] Client connected');
-    // ハートビートを開始
-    websocketSecurity_1.wsHeartbeat.start(ws);
+    // ハートビートを開始（無効化：アプリケーションレベルのheartbeatのみ使用）
+    // wsHeartbeat.start(ws);
     // セッション情報を取得するためにミドルウェアを手動で適用
     const mockResponse = {
         getHeader: () => { },
@@ -333,11 +333,6 @@ wss.on('connection', (ws, request) => {
         console.log(`[WebSocket] Session tokens - YouTube: ${!!clientData.youtubeAccessToken}, Twitch: ${!!clientData.twitchAccessToken}`);
         // Twitchチャットメッセージハンドラー
         const messageHandler = (message) => {
-            console.log('[WebSocket] Message received from Twitch:', {
-                channelLogin: message.channelLogin,
-                subscribedChannels: Array.from(clientData.channels),
-                hasChannel: clientData.channels.has(message.channelLogin)
-            });
             // このクライアントが購読しているチャンネルのメッセージのみ送信
             if (clientData.channels.has(message.channelLogin)) {
                 // channelLoginをdisplayNameに変換
@@ -346,11 +341,12 @@ wss.on('connection', (ws, request) => {
                     ...message,
                     channelName: displayName
                 });
-                console.log('[WebSocket] Sending message to client:', payload);
-                ws.send(payload);
-            }
-            else {
-                console.log('[WebSocket] Message filtered out - channel not subscribed');
+                try {
+                    ws.send(payload);
+                }
+                catch (error) {
+                    console.error('[MessageHandler] Error sending message:', error);
+                }
             }
         };
         // メッセージハンドラーを登録
@@ -471,8 +467,8 @@ wss.on('connection', (ws, request) => {
         });
         ws.on('close', async () => {
             console.log(`[WebSocket] Client disconnected: ${clientIP}`);
-            // ハートビートを停止
-            websocketSecurity_1.wsHeartbeat.stop(ws);
+            // ハートビートを停止（無効化：アプリケーションレベルのheartbeatのみ使用）
+            // wsHeartbeat.stop(ws);
             // 接続を解除
             websocketSecurity_1.wsConnectionManager.unregisterConnection(clientIP);
             metricsCollector_1.metricsCollector.recordWebSocketConnection(false); // メトリクス記録
@@ -531,10 +527,26 @@ server.listen(env_1.env.port, async () => {
     console.log('[server] StreamSyncService will start automatically when clients connect');
     // SystemMetricsCollectorを開始
     systemMetricsCollector_1.systemMetricsCollector.start();
-    // EventSubが有効な場合の通知（接続は管理者ログイン時に実行）
+    // EventSubが有効な場合の処理
     if (env_1.env.enableEventSub) {
         console.log('[server] EventSub is enabled');
-        console.log('[server] EventSub will be initialized when admin authenticates via dashboard');
+        const eventSubMode = process.env.EVENTSUB_MODE || 'websocket';
+        console.log(`[server] EventSub mode: ${eventSubMode}`);
+        if (eventSubMode === 'conduit') {
+            // Conduitsモード: サーバー起動時に自動初期化
+            console.log('[server] Initializing Conduits mode...');
+            try {
+                await twitchEventSubManager_1.twitchEventSubManager.connectAll();
+                console.log('[server] Conduits mode initialized successfully');
+            }
+            catch (error) {
+                console.error('[server] Failed to initialize Conduits mode:', error);
+            }
+        }
+        else {
+            // WebSocketモード: 管理者ログイン時に初期化
+            console.log('[server] EventSub will be initialized when admin authenticates via dashboard');
+        }
     }
     else {
         console.log('[server] EventSub is disabled');

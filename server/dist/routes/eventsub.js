@@ -7,6 +7,7 @@ const dynamicChannelAllocator_1 = require("../services/dynamicChannelAllocator")
 const metricsCollector_1 = require("../services/metricsCollector");
 const priorityManager_1 = require("../services/priorityManager");
 const twitchService_1 = require("../services/twitchService");
+const twitchAppAuth_1 = require("../services/twitchAppAuth");
 exports.eventsubRouter = (0, express_1.Router)();
 /**
  * GET /api/admin/eventsub/stats
@@ -78,7 +79,24 @@ exports.eventsubRouter.get('/subscriptions', async (req, res) => {
         const allChannelIds = twitchChannels.map(p => p.channelId);
         let channelInfoMap = new Map();
         if (allChannelIds.length > 0) {
-            const accessToken = twitchEventSubManager_1.twitchEventSubManager.getAccessToken();
+            // モードに応じたトークンを取得
+            let accessToken = null;
+            const mode = stats.mode;
+            if (mode === 'conduit') {
+                // Conduitsモード: App Access Token を使用
+                try {
+                    accessToken = await (0, twitchAppAuth_1.getTwitchAppAccessToken)();
+                    console.log('[EventSub] Using App Access Token for Conduits mode');
+                }
+                catch (error) {
+                    console.error('[EventSub] Failed to get App Access Token:', error);
+                }
+            }
+            else {
+                // WebSocketモード: User Access Token を使用
+                accessToken = twitchEventSubManager_1.twitchEventSubManager.getAccessToken();
+                console.log('[EventSub] Using User Access Token for WebSocket mode');
+            }
             if (accessToken) {
                 try {
                     const channelInfos = await (0, twitchService_1.fetchChannelsByIds)(accessToken, allChannelIds);
