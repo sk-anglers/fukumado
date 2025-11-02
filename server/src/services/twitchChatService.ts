@@ -110,54 +110,37 @@ class TwitchChatService {
       this.client = new tmi.Client(clientOptions);
 
       this.client.on('message', (channel, tags, message, self) => {
-        // メッセージイベント発火の確認（最優先ログ）
-        console.log(`[chatcheck] >>> MESSAGE EVENT FIRED <<< Channel: ${channel}, User: ${tags.username}, Self: ${self}`);
-
         try {
-          console.log('[chatcheck] Entering try block...');
-
           // メッセージ受信時刻を記録
           this.lastMessageReceivedAt = new Date();
-          console.log('[chatcheck] Timestamp recorded');
 
           const channelLogin = channel.replace('#', '');
-          console.log(`[chatcheck] Channel login extracted: ${channelLogin}`);
-
-          console.log(`[chatcheck] Message from ${tags.username} in ${channelLogin}: ${message}${self ? ' (self)' : ''}`);
 
           // エモート情報をパース
-          console.log('[chatcheck] Parsing emotes...');
           const emotes: TwitchEmote[] = [];
           if (tags.emotes) {
-            console.log('[chatcheck] Raw emotes:', tags.emotes);
             Object.entries(tags.emotes).forEach(([emoteId, positions]) => {
               const parsedPositions = positions.map((pos) => {
                 const [start, end] = pos.split('-').map(Number);
                 return { start, end };
               });
               emotes.push({ id: emoteId, positions: parsedPositions });
-              console.log('[chatcheck] Parsed emote:', { id: emoteId, positions: parsedPositions });
             });
           }
 
           // バッジ情報をパース
-          console.log('[chatcheck] Parsing badges...');
           const badges: TwitchBadge[] = [];
           const channelId = this.channelIdMap.get(channelLogin);
-          console.log('[chatcheck] Raw badges:', tags.badges, 'channelId:', channelId);
           if (tags.badges) {
             Object.entries(tags.badges).forEach(([setId, version]) => {
               const imageUrl = badgeService.getBadgeUrl(setId, version || '1', channelId);
-              console.log(`[chatcheck] Badge lookup: ${setId}/${version} -> ${imageUrl || 'NOT FOUND'}`);
               badges.push({
                 setId,
                 version: version || '1',
                 imageUrl: imageUrl || undefined
               });
             });
-            console.log('[chatcheck] Parsed badges:', badges);
           }
-          console.log('[chatcheck] Badges parsed successfully');
 
           // Bits情報を抽出
           const bits = tags.bits ? parseInt(tags.bits, 10) : undefined;
@@ -167,7 +150,6 @@ class TwitchChatService {
           const isModerator = tags.mod || false;
           const isVip = tags.badges?.vip !== undefined;
 
-          console.log('[chatcheck] Creating chat message object...');
           const chatMessage: TwitchChatMessage = {
             id: tags.id || `${Date.now()}-${Math.random()}`,
             platform: 'twitch',
@@ -187,36 +169,17 @@ class TwitchChatService {
             isModerator,
             isVip
           };
-          console.log('[chatcheck] Chat message object created successfully');
 
           // すべてのハンドラーに通知
-          console.log(`[chatcheck] About to notify ${this.messageHandlers.size} handlers with message from ${chatMessage.author}`);
-
-          if (this.messageHandlers.size === 0) {
-            console.warn('[chatcheck] WARNING: No message handlers registered!');
-          }
-
           this.messageHandlers.forEach((handler) => {
             try {
-              console.log('[chatcheck] Calling handler...');
               handler(chatMessage);
-              console.log('[chatcheck] Handler executed successfully');
             } catch (error) {
-              console.error('[chatcheck] Error in message handler:', error);
-              if (error instanceof Error) {
-                console.error('[chatcheck] Error stack:', error.stack);
-              }
+              console.error('[Twitch Chat Service] Error in message handler:', error);
             }
           });
-          console.log('[chatcheck] All handlers notified');
         } catch (error) {
-          console.error('[chatcheck] !!! CRITICAL ERROR processing message !!!');
-          console.error('[chatcheck] Error details:', error);
-          if (error instanceof Error) {
-            console.error('[chatcheck] Error name:', error.name);
-            console.error('[chatcheck] Error message:', error.message);
-            console.error('[chatcheck] Error stack:', error.stack);
-          }
+          console.error('[Twitch Chat Service] Error processing message:', error);
         }
       });
 

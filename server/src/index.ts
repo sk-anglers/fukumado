@@ -416,17 +416,8 @@ wss.on('connection', (ws, request) => {
 
   // Twitchチャットメッセージハンドラー
   const messageHandler = (message: any) => {
-    console.log('[chatcheck] [MessageHandler] START - Handler called for message from', message.author);
-    console.log('[chatcheck] [MessageHandler] Message received from Twitch:', {
-      channelLogin: message.channelLogin,
-      subscribedChannels: Array.from(clientData.channels),
-      hasChannel: clientData.channels.has(message.channelLogin)
-    });
-
     // このクライアントが購読しているチャンネルのメッセージのみ送信
     if (clientData.channels.has(message.channelLogin)) {
-      console.log('[chatcheck] [MessageHandler] Channel is subscribed, preparing to send...');
-
       // channelLoginをdisplayNameに変換
       const displayName = clientData.channelMapping[message.channelLogin] || message.channelLogin;
       const payload = JSON.stringify({
@@ -434,23 +425,12 @@ wss.on('connection', (ws, request) => {
         channelName: displayName
       });
 
-      console.log('[chatcheck] [MessageHandler] Payload created, about to call ws.send()...');
-      console.log('[chatcheck] [MessageHandler] WebSocket readyState:', ws.readyState);
-
       try {
         ws.send(payload);
-        console.log('[chatcheck] [MessageHandler] ws.send() completed successfully');
       } catch (error) {
-        console.error('[chatcheck] [MessageHandler] ERROR in ws.send():', error);
-        if (error instanceof Error) {
-          console.error('[chatcheck] [MessageHandler] Error stack:', error.stack);
-        }
+        console.error('[MessageHandler] Error sending message:', error);
       }
-    } else {
-      console.log('[chatcheck] [MessageHandler] Message filtered out - channel not subscribed');
     }
-
-    console.log('[chatcheck] [MessageHandler] END - Handler completed');
   };
 
   // メッセージハンドラーを登録
