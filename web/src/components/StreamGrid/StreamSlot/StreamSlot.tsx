@@ -330,11 +330,29 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
           const playHandler = () => {
             if (!isMounted) return;
             setSlotPlaying(slot.id, true); // 再生開始を通知
+
+            // 再生開始時、スロットがミュートされていなければミュート解除
+            if (playerInstanceRef.current && !slot.muted) {
+              try {
+                (playerInstanceRef.current as TwitchPlayer).setMuted(false);
+              } catch (e) {
+                console.error('[Twitch] Failed to unmute on play:', e);
+              }
+            }
           };
 
           const pauseHandler = () => {
             if (!isMounted) return;
             setSlotPlaying(slot.id, false); // 再生停止を通知
+
+            // 一時停止時にプレイヤーをミュート
+            if (playerInstanceRef.current) {
+              try {
+                (playerInstanceRef.current as TwitchPlayer).setMuted(true);
+              } catch (e) {
+                console.error('[Twitch] Failed to mute on pause:', e);
+              }
+            }
           };
 
           // イベントリスナーを登録
@@ -399,8 +417,26 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                 // YT.PlayerState.PLAYING = 1, YT.PlayerState.PAUSED = 2
                 if (event.data === 1) {
                   setSlotPlaying(slot.id, true); // 再生開始
+
+                  // 再生開始時、スロットがミュートされていなければミュート解除
+                  if (playerInstanceRef.current && !slot.muted) {
+                    try {
+                      (playerInstanceRef.current as any).unMute();
+                    } catch (e) {
+                      console.error('[YouTube] Failed to unmute on play:', e);
+                    }
+                  }
                 } else if (event.data === 2) {
                   setSlotPlaying(slot.id, false); // 一時停止
+
+                  // 一時停止時にプレイヤーをミュート
+                  if (playerInstanceRef.current) {
+                    try {
+                      (playerInstanceRef.current as any).mute();
+                    } catch (e) {
+                      console.error('[YouTube] Failed to mute on pause:', e);
+                    }
+                  }
                 }
               },
               onError: (event: any) => {
