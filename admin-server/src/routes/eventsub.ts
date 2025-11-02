@@ -289,6 +289,13 @@ eventsubRouter.get('/threshold/info', async (req, res) => {
         };
         lastUpdated: string;
         thresholdReason: string;
+        pollingChannels?: {
+          total: number;
+          youtube: number;
+          twitch: number;
+          limit: number;
+          usagePercent: number;
+        };
       };
       timestamp: string;
     }>('/api/admin/threshold/info');

@@ -89,6 +89,9 @@ export const analyticsTracker = new AnalyticsTracker(redisClient);
 setAnalyticsTracker(analyticsTracker);
 console.log('[AnalyticsTracker] Analytics tracking service initialized');
 
+// StreamSyncServiceをエクスポート（admin APIで統計情報にアクセスするため）
+export { streamSyncService };
+
 // CORS設定（モバイル対応 + 本番環境）
 const allowedOrigins = [
   env.frontendUrl,  // 環境変数から取得（デフォルト: localhost:5173）

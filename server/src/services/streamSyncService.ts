@@ -11,6 +11,11 @@ const CACHE_TTL = 100; // 100秒
 // 同期間隔（ミリ秒）
 const SYNC_INTERVAL = 90000; // 1.5分（API消費を削減）
 
+// ポーリング監視の最大チャンネル数
+// Twitch APIのレート制限（800リクエスト/分）を考慮
+// 50,000チャンネル = 500リクエスト/90秒 ≈ 333リクエスト/分（余裕あり）
+const MAX_POLLING_CHANNELS = 50000;
+
 // プラットフォーム別の配信情報
 export interface PlatformStreams {
   youtube: YouTubeLiveStream[];
@@ -97,6 +102,7 @@ class StreamSyncService {
 
   /**
    * 全ユーザーのフォローチャンネルを集約
+   * 上限を超えた場合は優先度の高いチャンネルを優先的に選択
    */
   private getAllChannels(): { youtube: string[], twitch: string[] } {
     const youtubeSet = new Set<string>();
@@ -107,9 +113,51 @@ class StreamSyncService {
       session.twitchChannels.forEach(ch => twitchSet.add(ch));
     }
 
+    const youtube = Array.from(youtubeSet);
+    const twitch = Array.from(twitchSet);
+    const totalChannels = youtube.length + twitch.length;
+
+    // 上限チェック
+    if (totalChannels > MAX_POLLING_CHANNELS) {
+      console.warn(`[StreamSync] ⚠️ Total channels (${totalChannels}) exceeds polling limit (${MAX_POLLING_CHANNELS})`);
+      console.warn(`[StreamSync] Prioritizing channels by viewer count...`);
+
+      // 優先度情報を取得（視聴者数順にソート済み）
+      const priorities = priorityManager.calculatePriorities();
+
+      // チャンネルIDをプラットフォーム別に分類
+      const prioritizedYouTube: string[] = [];
+      const prioritizedTwitch: string[] = [];
+
+      // 優先度の高い順（視聴者数の多い順）に選択
+      for (const { channelId, platform } of priorities) {
+        if (platform === 'youtube' && youtubeSet.has(channelId)) {
+          prioritizedYouTube.push(channelId);
+        } else if (platform === 'twitch' && twitchSet.has(channelId)) {
+          prioritizedTwitch.push(channelId);
+        }
+
+        // 上限に達したら終了
+        if (prioritizedYouTube.length + prioritizedTwitch.length >= MAX_POLLING_CHANNELS) {
+          break;
+        }
+      }
+
+      const selectedCount = prioritizedYouTube.length + prioritizedTwitch.length;
+      const droppedCount = totalChannels - selectedCount;
+
+      console.warn(`[StreamSync] Selected ${selectedCount} channels (YouTube: ${prioritizedYouTube.length}, Twitch: ${prioritizedTwitch.length})`);
+      console.warn(`[StreamSync] Dropped ${droppedCount} low-priority channels to stay within limit`);
+
+      return {
+        youtube: prioritizedYouTube,
+        twitch: prioritizedTwitch
+      };
+    }
+
     return {
-      youtube: Array.from(youtubeSet),
-      twitch: Array.from(twitchSet)
+      youtube,
+      twitch
     };
   }
 
@@ -413,12 +461,29 @@ class StreamSyncService {
     userCount: number;
     youtubeStreamCount: number;
     twitchStreamCount: number;
+    pollingChannels: {
+      total: number;
+      youtube: number;
+      twitch: number;
+      limit: number;
+      usagePercent: number;
+    };
   } {
+    const channels = this.getAllChannels();
+    const totalPollingChannels = channels.youtube.length + channels.twitch.length;
+
     return {
       isRunning: this.isRunning,
       userCount: this.userSessions.size,
       youtubeStreamCount: this.previousYouTubeStreams.size,
-      twitchStreamCount: this.previousTwitchStreams.size
+      twitchStreamCount: this.previousTwitchStreams.size,
+      pollingChannels: {
+        total: totalPollingChannels,
+        youtube: channels.youtube.length,
+        twitch: channels.twitch.length,
+        limit: MAX_POLLING_CHANNELS,
+        usagePercent: (totalPollingChannels / MAX_POLLING_CHANNELS) * 100
+      }
     };
   }
 }

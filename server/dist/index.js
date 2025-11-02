@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.analyticsTracker = exports.pvTracker = void 0;
+exports.streamSyncService = exports.analyticsTracker = exports.pvTracker = void 0;
 exports.getWebSocketStats = getWebSocketStats;
 const express_1 = __importDefault(require("express"));
 const express_session_1 = __importDefault(require("express-session"));
@@ -29,6 +29,7 @@ const adminStreams_1 = require("./routes/adminStreams");
 const admin_1 = require("./routes/admin");
 const twitchChatService_1 = require("./services/twitchChatService");
 const streamSyncService_1 = require("./services/streamSyncService");
+Object.defineProperty(exports, "streamSyncService", { enumerable: true, get: function () { return streamSyncService_1.streamSyncService; } });
 const twitchService_1 = require("./services/twitchService");
 const maintenanceService_1 = require("./services/maintenanceService");
 const twitchEventSubManager_1 = require("./services/twitchEventSubManager");

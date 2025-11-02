@@ -323,9 +323,51 @@ export const EventSub: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* ポーリング監視統計 */}
+            {thresholdData.pollingChannels && (
+              <div className={styles.thresholdCard}>
+                <div className={styles.thresholdHeader}>
+                  <span className={styles.thresholdTitle}>📊 ポーリング監視統計</span>
+                </div>
+                <div className={styles.thresholdBody}>
+                  <div className={styles.thresholdUsage}>
+                    <div className={styles.usageRow}>
+                      <span className={styles.usageLabel}>ポーリング中チャンネル:</span>
+                      <span className={styles.usageValue}>
+                        {thresholdData.pollingChannels.total} / {thresholdData.pollingChannels.limit}
+                        <span className={styles.usagePercent}>
+                          ({thresholdData.pollingChannels.usagePercent.toFixed(2)}%)
+                        </span>
+                      </span>
+                    </div>
+                    <div className={styles.usageRow}>
+                      <span className={styles.usageLabel}>YouTube:</span>
+                      <span className={styles.usageValue}>
+                        {thresholdData.pollingChannels.youtube}
+                      </span>
+                    </div>
+                    <div className={styles.usageRow}>
+                      <span className={styles.usageLabel}>Twitch:</span>
+                      <span className={styles.usageValue}>
+                        {thresholdData.pollingChannels.twitch}
+                      </span>
+                    </div>
+                  </div>
+                  {thresholdData.pollingChannels.usagePercent >= 80 && (
+                    <div className={styles.thresholdReason} style={{ borderLeftColor: '#f39c12' }}>
+                      ⚠️ ポーリング監視が上限に近づいています（{thresholdData.pollingChannels.usagePercent.toFixed(1)}%）。
+                      上限を超えると、視聴者数の少ないチャンネルから自動的に除外されます。
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className={styles.thresholdNote}>
               💡 EventSubの使用率に応じて自動的に閾値が調整されます（5分ごとに更新）。<br />
-              使用率が高い場合は閾値が引き上げられ、低い場合は引き下げられます。
+              使用率が高い場合は閾値が引き上げられ、低い場合は引き下げられます。<br />
+              ポーリング監視は最大50,000チャンネルまで対応可能です（Twitch API制限に基づく）。
             </div>
           </div>
         </section>

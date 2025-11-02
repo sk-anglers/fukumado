@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { followedChannelsCacheService } from '../services/followedChannelsCacheService';
 import { emoteCacheService } from '../services/emoteCacheService';
 import { apiLogStore } from '../utils/apiLogStore';
-import { getWebSocketStats, pvTracker, analyticsTracker } from '../index';
+import { getWebSocketStats, pvTracker, analyticsTracker, streamSyncService } from '../index';
 import { systemMetricsCollector } from '../services/systemMetricsCollector';
 import { priorityManager } from '../services/priorityManager';
 
@@ -499,10 +499,14 @@ adminRouter.get('/analytics/export', async (req: Request, res: Response) => {
 adminRouter.get('/threshold/info', (req: Request, res: Response) => {
   try {
     const thresholdInfo = priorityManager.getThresholdInfo();
+    const syncStats = streamSyncService.getStats();
 
     res.json({
       success: true,
-      data: thresholdInfo,
+      data: {
+        ...thresholdInfo,
+        pollingChannels: syncStats.pollingChannels
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {

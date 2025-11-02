@@ -677,6 +677,17 @@ export interface EventSubUsage {
 }
 
 /**
+ * ポーリングチャンネル統計
+ */
+export interface PollingChannels {
+  total: number;
+  youtube: number;
+  twitch: number;
+  limit: number;
+  usagePercent: number;
+}
+
+/**
  * 動的閾値情報
  */
 export interface ThresholdInfo {
@@ -684,6 +695,7 @@ export interface ThresholdInfo {
   eventSubUsage: EventSubUsage;
   lastUpdated: string;
   thresholdReason: string;
+  pollingChannels?: PollingChannels;
 }
 
 // ========================================

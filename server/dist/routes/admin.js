@@ -470,9 +470,13 @@ exports.adminRouter.get('/analytics/export', async (req, res) => {
 exports.adminRouter.get('/threshold/info', (req, res) => {
     try {
         const thresholdInfo = priorityManager_1.priorityManager.getThresholdInfo();
+        const syncStats = index_1.streamSyncService.getStats();
         res.json({
             success: true,
-            data: thresholdInfo,
+            data: {
+                ...thresholdInfo,
+                pollingChannels: syncStats.pollingChannels
+            },
             timestamp: new Date().toISOString()
         });
     }
