@@ -231,8 +231,44 @@ securityRouter.post('/clear-all-blocks', async (req, res) => {
 });
 
 /**
+ * GET /admin/api/security/whitelisted-ips
+ * ホワイトリストに登録されているIPリスト取得（本サービスから）
+ */
+securityRouter.get('/whitelisted-ips', async (req, res) => {
+  try {
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
+      data: {
+        whitelistedIPs: string[];
+        count: number;
+      };
+      timestamp: string;
+    }>('/api/admin/security/whitelisted-ips');
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to fetch whitelisted IPs from main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('[API] Error getting whitelisted IPs:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
  * POST /admin/api/security/whitelist-ip
- * ホワイトリスト追加
+ * IPをホワイトリストに追加（本サービスにproxy）
  */
 securityRouter.post('/whitelist-ip', async (req, res) => {
   try {
@@ -247,21 +283,82 @@ securityRouter.post('/whitelist-ip', async (req, res) => {
       return res.status(400).json(response);
     }
 
-    await securityMonitor.whitelistIP(ip);
-
-    const response: ApiResponse = {
-      success: true,
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
       data: {
-        ip,
-        whitelisted: true,
-        whitelistedAt: new Date().toISOString()
-      },
-      timestamp: new Date().toISOString()
-    };
+        ip: string;
+        whitelisted: boolean;
+        message: string;
+      };
+      timestamp: string;
+    }>('/api/admin/security/whitelist-ip', {
+      method: 'POST',
+      body: JSON.stringify({ ip })
+    });
 
-    res.json(response);
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to whitelist IP on main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    res.json(data);
   } catch (error) {
     console.error('[API] Error whitelisting IP:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
+ * POST /admin/api/security/remove-from-whitelist
+ * IPをホワイトリストから削除（本サービスにproxy）
+ */
+securityRouter.post('/remove-from-whitelist', async (req, res) => {
+  try {
+    const { ip } = req.body;
+
+    if (!ip || typeof ip !== 'string') {
+      const response: ApiResponse = {
+        success: false,
+        error: 'IP address is required',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(400).json(response);
+    }
+
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
+      data: {
+        ip: string;
+        wasWhitelisted: boolean;
+        message: string;
+      };
+      timestamp: string;
+    }>('/api/admin/security/remove-from-whitelist', {
+      method: 'POST',
+      body: JSON.stringify({ ip })
+    });
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to remove IP from whitelist on main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('[API] Error removing IP from whitelist:', error);
     const response: ApiResponse = {
       success: false,
       error: 'Internal server error',

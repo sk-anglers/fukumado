@@ -29,7 +29,8 @@ import {
   PVStats,
   AnalyticsStats,
   ThresholdInfo,
-  BlockedIPsResponse
+  BlockedIPsResponse,
+  WhitelistedIPsResponse
 } from '../types';
 
 /**
@@ -711,5 +712,32 @@ export const clearAllBlocks = async (): Promise<void> => {
   await fetchAPI('/security/clear-all-blocks', {
     method: 'POST',
     body: JSON.stringify({})
+  });
+};
+
+/**
+ * ホワイトリストに登録されているIPリストを取得
+ */
+export const getWhitelistedIPs = async (): Promise<WhitelistedIPsResponse> => {
+  return fetchAPI<WhitelistedIPsResponse>('/security/whitelisted-ips');
+};
+
+/**
+ * IPをホワイトリストに追加
+ */
+export const addToWhitelist = async (ip: string): Promise<void> => {
+  await fetchAPI('/security/whitelist-ip', {
+    method: 'POST',
+    body: JSON.stringify({ ip })
+  });
+};
+
+/**
+ * IPをホワイトリストから削除
+ */
+export const removeFromWhitelist = async (ip: string): Promise<void> => {
+  await fetchAPI('/security/remove-from-whitelist', {
+    method: 'POST',
+    body: JSON.stringify({ ip })
   });
 };

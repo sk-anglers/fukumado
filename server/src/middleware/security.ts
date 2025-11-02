@@ -100,6 +100,7 @@ export const websocketRateLimiter = rateLimit({
 class IPBlocklist {
   private blockedIPs: Map<string, { until: Date; reason: string }> = new Map();
   private violationCount: Map<string, number> = new Map();
+  private whitelistedIPs: Set<string> = new Set();
 
   /**
    * IPをブロック
@@ -114,6 +115,11 @@ class IPBlocklist {
    * IPがブロックされているか確認
    */
   public isBlocked(ip: string): boolean {
+    // ホワイトリストに登録されている場合はブロック対象外
+    if (this.whitelistedIPs.has(ip)) {
+      return false;
+    }
+
     const block = this.blockedIPs.get(ip);
     if (!block) {
       return false;
@@ -197,6 +203,45 @@ class IPBlocklist {
       blockedCount: this.blockedIPs.size,
       violationCount: this.violationCount.size,
     };
+  }
+
+  /**
+   * IPをホワイトリストに追加
+   */
+  public addToWhitelist(ip: string): void {
+    this.whitelistedIPs.add(ip);
+    // ホワイトリストに追加されたIPのブロックと違反カウントを削除
+    this.blockedIPs.delete(ip);
+    this.violationCount.delete(ip);
+    console.log(`[Security] Added IP to whitelist: ${ip}`);
+  }
+
+  /**
+   * IPをホワイトリストから削除
+   */
+  public removeFromWhitelist(ip: string): boolean {
+    const wasWhitelisted = this.whitelistedIPs.has(ip);
+    this.whitelistedIPs.delete(ip);
+
+    if (wasWhitelisted) {
+      console.log(`[Security] Removed IP from whitelist: ${ip}`);
+    }
+
+    return wasWhitelisted;
+  }
+
+  /**
+   * ホワイトリストに登録されているIPのリストを取得
+   */
+  public getWhitelistedIPs(): string[] {
+    return Array.from(this.whitelistedIPs);
+  }
+
+  /**
+   * IPがホワイトリストに登録されているか確認
+   */
+  public isWhitelisted(ip: string): boolean {
+    return this.whitelistedIPs.has(ip);
   }
 
   /**

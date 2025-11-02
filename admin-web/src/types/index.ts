@@ -338,6 +338,14 @@ export interface BlockedIPsResponse {
   count: number;
 }
 
+/**
+ * ホワイトリストに登録されたIPリスト
+ */
+export interface WhitelistedIPsResponse {
+  whitelistedIPs: string[];
+  count: number;
+}
+
 // ========================================
 // ユーザー/セッション管理型定義
 // ========================================

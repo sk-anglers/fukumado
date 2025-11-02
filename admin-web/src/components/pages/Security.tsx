@@ -10,7 +10,10 @@ import {
   getMainServiceSummary,
   getBlockedIPs,
   unblockIP,
-  clearAllBlocks
+  clearAllBlocks,
+  getWhitelistedIPs,
+  addToWhitelist,
+  removeFromWhitelist
 } from '../../services/apiClient';
 import { BlockedIP } from '../../types';
 import styles from './Security.module.css';
@@ -35,6 +38,9 @@ export const Security: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'main-service'>('dashboard');
   const [blockedIPs, setBlockedIPs] = useState<BlockedIP[]>([]);
   const [loadingBlocks, setLoadingBlocks] = useState(false);
+  const [whitelistedIPs, setWhitelistedIPs] = useState<string[]>([]);
+  const [loadingWhitelist, setLoadingWhitelist] = useState(false);
+  const [newWhitelistIP, setNewWhitelistIP] = useState('');
 
   // ブロックリストを取得
   const fetchBlockedIPs = async () => {
@@ -84,6 +90,56 @@ export const Security: React.FC = () => {
     }
   };
 
+  // ホワイトリストを取得
+  const fetchWhitelistedIPs = async () => {
+    try {
+      const result = await getWhitelistedIPs();
+      setWhitelistedIPs(result.whitelistedIPs || []);
+    } catch (error) {
+      console.error('[Security] Failed to fetch whitelisted IPs:', error);
+    }
+  };
+
+  // IPをホワイトリストに追加
+  const handleAddToWhitelist = async () => {
+    if (!newWhitelistIP.trim()) {
+      alert('IPアドレスを入力してください');
+      return;
+    }
+
+    setLoadingWhitelist(true);
+    try {
+      await addToWhitelist(newWhitelistIP.trim());
+      await fetchWhitelistedIPs();
+      setNewWhitelistIP('');
+      alert(`IP ${newWhitelistIP.trim()} をホワイトリストに追加しました`);
+    } catch (error) {
+      console.error('[Security] Failed to add IP to whitelist:', error);
+      alert('ホワイトリスト追加に失敗しました');
+    } finally {
+      setLoadingWhitelist(false);
+    }
+  };
+
+  // IPをホワイトリストから削除
+  const handleRemoveFromWhitelist = async (ip: string) => {
+    if (!confirm(`IP ${ip} をホワイトリストから削除しますか?`)) {
+      return;
+    }
+
+    setLoadingWhitelist(true);
+    try {
+      await removeFromWhitelist(ip);
+      await fetchWhitelistedIPs();
+      alert(`IP ${ip} をホワイトリストから削除しました`);
+    } catch (error) {
+      console.error('[Security] Failed to remove IP from whitelist:', error);
+      alert('ホワイトリストから削除に失敗しました');
+    } finally {
+      setLoadingWhitelist(false);
+    }
+  };
+
   // 本サービスのセキュリティデータを取得
   useEffect(() => {
     console.log('[DEBUG] Security: Main service data useEffect RUNNING');
@@ -111,11 +167,13 @@ export const Security: React.FC = () => {
 
     fetchMainServiceData();
     fetchBlockedIPs();
+    fetchWhitelistedIPs();
 
     // 30秒ごとに更新
     const interval = setInterval(() => {
       fetchMainServiceData();
       fetchBlockedIPs();
+      fetchWhitelistedIPs();
     }, 30000);
     return () => {
       console.log('[DEBUG] Security: Main service data useEffect CLEANUP');
@@ -696,6 +754,102 @@ export const Security: React.FC = () => {
                         }}
                       >
                         解除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </section>
+
+          {/* ホワイトリスト */}
+          <section className={styles.section}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 className={styles.sectionTitle} style={{ margin: 0 }}>ホワイトリスト ({whitelistedIPs.length})</h2>
+            </div>
+            <Card>
+              {/* 新規追加フォーム */}
+              <div style={{ marginBottom: '16px', padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '4px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={newWhitelistIP}
+                    onChange={(e) => setNewWhitelistIP(e.target.value)}
+                    placeholder="IPアドレスを入力 (例: 192.168.1.1)"
+                    disabled={loadingWhitelist}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      background: '#1e293b',
+                      border: '1px solid #475569',
+                      borderRadius: '4px',
+                      color: '#e2e8f0',
+                      fontSize: '14px'
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddToWhitelist();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleAddToWhitelist}
+                    disabled={loadingWhitelist || !newWhitelistIP.trim()}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: !newWhitelistIP.trim() ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      opacity: !newWhitelistIP.trim() ? 0.5 : 1
+                    }}
+                  >
+                    {loadingWhitelist ? '追加中...' : '追加'}
+                  </button>
+                </div>
+              </div>
+
+              {/* ホワイトリスト一覧 */}
+              {whitelistedIPs.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
+                  ホワイトリストに登録されているIPはありません
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {whitelistedIPs.map((ip) => (
+                    <div
+                      key={ip}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px',
+                        background: '#0f172a',
+                        border: '1px solid #334155',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <span style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>
+                        {ip}
+                      </span>
+                      <button
+                        onClick={() => handleRemoveFromWhitelist(ip)}
+                        disabled={loadingWhitelist}
+                        style={{
+                          padding: '6px 12px',
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: 500
+                        }}
+                      >
+                        削除
                       </button>
                     </div>
                   ))}

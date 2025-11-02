@@ -101,6 +101,7 @@ class IPBlocklist {
     constructor() {
         this.blockedIPs = new Map();
         this.violationCount = new Map();
+        this.whitelistedIPs = new Set();
     }
     /**
      * IPをブロック
@@ -114,6 +115,10 @@ class IPBlocklist {
      * IPがブロックされているか確認
      */
     isBlocked(ip) {
+        // ホワイトリストに登録されている場合はブロック対象外
+        if (this.whitelistedIPs.has(ip)) {
+            return false;
+        }
         const block = this.blockedIPs.get(ip);
         if (!block) {
             return false;
@@ -186,6 +191,39 @@ class IPBlocklist {
             blockedCount: this.blockedIPs.size,
             violationCount: this.violationCount.size,
         };
+    }
+    /**
+     * IPをホワイトリストに追加
+     */
+    addToWhitelist(ip) {
+        this.whitelistedIPs.add(ip);
+        // ホワイトリストに追加されたIPのブロックと違反カウントを削除
+        this.blockedIPs.delete(ip);
+        this.violationCount.delete(ip);
+        console.log(`[Security] Added IP to whitelist: ${ip}`);
+    }
+    /**
+     * IPをホワイトリストから削除
+     */
+    removeFromWhitelist(ip) {
+        const wasWhitelisted = this.whitelistedIPs.has(ip);
+        this.whitelistedIPs.delete(ip);
+        if (wasWhitelisted) {
+            console.log(`[Security] Removed IP from whitelist: ${ip}`);
+        }
+        return wasWhitelisted;
+    }
+    /**
+     * ホワイトリストに登録されているIPのリストを取得
+     */
+    getWhitelistedIPs() {
+        return Array.from(this.whitelistedIPs);
+    }
+    /**
+     * IPがホワイトリストに登録されているか確認
+     */
+    isWhitelisted(ip) {
+        return this.whitelistedIPs.has(ip);
     }
     /**
      * ブロックリストをクリア（テスト用）

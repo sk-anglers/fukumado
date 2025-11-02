@@ -615,3 +615,106 @@ adminRouter.post('/security/clear-all-blocks', (req: Request, res: Response) => 
     });
   }
 });
+
+/**
+ * GET /api/admin/security/whitelisted-ips
+ * ホワイトリストに登録されているIPリストを取得
+ */
+adminRouter.get('/security/whitelisted-ips', (req: Request, res: Response) => {
+  try {
+    const whitelistedIPs = ipBlocklist.getWhitelistedIPs();
+
+    res.json({
+      success: true,
+      data: {
+        whitelistedIPs,
+        count: whitelistedIPs.length
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting whitelisted IPs:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/security/whitelist-ip
+ * IPをホワイトリストに追加
+ */
+adminRouter.post('/security/whitelist-ip', (req: Request, res: Response) => {
+  try {
+    const { ip } = req.body;
+
+    if (!ip) {
+      return res.status(400).json({
+        success: false,
+        error: 'IP address is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    ipBlocklist.addToWhitelist(ip);
+
+    res.json({
+      success: true,
+      data: {
+        ip,
+        whitelisted: true,
+        message: `IP ${ip} has been added to whitelist`
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error whitelisting IP:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/security/remove-from-whitelist
+ * IPをホワイトリストから削除
+ */
+adminRouter.post('/security/remove-from-whitelist', (req: Request, res: Response) => {
+  try {
+    const { ip } = req.body;
+
+    if (!ip) {
+      return res.status(400).json({
+        success: false,
+        error: 'IP address is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const wasWhitelisted = ipBlocklist.removeFromWhitelist(ip);
+
+    res.json({
+      success: true,
+      data: {
+        ip,
+        wasWhitelisted,
+        message: wasWhitelisted ? `IP ${ip} has been removed from whitelist` : `IP ${ip} was not whitelisted`
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error removing IP from whitelist:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
