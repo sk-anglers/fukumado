@@ -72,7 +72,7 @@
   left: 0;
   bottom: 0;
   width: 280px;
-  z-index: 200;
+  z-index: 10000;
   transform: translateX(0);
   transition: transform 0.3s ease;
 }
@@ -85,7 +85,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 199;
+  z-index: 9999;
   animation: fadeIn 0.3s ease;
 }
 
@@ -106,7 +106,7 @@
   bottom: 0;
   width: 100%;
   max-width: 360px;
-  z-index: 200;
+  z-index: 10000;
   background: rgba(15, 23, 42, 0.95);
   border-left: 1px solid rgba(148, 163, 184, 0.1);
   display: flex;

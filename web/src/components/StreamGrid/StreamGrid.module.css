@@ -468,10 +468,11 @@
   top: calc(60px + 0.5rem);
   left: 0;
   right: 0;
-  z-index: 9998;
+  z-index: 150;
   display: flex;
   justify-content: center;
   padding: 0 1rem;
+  pointer-events: none;
   animation: slideDown 0.5s ease;
 }
 
@@ -488,6 +489,7 @@
   width: 100%;
   max-height: calc(100vh - 2rem - 80px);
   overflow-y: auto;
+  pointer-events: auto;
 }
 
 .loadingSpinner {
@@ -521,10 +523,11 @@
   top: calc(60px + 0.5rem);
   left: 0;
   right: 0;
-  z-index: 9998;
+  z-index: 150;
   display: flex;
   justify-content: center;
   padding: 0 1rem;
+  pointer-events: none;
   animation: slideDown 0.5s ease;
 }
 
@@ -551,6 +554,7 @@
   width: 100%;
   max-height: calc(100vh - 2rem - 80px);
   overflow-y: auto;
+  pointer-events: auto;
 }
 
 .readyNotificationIcon {
@@ -585,10 +589,11 @@
   top: calc(60px + 0.5rem);
   left: 0;
   right: 0;
-  z-index: 9999;
+  z-index: 150;
   display: flex;
   justify-content: center;
   padding: 0 1rem;
+  pointer-events: none;
   animation: slideDown 0.5s ease;
 }
 
@@ -605,6 +610,7 @@
   width: 100%;
   max-height: calc(100vh - 2rem - 80px);
   overflow-y: auto;
+  pointer-events: auto;
 }
 
 .reloadNotificationText {
