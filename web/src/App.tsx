@@ -297,10 +297,10 @@ function App(): JSX.Element {
     return <UnsupportedBrowser />;
   }
 
-  // モバイル制限（ベータ環境は除外）
-  if (isMobile && !config.isBeta) {
-    return <MobileRestriction />;
-  }
+  // モバイル制限を解除（全環境でモバイルアクセス可能）
+  // if (isMobile && !config.isBeta) {
+  //   return <MobileRestriction />;
+  // }
 
   return (
     <>
