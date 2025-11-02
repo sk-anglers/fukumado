@@ -139,7 +139,7 @@ class EmoteCacheService {
         this.cleanupInterval = null;
         // キャッシュTTL設定
         this.GLOBAL_EMOTES_TTL = 24 * 60 * 60 * 1000; // 24時間
-        this.CHANNEL_EMOTES_TTL = 6 * 60 * 60 * 1000; // 6時間
+        this.CHANNEL_EMOTES_TTL = 24 * 60 * 60 * 1000; // 24時間
         this.CLEANUP_INTERVAL = 60 * 60 * 1000; // 1時間ごとにクリーンアップ
         this.cache = new LRUCache(maxCacheSize);
         console.log('[Emote Cache Service] Initialized with max size:', maxCacheSize);

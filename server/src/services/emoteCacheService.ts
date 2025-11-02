@@ -189,7 +189,7 @@ export class EmoteCacheService {
 
   // キャッシュTTL設定
   private readonly GLOBAL_EMOTES_TTL = 24 * 60 * 60 * 1000; // 24時間
-  private readonly CHANNEL_EMOTES_TTL = 6 * 60 * 60 * 1000; // 6時間
+  private readonly CHANNEL_EMOTES_TTL = 24 * 60 * 60 * 1000; // 24時間
   private readonly CLEANUP_INTERVAL = 60 * 60 * 1000; // 1時間ごとにクリーンアップ
 
   constructor(maxCacheSize: number = 500) {
