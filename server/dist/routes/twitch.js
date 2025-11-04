@@ -11,6 +11,7 @@ const streamSyncService_1 = require("../services/streamSyncService");
 const priorityManager_1 = require("../services/priorityManager");
 const dynamicChannelAllocator_1 = require("../services/dynamicChannelAllocator");
 const followedChannelsCacheService_1 = require("../services/followedChannelsCacheService");
+const channelService_1 = require("../services/channelService");
 const env_1 = require("../config/env");
 exports.twitchRouter = (0, express_1.Router)();
 const channelSearchCache = new Map();
@@ -98,10 +99,22 @@ exports.twitchRouter.get('/channels', async (req, res) => {
             console.log(`[Twitch Channel Search Cache] キャッシュヒット: "${query}" (TTL残り: ${remainingTtl}秒)`);
             return res.json(cached.data);
         }
-        // キャッシュミス - APIから取得
-        console.log(`[Twitch Channel Search Cache] キャッシュミス: "${query}" - APIから取得します`);
-        const maxResults = maxResultsParam ? Number(maxResultsParam) : undefined;
-        const channels = await (0, twitchService_1.searchChannels)(accessToken, query, maxResults);
+        // キャッシュミス - まずDBから検索
+        console.log(`[Twitch Channel Search Cache] キャッシュミス: "${query}" - まずDBから検索します`);
+        const maxResults = maxResultsParam ? Number(maxResultsParam) : 20;
+        let channels = await (0, channelService_1.searchChannelsInDB)(query, maxResults);
+        // DB検索結果が少ない場合はAPIから取得
+        if (channels.length < 5) {
+            console.log(`[Twitch Channel Search] DB検索結果が少ないためAPIから取得: ${channels.length}件`);
+            channels = await (0, twitchService_1.searchChannels)(accessToken, query, maxResults);
+            // 検索結果をDBに保存（非同期）
+            (0, channelService_1.upsertTwitchChannels)(channels).catch(err => {
+                console.error('[Twitch Channel Search] Failed to save channels to DB:', err);
+            });
+        }
+        else {
+            console.log(`[Twitch Channel Search] DB検索成功: ${channels.length}件`);
+        }
         const responseData = { items: channels };
         // キャッシュに保存
         channelSearchCache.set(cacheKey, {

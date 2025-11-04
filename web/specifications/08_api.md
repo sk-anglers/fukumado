@@ -489,3 +489,142 @@ const fetchWithTimeout = async (url: string, timeout = 5000) => {
   }
 };
 ```
+
+## 8.9 管理者API
+
+管理者ダッシュボード用のAPI群。認証が必要。
+
+### GET `/api/admin/metrics`
+システムメトリクスを取得。
+
+**レスポンス**:
+```json
+{
+  "system": {
+    "uptime": 123456,
+    "memory": { "used": 512, "total": 8192 },
+    "cpu": { "usage": 45.2 }
+  },
+  "cache": {
+    "hitRate": 0.89,
+    "keys": 1234
+  }
+}
+```
+
+### GET `/api/admin/logs`
+システムログを取得。
+
+**クエリパラメータ**:
+- `level`: ログレベル (info, warn, error)
+- `limit`: 取得件数 (デフォルト: 100)
+
+### GET `/api/admin/security`
+セキュリティ情報を取得（ブロックリスト、攻撃検知など）。
+
+### POST `/api/admin/cache/clear`
+キャッシュをクリア。
+
+## 8.10 メンテナンスAPI
+
+### GET `/api/maintenance/status`
+メンテナンスモードの状態を取得。
+
+**レスポンス**:
+```json
+{
+  "enabled": true,
+  "message": "システムメンテナンス中です",
+  "estimatedEnd": "2025-11-03T12:00:00Z"
+}
+```
+
+### POST `/api/maintenance/enable`
+メンテナンスモードを有効化（管理者のみ）。
+
+### POST `/api/maintenance/disable`
+メンテナンスモードを無効化（管理者のみ）。
+
+## 8.11 アナリティクスAPI
+
+### POST `/api/analytics/track`
+ユーザーアクションを追跡。
+
+**リクエストボディ**:
+```json
+{
+  "event": "button_click",
+  "properties": {
+    "button_id": "fullscreen",
+    "location": "header"
+  }
+}
+```
+
+### GET `/api/analytics/stats`
+アナリティクス統計を取得（管理者のみ）。
+
+## 8.12 Cookie同意API
+
+### GET `/api/consent/status`
+ユーザーのCookie同意状態を取得。
+
+### POST `/api/consent/update`
+Cookie同意設定を更新。
+
+**リクエストボディ**:
+```json
+{
+  "necessary": true,
+  "analytics": true,
+  "functional": false
+}
+```
+
+## 8.13 法的文書API
+
+### GET `/api/legal/terms`
+利用規約を取得。
+
+### GET `/api/legal/privacy`
+プライバシーポリシーを取得。
+
+## 8.14 EventSub Webhook API
+
+### POST `/eventsub/callback`
+Twitch EventSub Webhookコールバック。
+
+**機能**:
+- 配信開始・終了通知
+- フォロー通知
+- チャンネルポイント交換
+
+## 8.15 配信管理API
+
+### GET `/api/streams/live`
+全プラットフォームの配信中リストを取得。
+
+**レスポンス**:
+```json
+{
+  "youtube": [...],
+  "twitch": [...],
+  "niconico": [...]
+}
+```
+
+## 8.16 ユーザー管理API
+
+### GET `/api/users/profile`
+ユーザープロフィールを取得。
+
+### PATCH `/api/users/profile`
+ユーザープロフィールを更新。
+
+## 8.17 キャッシュ管理API
+
+### GET `/api/cache/stats`
+キャッシュ統計を取得（管理者のみ）。
+
+### DELETE `/api/cache/:key`
+特定のキャッシュキーを削除（管理者のみ）。

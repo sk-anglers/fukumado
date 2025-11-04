@@ -14,59 +14,82 @@
 - ログとエラーの追跡
 - メンテナンスモードの制御
 
-### 16.1.2 主要機能
+### 16.1.2 主要機能（12タブ）
 
-1. **ダッシュボード（Dashboard）**
+1. **ダッシュボード（Dashboard）** 📊
    - システム概要の表示
    - リアルタイム統計情報
    - 稼働状況サマリー
+   - 主要メトリクスの可視化
 
-2. **システム管理（System）**
+2. **PV統計（PV Stats）** 📈
+   - ページビュー統計の表示
+   - 日次/週次/月次のアクセス数
+   - ユニークユーザー数
+   - リアルタイムアクセス状況
+
+3. **アナリティクス（Analytics）** 📉
+   - ユーザー行動分析
+   - ボタンクリック追跡
+   - セッション分析
+   - コンバージョン追跡
+
+4. **システム管理（System）** 💻
    - サーバー稼働状況の監視
    - リソース使用状況（CPU、メモリ、ディスク）
    - アプリケーションバージョン情報
    - 環境変数の確認
 
-3. **セキュリティ（Security）**
+5. **セキュリティ（Security）** 🔒
    - ログイン履歴の追跡
    - 不正アクセス試行の検出
    - IPアドレスブロッキング
    - セキュリティイベントの監視
+   - リアルタイム攻撃検知
 
-4. **配信管理（Streams）**
+6. **配信管理（Streams）** 📺
    - アクティブ配信の一覧
    - 配信統計情報
    - 配信者ランキング
    - 配信履歴
 
-5. **ユーザー管理（Users）**
+7. **ユーザー管理（Users）** 👥
    - ユーザー一覧と詳細情報
    - 認証状態の確認
    - ユーザーアクティビティ追跡
    - アカウント管理
 
-6. **ログ管理（Logs）**
+8. **ログ閲覧（Logs）** 📋
    - アプリケーションログの表示
    - エラーログの追跡
    - アクセスログの分析
    - ログレベルフィルタリング
 
-7. **EventSub管理（EventSub）**
+9. **EventSub管理（EventSub）** 🔔
    - Twitch EventSub接続状況の監視
    - 購読チャンネルの管理
    - 接続統計とキャパシティ情報
    - EventSub認証管理
+   - Conduit統合状態の確認
 
-8. **キャッシュ管理（Cache）**
-   - Redisキャッシュの状態確認
-   - キャッシュキーの検索と削除
-   - キャッシュヒット率の分析
-   - メモリ使用量の監視
+10. **キャッシュ/DB（Cache）** 💾
+    - Redisキャッシュの状態確認
+    - キャッシュキーの検索と削除
+    - キャッシュヒット率の分析
+    - メモリ使用量の監視
+    - データベース接続状態
 
-9. **メンテナンスモード（Maintenance）**
-   - メンテナンスモードの切り替え
-   - メンテナンス通知のカスタマイズ
-   - スケジュール設定
+11. **API監視（API Monitor）** 🌐
+    - Twitch APIレート制限状況
+    - YouTube API クォータ使用状況
+    - API呼び出し統計
+    - エラー率の監視
+
+12. **メンテナンス（Maintenance）** 🔧
+    - メンテナンスモードの切り替え
+    - メンテナンス通知のカスタマイズ
+    - スケジュール設定
+    - システム再起動
 
 ### 16.1.3 技術スタック
 
@@ -278,9 +301,29 @@ C:\Users\s_kus\開発\admin-web\
 │   │   └── pages/               # ページコンポーネント
 │   │       ├── Dashboard.tsx    # ダッシュボードページ
 │   │       ├── Dashboard.module.css
+│   │       ├── PVStats.tsx      # PV統計ページ
+│   │       ├── PVStats.module.css
+│   │       ├── Analytics.tsx    # アナリティクスページ
+│   │       ├── Analytics.module.css
+│   │       ├── System.tsx       # システムページ
+│   │       ├── System.module.css
+│   │       ├── Security.tsx     # セキュリティページ
+│   │       ├── Security.module.css
+│   │       ├── Streams.tsx      # 配信管理ページ
+│   │       ├── Streams.module.css
+│   │       ├── Users.tsx        # ユーザー管理ページ
+│   │       ├── Users.module.css
+│   │       ├── Logs.tsx         # ログ閲覧ページ
+│   │       ├── Logs.module.css
 │   │       ├── EventSub.tsx     # EventSub管理ページ
 │   │       ├── EventSub.module.css
-│   │       └── Login.tsx        # ログインページ
+│   │       ├── Cache.tsx        # キャッシュ/DBページ
+│   │       ├── Cache.module.css
+│   │       ├── ApiMonitor.tsx   # API監視ページ
+│   │       ├── ApiMonitor.module.css
+│   │       ├── Maintenance.tsx  # メンテナンスページ
+│   │       ├── Maintenance.module.css
+│   │       └── index.ts         # ページエクスポート
 │   ├── services/
 │   │   └── apiClient.ts         # APIクライアント
 │   ├── types/
@@ -649,16 +692,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 **ナビゲーション項目:**
 ```typescript
-const menuItems = [
-  { path: '/', label: 'ダッシュボード', icon: '📊' },
-  { path: '/eventsub', label: 'EventSub管理', icon: '📡' },
-  // 将来の拡張用
-  // { path: '/system', label: 'システム', icon: '⚙️' },
-  // { path: '/security', label: 'セキュリティ', icon: '🔒' },
-  // { path: '/streams', label: '配信管理', icon: '📹' },
-  // { path: '/users', label: 'ユーザー', icon: '👥' },
-  // { path: '/logs', label: 'ログ', icon: '📝' },
-  // { path: '/cache', label: 'キャッシュ', icon: '💾' },
+const navItems: NavItem[] = [
+  { id: 'dashboard', label: 'ダッシュボード', path: '/', icon: '📊' },
+  { id: 'pv-stats', label: 'PV統計', path: '/pv-stats', icon: '📈' },
+  { id: 'analytics', label: 'アナリティクス', path: '/analytics', icon: '📉' },
+  { id: 'system', label: 'システム', path: '/system', icon: '💻' },
+  { id: 'security', label: 'セキュリティ', path: '/security', icon: '🔒' },
+  { id: 'streams', label: '配信管理', path: '/streams', icon: '📺' },
+  { id: 'users', label: 'ユーザー管理', path: '/users', icon: '👥' },
+  { id: 'logs', label: 'ログ閲覧', path: '/logs', icon: '📋' },
+  { id: 'eventsub', label: 'EventSub管理', path: '/eventsub', icon: '🔔' },
+  { id: 'cache', label: 'キャッシュ/DB', path: '/cache', icon: '💾' },
+  { id: 'api-monitor', label: 'API監視', path: '/api-monitor', icon: '🌐' },
+  { id: 'maintenance', label: 'メンテナンス', path: '/maintenance', icon: '🔧' }
 ];
 ```
 
@@ -836,6 +882,145 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   );
 };
 ```
+
+### 16.6.6 PVStats（`components/pages/PVStats.tsx`）
+
+**責務:**
+- ページビュー統計の表示
+- 時系列グラフとトレンド分析
+- 日次・週次・月次のPVデータ可視化
+
+**主要機能:**
+- リアルタイムPVカウント表示
+- 期間別フィルタリング（日次、週次、月次）
+- グラフ表示（折れ線グラフ、棒グラフ）
+- CSV/JSONエクスポート機能
+
+### 16.6.7 Analytics（`components/pages/Analytics.tsx`）
+
+**責務:**
+- ユーザー行動分析の表示
+- イベントトラッキングデータの可視化
+- ボタンクリック追跡とコンバージョン分析
+
+**主要機能:**
+- イベント別トラッキング統計
+- ユーザーセッション分析
+- コンバージョンファネル表示
+- カスタムイベントフィルタリング
+
+### 16.6.8 System（`components/pages/System.tsx`）
+
+**責務:**
+- システムメトリクスの表示
+- サーバーヘルスチェック
+- リソース使用状況のモニタリング
+
+**主要機能:**
+- CPU・メモリ使用率表示
+- Redis接続状態
+- WebSocket接続数
+- アップタイム表示
+- システムバージョン情報
+
+### 16.6.9 Security（`components/pages/Security.tsx`）
+
+**責務:**
+- セキュリティイベントの監視
+- 異常検知アラートの表示
+- ブロックリスト管理
+
+**主要機能:**
+- 攻撃検知ログ表示
+- レート制限違反の追跡
+- IPブロックリスト管理
+- セキュリティアラートの可視化
+- 不正アクセス試行の統計
+
+### 16.6.10 Streams（`components/pages/Streams.tsx`）
+
+**責務:**
+- 配信リストの管理
+- 配信同期設定
+- キャッシュ管理
+
+**主要機能:**
+- 現在配信中のチャンネル一覧
+- 配信リストの手動同期
+- キャッシュのクリアと更新
+- プラットフォーム別フィルタリング（YouTube、Twitch、ニコニコ）
+- 配信統計の表示
+
+### 16.6.11 Users（`components/pages/Users.tsx`）
+
+**責務:**
+- ユーザー管理
+- フォローチャンネル管理
+- OAuth認証状態の確認
+
+**主要機能:**
+- 登録ユーザー一覧表示
+- ユーザー別フォローチャンネル表示
+- OAuth認証状態の確認
+- ユーザーセッション管理
+- ユーザー別アクティビティログ
+
+### 16.6.12 Logs（`components/pages/Logs.tsx`）
+
+**責務:**
+- システムログの閲覧
+- エラーログのフィルタリング
+- ログレベル別表示
+
+**主要機能:**
+- リアルタイムログストリーミング
+- ログレベルフィルタリング（ERROR、WARN、INFO、DEBUG）
+- 時間範囲指定
+- キーワード検索
+- ログのエクスポート（JSON、テキスト）
+
+### 16.6.13 Cache（`components/pages/Cache.tsx`）
+
+**責務:**
+- Redisキャッシュの管理
+- データベース状態の確認
+- キャッシュヒット率の監視
+
+**主要機能:**
+- Redis接続状態表示
+- キャッシュキー一覧
+- キャッシュヒット/ミス統計
+- 個別キャッシュのクリア
+- 全キャッシュのフラッシュ
+- キャッシュTTL設定
+
+### 16.6.14 ApiMonitor（`components/pages/ApiMonitor.tsx`）
+
+**責務:**
+- API呼び出し状況の監視
+- レスポンスタイムの追跡
+- エンドポイント別統計
+
+**主要機能:**
+- エンドポイント別リクエスト数
+- 平均レスポンスタイム表示
+- エラーレート監視
+- レート制限状態の確認
+- API使用量グラフ
+
+### 16.6.15 Maintenance（`components/pages/Maintenance.tsx`）
+
+**責務:**
+- メンテナンスモードの管理
+- メンテナンス通知の設定
+- システム再起動
+
+**主要機能:**
+- メンテナンスモードのON/OFF切り替え
+- メンテナンスメッセージの編集
+- 予定終了時刻の設定
+- メンテナンス履歴の表示
+- システム再起動ボタン
 
 ---
 

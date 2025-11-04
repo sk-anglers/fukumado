@@ -7,7 +7,8 @@ exports.streamSyncService = exports.analyticsTracker = exports.pvTracker = void 
 exports.getWebSocketStats = getWebSocketStats;
 const express_1 = __importDefault(require("express"));
 const express_session_1 = __importDefault(require("express-session"));
-const connect_redis_1 = __importDefault(require("connect-redis"));
+const connect_pg_simple_1 = __importDefault(require("connect-pg-simple"));
+const pg_1 = require("pg");
 const ioredis_1 = __importDefault(require("ioredis"));
 const cors_1 = __importDefault(require("cors"));
 const http_1 = require("http");
@@ -17,6 +18,7 @@ const auth_1 = require("./routes/auth");
 const youtube_1 = require("./routes/youtube");
 const twitch_1 = require("./routes/twitch");
 const streams_1 = require("./routes/streams");
+const channels_1 = require("./routes/channels");
 const security_1 = require("./routes/security");
 const consent_1 = require("./routes/consent");
 const legal_1 = require("./routes/legal");
@@ -31,6 +33,7 @@ const twitchChatService_1 = require("./services/twitchChatService");
 const streamSyncService_1 = require("./services/streamSyncService");
 Object.defineProperty(exports, "streamSyncService", { enumerable: true, get: function () { return streamSyncService_1.streamSyncService; } });
 const twitchService_1 = require("./services/twitchService");
+const dataSyncService_1 = require("./services/dataSyncService");
 const maintenanceService_1 = require("./services/maintenanceService");
 const twitchEventSubManager_1 = require("./services/twitchEventSubManager");
 const twitchEventSubWebhookService_1 = require("./services/twitchEventSubWebhookService");
@@ -47,9 +50,9 @@ const anomalyDetection_1 = require("./services/anomalyDetection");
 const metricsCollector_1 = require("./services/metricsCollector");
 const systemMetricsCollector_1 = require("./services/systemMetricsCollector");
 const sessionSecurity_1 = require("./middleware/sessionSecurity");
-const pvTracker_1 = require("./services/pvTracker");
+const pvTrackerService_1 = require("./services/pvTrackerService");
 const pvCounter_1 = require("./middleware/pvCounter");
-const analyticsTracker_1 = require("./services/analyticsTracker");
+const analyticsService_1 = require("./services/analyticsService");
 const analytics_1 = require("./routes/analytics");
 const app = (0, express_1.default)();
 // Renderのリバースプロキシを信頼
@@ -69,13 +72,13 @@ redisClient.on('error', (err) => console.error('[Redis] Client Error:', err));
 redisClient.on('connect', () => console.log('[Redis] Client Connected'));
 redisClient.on('ready', () => console.log('[Redis] Client Ready'));
 redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...'));
-// PV計測サービスの初期化
-exports.pvTracker = new pvTracker_1.PVTracker(redisClient);
-console.log('[PVTracker] PV tracking service initialized');
-// アナリティクストラッキングサービスの初期化
-exports.analyticsTracker = new analyticsTracker_1.AnalyticsTracker(redisClient);
+// PV計測サービスの初期化（PostgreSQL版）
+exports.pvTracker = new pvTrackerService_1.PVTrackerService();
+console.log('[PVTrackerService] PV tracking service initialized');
+// アナリティクストラッキングサービスの初期化（PostgreSQL版）
+exports.analyticsTracker = new analyticsService_1.AnalyticsService();
 (0, analytics_1.setAnalyticsTracker)(exports.analyticsTracker);
-console.log('[AnalyticsTracker] Analytics tracking service initialized');
+console.log('[AnalyticsService] Analytics tracking service initialized');
 // CORS設定（モバイル対応 + 本番環境）
 const allowedOrigins = [
     env_1.env.frontendUrl, // 環境変数から取得（デフォルト: localhost:5173）
@@ -114,9 +117,20 @@ app.use((req, res, next) => {
     });
     next();
 });
+// PostgreSQLセッションストア
+const PgSession = (0, connect_pg_simple_1.default)(express_session_1.default);
+const pgPool = new pg_1.Pool({
+    connectionString: env_1.env.databaseUrl,
+    ssl: {
+        rejectUnauthorized: false // Render PostgreSQLのSSL証明書を受け入れる
+    }
+});
 // セッションミドルウェア（WebSocketでも使用するためexport）
 const sessionMiddleware = (0, express_session_1.default)({
-    store: new connect_redis_1.default({ client: redisClient }),
+    store: new PgSession({
+        pool: pgPool,
+        tableName: 'sessions' // schema.sqlで作成したsessionsテーブルを使用
+    }),
     secret: env_1.env.sessionSecret,
     resave: false,
     saveUninitialized: false,
@@ -153,6 +167,7 @@ else {
 // APIルーター（レート制限付き）
 app.use('/api/twitch', security_2.apiRateLimiter, twitch_1.twitchRouter);
 app.use('/api/streams', security_2.apiRateLimiter, streams_1.streamsRouter);
+app.use('/api/channels', security_2.apiRateLimiter, channels_1.channelsRouter);
 app.use('/api/security', security_2.apiRateLimiter, security_1.securityRouter);
 app.use('/api/consent', security_2.apiRateLimiter, consent_1.consentRouter);
 app.use('/api/legal', security_2.apiRateLimiter, legal_1.legalRouter);
@@ -572,6 +587,9 @@ server.listen(env_1.env.port, async () => {
         priorityManager_1.priorityManager.setAccessToken(appAccessToken);
         priorityManager_1.priorityManager.startDynamicThresholdMonitoring();
         console.log('[server] Dynamic threshold monitoring started');
+        // データ同期サービスを開始（グローバルエモート、古いチャンネルデータの同期）
+        (0, dataSyncService_1.startDataSync)(appAccessToken);
+        console.log('[server] Data sync service started');
     }
     catch (error) {
         console.error('[server] Failed to start dynamic threshold monitoring:', error);

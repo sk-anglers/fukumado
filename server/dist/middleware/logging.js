@@ -5,7 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.recordAccessStats = exports.accessLogStats = exports.AccessLogStats = exports.SecurityLogger = exports.errorLogger = exports.requestLogger = exports.productionLogger = exports.developmentLogger = void 0;
 const morgan_1 = __importDefault(require("morgan"));
-const logStore_1 = require("../utils/logStore");
+const securityLogService_1 = require("../services/securityLogService");
+// セキュリティログサービスのインスタンス
+const securityLogService = new securityLogService_1.SecurityLogService();
 /**
  * カスタムトークン定義
  */
@@ -83,7 +85,7 @@ class SecurityLogger {
     static logBlockedRequest(ip, reason, path, metadata) {
         const timestamp = new Date().toISOString();
         console.warn(`[Security Block] ${timestamp} - IP: ${ip} - Path: ${path} - Reason: ${reason}`, metadata || '');
-        logStore_1.logStore.addSecurityLog('block', ip, reason, path, metadata);
+        securityLogService.addSecurityLog('block', ip, reason, path, metadata);
     }
     /**
      * レート制限違反をログ出力
@@ -91,7 +93,7 @@ class SecurityLogger {
     static logRateLimitViolation(ip, path, currentCount, limit) {
         const timestamp = new Date().toISOString();
         console.warn(`[Rate Limit] ${timestamp} - IP: ${ip} - Path: ${path} - Count: ${currentCount}/${limit}`);
-        logStore_1.logStore.addSecurityLog('rate_limit', ip, `Rate limit exceeded: ${currentCount}/${limit}`, path, { currentCount, limit });
+        securityLogService.addSecurityLog('rate_limit', ip, `Rate limit exceeded: ${currentCount}/${limit}`, path, { currentCount, limit });
     }
     /**
      * 異常なアクセスパターンをログ出力
@@ -99,7 +101,7 @@ class SecurityLogger {
     static logAnomalousActivity(ip, pattern, details) {
         const timestamp = new Date().toISOString();
         console.warn(`[Anomaly Detected] ${timestamp} - IP: ${ip} - Pattern: ${pattern}`, details);
-        logStore_1.logStore.addSecurityLog('anomaly', ip, pattern, undefined, details);
+        securityLogService.addSecurityLog('anomaly', ip, pattern, undefined, details);
     }
     /**
      * WebSocket接続イベントをログ出力
@@ -206,17 +208,21 @@ const recordAccessStats = (req, res, next) => {
     res.on('finish', () => {
         const responseTime = Date.now() - startTime;
         exports.accessLogStats.recordRequest(req, res);
-        // ログストアにも記録
-        logStore_1.logStore.addAccessLog(req, res, responseTime);
+        // セキュリティログサービスに記録（非同期）
+        securityLogService.addAccessLog(req, res, responseTime).catch((error) => {
+            console.error('[Logging] Error adding access log:', error);
+        });
         // エラーログも記録（4xx, 5xx）
         if (res.statusCode >= 400) {
             const message = `HTTP ${res.statusCode} - ${req.method} ${req.path}`;
             const level = res.statusCode >= 500 ? 'error' : 'warn';
-            logStore_1.logStore.addErrorLog(level, message, undefined, {
+            securityLogService.addErrorLog(level, message, undefined, {
                 ip: req.ip,
                 method: req.method,
                 path: req.path,
                 statusCode: res.statusCode
+            }).catch((error) => {
+                console.error('[Logging] Error adding error log:', error);
             });
         }
     });

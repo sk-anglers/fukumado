@@ -285,15 +285,43 @@ export const config = {
 };
 ```
 
-### 必須環境変数
+### 必須環境変数（server）
 
 | 変数名 | 説明 | 取得方法 |
 |---|---|---|
-| `GOOGLE_CLIENT_ID` | Google OAuth2 クライアントID | Google Cloud Console |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth2 クライアントシークレット | Google Cloud Console |
+| `PORT` | サーバーポート | デフォルト: 4000 |
+| `SESSION_SECRET` | セッション暗号化キー | ランダム文字列生成 |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 APIキー | Google Cloud Console |
+| `YOUTUBE_CLIENT_ID` | Google OAuth2 クライアントID | Google Cloud Console |
+| `YOUTUBE_CLIENT_SECRET` | Google OAuth2 クライアントシークレット | Google Cloud Console |
+| `YOUTUBE_REDIRECT_URI` | Google OAuthリダイレクトURI | 例: http://localhost:4000/auth/google/callback |
 | `TWITCH_CLIENT_ID` | Twitch OAuth2 クライアントID | Twitch Developer Console |
 | `TWITCH_CLIENT_SECRET` | Twitch OAuth2 クライアントシークレット | Twitch Developer Console |
-| `SESSION_SECRET` | セッション暗号化キー | ランダム文字列生成 |
+| `TWITCH_REDIRECT_URI` | Twitch OAuthリダイレクトURI | 例: http://localhost:4000/auth/twitch/callback |
+| `EVENTSUB_MODE` | EventSubモード（websocket or conduit） | websocket: 最大900購読, conduit: 最大100,000購読 |
+| `REDIS_HOST` | Redisホスト | デフォルト: localhost |
+| `REDIS_PORT` | Redisポート | デフォルト: 6379 |
+| `REDIS_PASSWORD` | Redisパスワード（オプション） | - |
+
+### 必須環境変数（admin-server）
+
+| 変数名 | 説明 | デフォルト値 |
+|---|---|---|
+| `PORT` | 管理サーバーポート | 4001 |
+| `ADMIN_USERNAME` | 管理者ユーザー名 | admin |
+| `ADMIN_PASSWORD` | 管理者パスワード（最低16文字） | - |
+| `MAIN_BACKEND_URL` | メインバックエンドURL | http://localhost:4000 |
+| `REDIS_URL` | Redis接続URL | redis://localhost:6379 |
+| `ADMIN_ALLOWED_IPS` | 許可IPアドレス（カンマ区切り、オプション） | - |
+| `SLACK_WEBHOOK_URL` | Slack通知WebhookURL（オプション） | - |
+| `TWITCH_CLIENT_ID` | Twitch OAuth2 クライアントID（EventSub用） | - |
+| `TWITCH_CLIENT_SECRET` | Twitch OAuth2 クライアントシークレット（EventSub用） | - |
+| `TWITCH_REDIRECT_URI` | Twitch OAuthリダイレクトURI（EventSub用） | http://localhost:5174/eventsub |
+
+**注意事項:**
+- `ADMIN_PASSWORD` には `#` 記号を含めないこと（dotenvがコメントとして解釈）
+- 本番環境では強力なランダムパスワードを使用すること
+- EventSub管理機能を使用する場合は、Twitch OAuth設定が必要
 
 ## 9.9 設定のベストプラクティス
 

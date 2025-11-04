@@ -1,6 +1,9 @@
 import morgan from 'morgan';
 import { Request, Response } from 'express';
-import { logStore } from '../utils/logStore';
+import { SecurityLogService } from '../services/securityLogService';
+
+// セキュリティログサービスのインスタンス
+const securityLogService = new SecurityLogService();
 
 /**
  * カスタムトークン定義
@@ -91,7 +94,7 @@ export class SecurityLogger {
   ): void {
     const timestamp = new Date().toISOString();
     console.warn(`[Security Block] ${timestamp} - IP: ${ip} - Path: ${path} - Reason: ${reason}`, metadata || '');
-    logStore.addSecurityLog('block', ip, reason, path, metadata);
+    securityLogService.addSecurityLog('block', ip, reason, path, metadata);
   }
 
   /**
@@ -105,7 +108,7 @@ export class SecurityLogger {
   ): void {
     const timestamp = new Date().toISOString();
     console.warn(`[Rate Limit] ${timestamp} - IP: ${ip} - Path: ${path} - Count: ${currentCount}/${limit}`);
-    logStore.addSecurityLog('rate_limit', ip, `Rate limit exceeded: ${currentCount}/${limit}`, path, { currentCount, limit });
+    securityLogService.addSecurityLog('rate_limit', ip, `Rate limit exceeded: ${currentCount}/${limit}`, path, { currentCount, limit });
   }
 
   /**
@@ -118,7 +121,7 @@ export class SecurityLogger {
   ): void {
     const timestamp = new Date().toISOString();
     console.warn(`[Anomaly Detected] ${timestamp} - IP: ${ip} - Pattern: ${pattern}`, details);
-    logStore.addSecurityLog('anomaly', ip, pattern, undefined, details);
+    securityLogService.addSecurityLog('anomaly', ip, pattern, undefined, details);
   }
 
   /**
@@ -261,18 +264,22 @@ export const recordAccessStats = (req: Request, res: Response, next: Function): 
     const responseTime = Date.now() - startTime;
     accessLogStats.recordRequest(req, res);
 
-    // ログストアにも記録
-    logStore.addAccessLog(req, res, responseTime);
+    // セキュリティログサービスに記録（非同期）
+    securityLogService.addAccessLog(req, res, responseTime).catch((error) => {
+      console.error('[Logging] Error adding access log:', error);
+    });
 
     // エラーログも記録（4xx, 5xx）
     if (res.statusCode >= 400) {
       const message = `HTTP ${res.statusCode} - ${req.method} ${req.path}`;
       const level = res.statusCode >= 500 ? 'error' : 'warn';
-      logStore.addErrorLog(level, message, undefined, {
+      securityLogService.addErrorLog(level, message, undefined, {
         ip: req.ip,
         method: req.method,
         path: req.path,
         statusCode: res.statusCode
+      }).catch((error) => {
+        console.error('[Logging] Error adding error log:', error);
       });
     }
   });

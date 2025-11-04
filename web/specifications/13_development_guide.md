@@ -69,6 +69,35 @@ npm run lint:fix  # 自動修正
 ```
 - ESLintで静的解析
 
+### 管理ダッシュボード開発（admin-web + admin-server）
+
+**admin-server起動**:
+```bash
+cd admin-server
+npm install
+npm run dev
+```
+- ポート: 4001
+- Basic認証: `ADMIN_USERNAME` / `ADMIN_PASSWORD` (.envで設定)
+- メインバックエンド（localhost:4000）へのプロキシ
+
+**admin-web起動**:
+```bash
+cd admin-web
+npm install
+npm run dev
+```
+- ポート: 5174
+- admin-server（localhost:4001）への接続が必要
+- ログイン画面から管理ダッシュボードへアクセス
+
+**推奨起動順序**:
+1. Redis起動
+2. メインバックエンド（server）起動
+3. admin-server起動
+4. admin-web起動
+5. フロントエンド（web）起動
+
 ## 13.3 ディレクトリ追加ガイドライン
 
 ### 新規コンポーネント

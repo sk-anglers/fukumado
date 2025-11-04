@@ -56,9 +56,9 @@ import { anomalyDetectionService } from './services/anomalyDetection';
 import { metricsCollector } from './services/metricsCollector';
 import { systemMetricsCollector } from './services/systemMetricsCollector';
 import { initializeSession, detectSessionHijacking, checkSessionTimeout, includeCSRFToken } from './middleware/sessionSecurity';
-import { PVTracker } from './services/pvTracker';
+import { PVTrackerService } from './services/pvTrackerService';
 import { createPVCounterMiddleware } from './middleware/pvCounter';
-import { AnalyticsTracker } from './services/analyticsTracker';
+import { AnalyticsService } from './services/analyticsService';
 import { analyticsRouter, setAnalyticsTracker } from './routes/analytics';
 
 const app = express();
@@ -83,14 +83,14 @@ redisClient.on('connect', () => console.log('[Redis] Client Connected'));
 redisClient.on('ready', () => console.log('[Redis] Client Ready'));
 redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...'));
 
-// PV計測サービスの初期化
-export const pvTracker = new PVTracker(redisClient);
-console.log('[PVTracker] PV tracking service initialized');
+// PV計測サービスの初期化（PostgreSQL版）
+export const pvTracker = new PVTrackerService();
+console.log('[PVTrackerService] PV tracking service initialized');
 
-// アナリティクストラッキングサービスの初期化
-export const analyticsTracker = new AnalyticsTracker(redisClient);
+// アナリティクストラッキングサービスの初期化（PostgreSQL版）
+export const analyticsTracker = new AnalyticsService();
 setAnalyticsTracker(analyticsTracker);
-console.log('[AnalyticsTracker] Analytics tracking service initialized');
+console.log('[AnalyticsService] Analytics tracking service initialized');
 
 // StreamSyncServiceをエクスポート（admin APIで統計情報にアクセスするため）
 export { streamSyncService };

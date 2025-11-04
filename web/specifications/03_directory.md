@@ -19,9 +19,21 @@ C:\Users\s_kus\開発\web\
 │   │   ├── Footer/           # フッター
 │   │   ├── LayoutPresetModal/ # レイアウト選択モーダル
 │   │   ├── SlotSelectionModal/ # スロット選択モーダル
+│   │   ├── StreamSelectionModal/ # 配信選択モーダル
 │   │   ├── EmotePicker/      # Twitchエモートピッカー
 │   │   ├── Toast/            # 通知トースト
-│   │   └── Legal/            # 利用規約・プライバシーポリシー
+│   │   ├── Legal/            # 利用規約・プライバシーポリシー
+│   │   │   ├── LegalModal.tsx
+│   │   │   ├── TermsOfService.tsx
+│   │   │   └── PrivacyPolicy.tsx
+│   │   ├── ConsentManager.tsx      # Cookie同意管理
+│   │   ├── CookieConsentBanner.tsx # Cookie同意バナー
+│   │   ├── TermsAndPrivacyModal.tsx # 利用規約・プライバシーポリシーモーダル
+│   │   ├── DebugPanel/       # デバッグパネル
+│   │   ├── GlobalControls/   # グローバルコントロール
+│   │   ├── MaintenancePage/  # メンテナンスページ
+│   │   ├── MobileRestriction/ # モバイル制限表示
+│   │   └── UnsupportedBrowser/ # 非対応ブラウザ表示
 │   ├── stores/               # Zustand状態管理
 │   │   ├── layoutStore.ts    # レイアウト・配信スロット管理
 │   │   ├── chatStore.ts      # チャットメッセージ管理
@@ -29,7 +41,9 @@ C:\Users\s_kus\開発\web\
 │   │   ├── userStore.ts      # ユーザー情報・フォロー管理
 │   │   ├── syncStore.ts      # 同期設定管理
 │   │   ├── notificationStore.ts # 通知管理
-│   │   └── dataUsageStore.ts # データ使用量管理
+│   │   ├── dataUsageStore.ts # データ使用量管理
+│   │   ├── maintenanceStore.ts # メンテナンス状態管理
+│   │   └── mobileMenuStore.ts # モバイルメニュー状態管理
 │   ├── hooks/                # カスタムReactフック
 │   │   ├── useAuthStatus.ts
 │   │   ├── useTwitchAuthStatus.ts
@@ -39,12 +53,19 @@ C:\Users\s_kus\開発\web\
 │   │   ├── useTwitchEmbed.ts
 │   │   ├── useYouTubeIframeApi.ts
 │   │   ├── useAudioLevelMonitor.ts
-│   │   └── useDataUsageMonitor.ts
+│   │   ├── useDataUsageMonitor.ts
+│   │   ├── useAnalytics.ts       # アナリティクス追跡フック
+│   │   ├── useMediaQuery.ts      # メディアクエリ検出フック
+│   │   └── useStreamUpdates.ts   # 配信更新通知フック
 │   ├── types/                # TypeScript型定義
 │   │   ├── index.ts
 │   │   └── youtube.d.ts
 │   ├── utils/                # ユーティリティ関数
 │   │   └── api.ts
+│   ├── services/             # フロントエンドサービス層
+│   │   ├── analyticsService.ts   # アナリティクス送信サービス
+│   │   └── websocketService.ts   # WebSocket接続管理
+│   ├── styles/               # グローバルスタイル
 │   ├── config.ts             # アプリケーション設定
 │   ├── App.tsx               # ルートコンポーネント
 │   ├── main.tsx              # エントリーポイント
@@ -64,28 +85,66 @@ C:\Users\s_kus\開発\server\
 ├── src/
 │   ├── routes/               # APIルート
 │   │   ├── auth.ts           # OAuth認証エンドポイント
-│   │   ├── twitch.ts         # Twitch API エンドポイント（13個）
-│   │   └── youtube.ts        # YouTube API エンドポイント（3個）
+│   │   ├── twitch.ts         # Twitch API エンドポイント
+│   │   ├── youtube.ts        # YouTube API エンドポイント
+│   │   ├── admin.ts          # 管理者ダッシュボード API
+│   │   ├── adminStreams.ts   # 管理者配信管理 API
+│   │   ├── analytics.ts      # アナリティクス API
+│   │   ├── cache.ts          # キャッシュ管理 API
+│   │   ├── consent.ts        # Cookie同意管理 API
+│   │   ├── eventsub.ts       # Twitch EventSub Webhook
+│   │   ├── legal.ts          # 利用規約・プライバシーポリシー API
+│   │   ├── logs.ts           # ログ管理 API
+│   │   ├── maintenance.ts    # メンテナンスモード API
+│   │   ├── security.ts       # セキュリティ API
+│   │   ├── streams.ts        # 配信管理 API
+│   │   └── users.ts          # ユーザー管理 API
 │   ├── services/             # ビジネスロジック
 │   │   ├── streamSyncService.ts      # 配信同期サービス（60秒間隔）
 │   │   ├── twitchChatService.ts      # Twitchチャットサービス（IRC）
 │   │   ├── twitchService.ts          # Twitch API ラッパー
 │   │   ├── youtubeService.ts         # YouTube API ラッパー
 │   │   ├── cacheService.ts           # Redisキャッシュサービス
-│   │   ├── tokenStorage.ts           # トークンストレージ
-│   │   └── twitchEventSubWebhookService.ts # EventSub Webhook
+│   │   ├── twitchEventSubWebhookService.ts # EventSub Webhook
+│   │   ├── analyticsTracker.ts       # アナリティクス追跡
+│   │   ├── anomalyDetection.ts       # 異常検知サービス
+│   │   ├── badgeService.ts           # Twitchバッジサービス
+│   │   ├── consentManager.ts         # Cookie同意管理
+│   │   ├── dynamicChannelAllocator.ts # 動的チャンネル割り当て
+│   │   ├── emoteCacheService.ts      # エモートキャッシュ
+│   │   ├── followedChannelsCacheService.ts # フォローチャンネルキャッシュ
+│   │   ├── liveStreamsCacheService.ts # 配信リストキャッシュ
+│   │   ├── maintenanceService.ts     # メンテナンス管理
+│   │   ├── metricsCollector.ts       # メトリクス収集
+│   │   ├── priorityManager.ts        # 優先度管理
+│   │   ├── pvTracker.ts              # PVトラッキング
+│   │   ├── securityReporter.ts       # セキュリティレポート
+│   │   ├── systemMetricsCollector.ts # システムメトリクス
+│   │   ├── twitchAppAuth.ts          # Twitchアプリ認証
+│   │   ├── twitchConduitClient.ts    # Twitch Conduitクライアント
+│   │   ├── twitchConduitManager.ts   # Twitch Conduit管理
+│   │   ├── twitchEventSubConnection.ts # EventSub WebSocket接続
+│   │   ├── twitchEventSubManager.ts  # EventSub管理
+│   │   └── twitchEventSubService.ts  # EventSubサービス
 │   ├── types/                # TypeScript型定義
 │   │   └── index.ts
 │   ├── config/               # 設定ファイル
-│   │   └── index.ts
+│   │   └── env.ts
 │   ├── middleware/           # Expressミドルウェア
-│   │   └── auth.ts
+│   │   ├── adminAuth.ts      # 管理者認証
+│   │   ├── logging.ts        # ロギング
+│   │   ├── maintenanceMode.ts # メンテナンスモード
+│   │   ├── pvCounter.ts      # PVカウンター
+│   │   ├── security.ts       # セキュリティ
+│   │   ├── sessionSecurity.ts # セッションセキュリティ
+│   │   ├── validation.ts     # バリデーション
+│   │   └── websocketSecurity.ts # WebSocketセキュリティ
 │   ├── utils/                # ユーティリティ関数
 │   │   └── logger.ts
 │   ├── websocket/            # WebSocketサーバー
 │   │   ├── chatServer.ts     # チャット用WebSocket
 │   │   └── streamServer.ts   # 配信更新通知用WebSocket
-│   └── server.ts             # エントリーポイント
+│   └── index.ts              # エントリーポイント
 ├── .env                      # 環境変数
 ├── package.json              # 依存関係
 ├── tsconfig.json             # TypeScript設定

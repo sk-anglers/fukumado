@@ -1,5 +1,7 @@
 import { Router } from 'express';
-import { logStore } from '../utils/logStore';
+import { SecurityLogService } from '../services/securityLogService';
+
+const securityLogService = new SecurityLogService();
 
 export const logsRouter = Router();
 
@@ -17,7 +19,7 @@ logsRouter.get('/access', async (req, res) => {
     const startDate = req.query.startDate as string | undefined;
     const endDate = req.query.endDate as string | undefined;
 
-    const result = logStore.getAccessLogs({
+    const result = await securityLogService.getAccessLogs({
       limit,
       offset,
       method,
@@ -53,7 +55,7 @@ logsRouter.get('/error', async (req, res) => {
     const level = req.query.level as 'error' | 'warn' | undefined;
     const searchMessage = req.query.searchMessage as string | undefined;
 
-    const result = logStore.getErrorLogs({
+    const result = await securityLogService.getErrorLogs({
       limit,
       offset,
       level,
@@ -86,7 +88,7 @@ logsRouter.get('/security', async (req, res) => {
     const type = req.query.type as 'block' | 'rate_limit' | 'anomaly' | 'auth_failed' | 'websocket' | undefined;
     const searchIp = req.query.searchIp as string | undefined;
 
-    const result = logStore.getSecurityLogs({
+    const result = await securityLogService.getSecurityLogs({
       limit,
       offset,
       type,
@@ -114,7 +116,7 @@ logsRouter.get('/security', async (req, res) => {
  */
 logsRouter.get('/summary', async (req, res) => {
   try {
-    const summary = logStore.getSummary();
+    const summary = await securityLogService.getSummary();
 
     res.json({
       success: true,
@@ -147,7 +149,7 @@ logsRouter.delete('/:type', async (req, res) => {
       });
     }
 
-    logStore.clearLogs(type);
+    await securityLogService.clearLogs(type);
     console.log(`[Logs] Cleared ${type} logs`);
 
     res.json({

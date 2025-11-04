@@ -472,7 +472,62 @@ if (isMobile && !config.isBeta) {
 | ベータ | true | true | **モバイル対応画面** |
 | ベータ | true | false | 通常画面 |
 
-## 10.9 パフォーマンス最適化
+## 10.9 非対応ブラウザ検出
+
+### UnsupportedBrowser コンポーネント
+
+**App.tsx**:
+```typescript
+// ブラウザ互換性チェック
+if (isUnsupportedBrowser) {
+  return <UnsupportedBrowser />;
+}
+```
+
+**検出対象ブラウザ**:
+- Internet Explorer（全バージョン）
+- 古いバージョンのEdge（EdgeHTML）
+- その他の古いブラウザ
+
+**表示内容**:
+```typescript
+<div className={styles.container}>
+  <div className={styles.content}>
+    <div className={styles.icon}>⚠️</div>
+    <h1 className={styles.title}>ご利用のブラウザは非対応です</h1>
+    <p className={styles.description}>
+      より快適にご利用いただくため、以下のブラウザをご利用ください。
+    </p>
+    <ul className={styles.browserList}>
+      <li>Google Chrome（最新版）</li>
+      <li>Mozilla Firefox（最新版）</li>
+      <li>Microsoft Edge（Chromium版）</li>
+      <li>Safari（最新版）</li>
+    </ul>
+  </div>
+</div>
+```
+
+**検出ロジック**:
+```typescript
+const isUnsupportedBrowser = (): boolean => {
+  const ua = navigator.userAgent;
+
+  // IE検出
+  if (ua.indexOf('MSIE') !== -1 || ua.indexOf('Trident/') !== -1) {
+    return true;
+  }
+
+  // 古いEdge検出（EdgeHTML）
+  if (ua.indexOf('Edge/') !== -1) {
+    return true;
+  }
+
+  return false;
+};
+```
+
+## 10.10 パフォーマンス最適化
 
 ### リフロー抑制
 
@@ -520,7 +575,7 @@ export const useMediaQuery = (query: string): boolean => {
 }
 ```
 
-## 10.10 アクセシビリティ
+## 10.11 アクセシビリティ
 
 ### タッチターゲットサイズ
 
@@ -547,7 +602,7 @@ export const useMediaQuery = (query: string): boolean => {
 }
 ```
 
-## 10.11 今後の展開
+## 10.12 今後の展開
 
 ### 計画中の機能
 

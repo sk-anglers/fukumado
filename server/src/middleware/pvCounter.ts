@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { PVTracker } from '../services/pvTracker';
+import { PVTrackerService } from '../services/pvTrackerService';
 
 /**
  * ボット判定用のUser-Agentパターン
@@ -55,7 +55,7 @@ function getClientIP(req: Request): string {
 /**
  * PVカウントミドルウェアを作成
  */
-export function createPVCounterMiddleware(pvTracker: PVTracker) {
+export function createPVCounterMiddleware(pvTracker: PVTrackerService) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // API呼び出しは除外（/api/、/auth/など）
@@ -82,7 +82,14 @@ export function createPVCounterMiddleware(pvTracker: PVTracker) {
       const ip = getClientIP(req);
 
       // PVをカウント（非同期で実行、エラーでもブロックしない）
-      pvTracker.trackPageView(ip).catch((error) => {
+      pvTracker.trackPageView(
+        ip,
+        req.path,
+        req.headers['referer'],
+        userAgent,
+        undefined, // userId (セッションから取得可能だが後で実装)
+        undefined  // deviceType (User-Agentから判定可能だが後で実装)
+      ).catch((error) => {
         console.error('[PVCounter] Error tracking page view:', error);
       });
 

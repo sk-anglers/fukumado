@@ -561,7 +561,59 @@ interface LegalModalProps {
 - maintenanceStore から状態を取得
 - バックエンド `/api/admin/maintenance/status` から最新情報を取得
 
-## 6.19 コンポーネント設計原則
+## 6.19 DebugPanel (src/components/DebugPanel/DebugPanel.tsx)
+
+開発者向けのデバッグ情報表示パネル。
+
+### 機能
+- ストアの現在の状態を可視化
+- WebSocket接続状態の表示
+- パフォーマンスメトリクスの表示
+- ローカルストレージの内容確認
+
+### 表示条件
+- 開発モード（`import.meta.env.DEV === true`）でのみ表示
+- または特定のクエリパラメータ（`?debug=true`）で有効化
+
+## 6.20 MobileRestriction (src/components/MobileRestriction/MobileRestriction.tsx)
+
+モバイルデバイスでのアクセス制限を表示するコンポーネント。
+
+### 機能
+- モバイルデバイス検出
+- PCでの利用を推奨するメッセージ表示
+- QRコード表示（PC版URLへのアクセス用）
+
+### 表示条件
+- `useMediaQuery` フックで画面幅が768px以下の場合
+- またはユーザーエージェントでモバイルデバイスを検出
+
+### UI要素
+- ロゴ表示
+- 推奨メッセージ
+- PC版URLのQRコード
+- 「それでも続ける」ボタン（localStorage に保存）
+
+## 6.21 UnsupportedBrowser (src/components/UnsupportedBrowser/UnsupportedBrowser.tsx)
+
+非対応ブラウザを検出して警告を表示するコンポーネント。
+
+### 検出対象
+- Internet Explorer（全バージョン）
+- 古いバージョンのChrome、Firefox、Safari、Edge
+- WebSocketをサポートしていないブラウザ
+- ES2015をサポートしていないブラウザ
+
+### 機能
+- ブラウザ情報の表示
+- 推奨ブラウザのリスト表示
+- ダウンロードリンク提供
+
+### 表示条件
+- ブラウザ互換性チェックで非対応と判定された場合
+- モーダルまたは全画面表示で警告
+
+## 6.22 コンポーネント設計原則
 
 ### 単一責任の原則
 各コンポーネントは1つの明確な責務を持ちます。

@@ -705,19 +705,62 @@ public setCredentials(accessToken: string, username: string): void {
 
 ### 現在の状況
 
-**ステータス**: ❌ **未解決**
+**ステータス**: ✅ **解決済み** (2025-11-02)
 
-**推奨される次の調査ステップ**:
-1. **サーバーコンソールログの確認**: `[Twitch Chat] Send message error:` の詳細を確認
-2. **TMI.jsのエラーログ**: Twitch IRC接続の詳細なエラーを確認
-3. **認証フローの検証**: accessTokenが正しく設定されているか確認
-4. **チャンネル参加状態の確認**: `joinedChannels` Setにチャンネルが含まれているか確認
-5. **Twitchアクセストークンのスコープ確認**: `chat:edit` スコープが付与されているか確認
+### 解決方法
+
+**根本原因**:
+- Twitch IRC接続がタイムアウトし、長時間接続後にチャット送信が失敗していた
+- TMI.js クライアントの接続状態が不安定になり、エラーが発生
+
+**実施した対策**:
+
+#### 1. ヘルスチェック機能の追加 (`server/src/services/twitchChatService.ts`)
+
+**`startHealthCheck()` メソッド** (L370-382):
+```typescript
+private startHealthCheck(): void {
+  if (this.healthCheckInterval) {
+    clearInterval(this.healthCheckInterval);
+  }
+
+  // 1分ごとにチェック
+  this.healthCheckInterval = setInterval(() => {
+    this.performHealthCheck();
+  }, 60000);
+}
+```
+
+**`performHealthCheck()` メソッド** (L387-427):
+- 接続状態（readyState）を1分ごとに確認
+- 接続が閉じている場合は自動再接続を試行
+- 5分以上メッセージを受信していない場合に警告を出力
+- 接続時間を定期的にログ出力
+
+#### 2. メッセージ受信時刻の記録
+
+```typescript
+// L46: フィールド追加
+private lastMessageReceivedAt: Date | null = null;
+
+// L115: メッセージ受信時に更新
+this.lastMessageReceivedAt = new Date();
+```
+
+#### 3. 自動再接続機能の強化
+
+**`attemptReconnect()` メソッド** (L432-480):
+- 指数バックオフによる再接続（最大30秒間隔）
+- 最大10回まで再接続を試行
+- 再接続後、以前参加していたチャンネルに自動的に再参加
+
+**効果**:
+- ✅ チャット送信機能が正常に動作
+- ✅ 長時間の接続でも安定稼働
+- ✅ 接続断絶時の自動復旧
 
 **関連ファイル**:
+- `server/src/services/twitchChatService.ts` L370-480（ヘルスチェック・再接続実装）
 - `web/src/components/ChatPanel/ChatPanel.tsx` L121-172（フロントエンド送信処理）
 - `web/src/components/StreamGrid/StreamGrid.tsx` L169-217（全画面チャット送信処理）
 - `server/src/routes/twitch.ts` L149-185（バックエンドAPI）
-- `server/src/services/twitchChatService.ts` L270-291（sendMessage実装）
-
-**ワークアラウンド**: なし（現在チャット送信機能は使用不可）

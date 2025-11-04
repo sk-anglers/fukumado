@@ -415,38 +415,114 @@ const syncSettings: SyncSettings = {
 
 ## 4.7 データ使用量関連型
 
-### DataUsageEntry
+### DataUsageState
 ```typescript
-export interface DataUsageEntry {
-  slotId: string;             // スロットID
-  platform: Platform;         // プラットフォーム
-  channelName: string;        // チャンネル名
-  transferSize: number;       // 転送量（バイト）
-  timestamp: number;          // タイムスタンプ
+interface DataUsageState {
+  totalBytes: number;         // 合計データ使用量（バイト）
+  sessionStartTime: number;   // セッション開始時刻
+  addUsage: (bytes: number) => void;    // データ使用量を追加
+  reset: () => void;                    // リセット
+  getTotalMB: () => number;             // MB単位で取得
+  getTotalGB: () => number;             // GB単位で取得
+  getSessionDuration: () => number;     // セッション経過時間（秒）
 }
 ```
 
-### DataUsageStats
+**実装場所**: `src/stores/dataUsageStore.ts`
+
+**特徴**:
+- セッションストレージに永続化（ページリロード時も保持）
+- Resource Timing APIによる自動計測
+- リアルタイム更新
+
+## 4.8 アナリティクス関連型（src/types/analytics.ts）
+
+### EventType
 ```typescript
-export interface DataUsageStats {
-  total: number;              // 合計データ使用量（バイト）
-  byPlatform: {
-    youtube: number;
-    twitch: number;
-    niconico: number;
-  };
-  byQuality: {
-    auto: number;
-    '1080p': number;
-    '720p': number;
-    '480p': number;
-    '360p': number;
-  };
-  sessionStart: number;       // セッション開始時刻
-}
+export type EventType =
+  | 'page_view'
+  | 'layout_change'
+  | 'button_click'
+  | 'feature_use'
+  | 'stream_action'
+  | 'auth_action'
+  | 'session_start'
+  | 'session_end';
 ```
 
-## 4.8 型のバリデーション
+### ButtonType
+```typescript
+export type ButtonType =
+  | 'sync_start'       // 同期開始
+  | 'sync_stop'        // 同期停止
+  | 'mute_all'         // 全ミュート
+  | 'fullscreen'       // 全画面切り替え
+  | 'layout_preset'    // レイアウトプリセット
+  | 'slot_add'         // スロット追加
+  | 'slot_remove'      // スロット削除
+  | 'stream_search'    // 配信検索
+  | 'auth_youtube'     // YouTube認証
+  | 'auth_twitch'      // Twitch認証
+  | 'logout';          // ログアウト
+```
+
+### FeatureType
+```typescript
+export type FeatureType =
+  | 'chat'            // チャット機能
+  | 'emote'           // エモート
+  | 'search'          // 検索
+  | 'sync'            // 同期
+  | 'quality_change'; // 画質変更
+```
+
+### StreamActionType
+```typescript
+export type StreamActionType =
+  | 'assign'          // 配信割り当て
+  | 'clear'           // 配信クリア
+  | 'mute'            // ミュート
+  | 'unmute'          // ミュート解除
+  | 'volume_change'   // 音量変更
+  | 'quality_change'  // 画質変更
+  | 'swap';           // スロット入れ替え
+```
+
+### AnalyticsEvent（共用型）
+```typescript
+export type AnalyticsEvent =
+  | LayoutChangeEvent
+  | ButtonClickEvent
+  | FeatureUseEvent
+  | StreamActionEvent
+  | AuthActionEvent
+  | SessionStartEvent
+  | SessionEndEvent;
+```
+
+各イベント型には、以下の共通フィールド（BaseEventData）が含まれます：
+- `sessionId`: セッションID
+- `userId`: ユーザーID（認証済みの場合）
+- `timestamp`: イベント発生時刻
+- `userAgent`: ブラウザ情報
+- `screenWidth/screenHeight`: 画面サイズ
+- `deviceType`: デバイスタイプ（mobile/tablet/desktop）
+
+**使用例**:
+```typescript
+const event: ButtonClickEvent = {
+  type: 'button_click',
+  sessionId: 'abc123',
+  timestamp: new Date().toISOString(),
+  deviceType: 'desktop',
+  data: {
+    buttonType: 'fullscreen',
+    location: 'header'
+  }
+};
+```
+
+## 4.9 型のバリデーション
 
 ### ランタイムバリデーション例
 

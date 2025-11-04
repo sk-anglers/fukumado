@@ -2,7 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.logsRouter = void 0;
 const express_1 = require("express");
-const logStore_1 = require("../utils/logStore");
+const securityLogService_1 = require("../services/securityLogService");
+const securityLogService = new securityLogService_1.SecurityLogService();
 exports.logsRouter = (0, express_1.Router)();
 /**
  * GET /api/admin/logs/access
@@ -17,7 +18,7 @@ exports.logsRouter.get('/access', async (req, res) => {
         const searchPath = req.query.searchPath;
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
-        const result = logStore_1.logStore.getAccessLogs({
+        const result = await securityLogService.getAccessLogs({
             limit,
             offset,
             method,
@@ -51,7 +52,7 @@ exports.logsRouter.get('/error', async (req, res) => {
         const offset = parseInt(req.query.offset) || 0;
         const level = req.query.level;
         const searchMessage = req.query.searchMessage;
-        const result = logStore_1.logStore.getErrorLogs({
+        const result = await securityLogService.getErrorLogs({
             limit,
             offset,
             level,
@@ -82,7 +83,7 @@ exports.logsRouter.get('/security', async (req, res) => {
         const offset = parseInt(req.query.offset) || 0;
         const type = req.query.type;
         const searchIp = req.query.searchIp;
-        const result = logStore_1.logStore.getSecurityLogs({
+        const result = await securityLogService.getSecurityLogs({
             limit,
             offset,
             type,
@@ -109,7 +110,7 @@ exports.logsRouter.get('/security', async (req, res) => {
  */
 exports.logsRouter.get('/summary', async (req, res) => {
     try {
-        const summary = logStore_1.logStore.getSummary();
+        const summary = await securityLogService.getSummary();
         res.json({
             success: true,
             data: summary,
@@ -139,7 +140,7 @@ exports.logsRouter.delete('/:type', async (req, res) => {
                 timestamp: new Date().toISOString()
             });
         }
-        logStore_1.logStore.clearLogs(type);
+        await securityLogService.clearLogs(type);
         console.log(`[Logs] Cleared ${type} logs`);
         res.json({
             success: true,

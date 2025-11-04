@@ -1,0 +1,244 @@
+# チャット停止問題 調査状況まとめ
+作成日時: 2025-11-01
+
+## 問題の症状
+- チャットが一定時間（約1-2分）で更新されなくなる
+- **ハートビート開始のタイミング**とチャットが止まるタイミングが一致している
+- **ブラウザのコンソールログには何も出力されていない**（重要）
+
+## 調査で判明した事実
+
+### ✅ サーバー側は正常動作
+1. **Twitch IRC接続**: 正常（[chatcheck] MESSAGE EVENT FIRED が継続）
+2. **WebSocket接続**: 正常（readyState: 1 = OPEN）
+3. **ws.send()**: 成功（[chatcheck] ws.send() completed successfully）
+4. **ログ出力**: 全て正常に動作（1098行のログが正常に出力）
+
+### 🔍 タイムアウト関連の設定
+- **サーバー側タイムアウト**: 60秒（`server/src/index.ts:228`）
+- **タイムアウトチェック間隔**: 30秒ごと（`server/src/index.ts:238`）
+- **クライアント側ハートビート間隔**: 30秒（`web/src/services/websocketService.ts:25`）
+- **ハートビート処理**: 正常に検証を通過（`server/src/middleware/websocketSecurity.ts:139`）
+- **lastMessageAt更新**: ハートビート受信時に正常に更新（`server/src/index.ts:484`）
+
+### ⚠️ 疑わしいポイント
+
+**ブラウザのコンソールログに何も出ていない**ことから、以下の可能性があります：
+
+1. **WebSocketのonmessageイベントが発火していない**
+   - `websocketService.ts:60-77` の `ws.onmessage` が呼ばれていない
+   - つまり、サーバーからメッセージは送信されているが、**ブラウザ側で受信できていない**
+
+2. **ハートビート開始との関連性**
+   - ハートビート開始タイミング（接続後30秒）で問題が発生
+   - `websocketService.ts:254-259` のハートビート送信処理に問題がある可能性
+
+3. **考えられる原因**
+   - ハートビート送信時にWebSocket接続が何らかの理由で中断
+   - ブラウザ側のWebSocketが`OPEN`状態を維持しているがメッセージを受信できない状態
+   - ネットワーク層での問題（プロキシ、ロードバランサー、Render等）
+
+## 関連ファイルと該当箇所
+
+### `web/src/services/websocketService.ts`
+- **L25**: `heartbeatInterval = 30000` (30秒)
+- **L47-48**: 接続成功時にハートビート開始
+- **L60-77**: onmessageハンドラー（ここでログが出るはずだが出ていない）
+- **L254-259**: ハートビート送信処理
+  ```typescript
+  this.heartbeatTimer = setInterval(() => {
+    if (this.isConnected()) {
+      console.log('[WebSocketService] Sending heartbeat');
+      this.send({ type: 'heartbeat' });
+    }
+  }, this.heartbeatInterval);
+  ```
+
+### `server/src/index.ts`
+- **L228**: `CLIENT_TIMEOUT_MS = 60 * 1000` (60秒)
+- **L229-238**: クライアントタイムアウトチェック（30秒ごと）
+  ```typescript
+  setInterval(() => {
+    const now = Date.now();
+    clients.forEach((clientData, ws) => {
+      const timeSinceLastMessage = now - clientData.lastMessageAt;
+      if (timeSinceLastMessage > CLIENT_TIMEOUT_MS) {
+        console.warn(`[WebSocket] Client timeout detected: ${clientData.userId} (${Math.floor(timeSinceLastMessage / 1000)}s since last message)`);
+        ws.close(1001, 'Client timeout');
+      }
+    });
+  }, 30 * 1000); // 30秒ごとにチェック
+  ```
+
+- **L484**: ハートビート受信時の`lastMessageAt`更新
+  ```typescript
+  // 最終メッセージ時刻を更新（タイムアウト検出用）
+  clientData.lastMessageAt = Date.now();
+  ```
+
+- **L486-489**: ハートビート処理（何もせずreturn）
+  ```typescript
+  // ハートビートメッセージは何もせず終了
+  if (payload.type === 'heartbeat') {
+    return;
+  }
+  ```
+
+- **L417-454**: messageHandler（Twitchチャットメッセージをクライアントに転送）
+  - 大量の[chatcheck]ログで動作を確認済み
+  - ws.send()は正常に完了している
+
+### `server/src/middleware/websocketSecurity.ts`
+- **L139**: `allowedTypes = ['subscribe', 'subscribe_streams', 'unsubscribe', 'heartbeat']`
+- **L137-157**: メッセージ検証関数
+  - ハートビートは正常に検証を通過
+
+### `web/src/utils/api.ts`
+- **L3-17**: backendOrigin の環境判定
+  - ローカル: localhost:5173 → localhost:4000
+  - ベータ: プロキシ経由（同一オリジン）
+  - 本番: api.fukumado.jp
+
+## 次回の調査方針
+
+### 優先度高：ブラウザ側WebSocketの状態を確認
+
+1. **websocketService.tsに詳細ログを追加**
+   ```typescript
+   // onmessage
+   this.ws.onmessage = (event) => {
+     console.log('[WebSocketService] <<<< MESSAGE RECEIVED >>>>');
+     console.log('[WebSocketService] Event:', event);
+     console.log('[WebSocketService] Data:', event.data);
+     // 既存の処理...
+   };
+
+   // onerror
+   this.ws.onerror = (error) => {
+     console.error('[WebSocketService] <<<< ERROR OCCURRED >>>>');
+     console.error('[WebSocketService] Error:', error);
+     // 既存の処理...
+   };
+
+   // onclose
+   this.ws.onclose = (event) => {
+     console.log('[WebSocketService] <<<< CONNECTION CLOSED >>>>');
+     console.log('[WebSocketService] Code:', event.code);
+     console.log('[WebSocketService] Reason:', event.reason);
+     console.log('[WebSocketService] Clean:', event.wasClean);
+     // 既存の処理...
+   };
+   ```
+
+2. **ハートビート送信の詳細ログ**
+   ```typescript
+   private startHeartbeat(): void {
+     // ...
+     this.heartbeatTimer = setInterval(() => {
+       console.log('[WebSocketService] ==== HEARTBEAT TICK ====');
+       console.log('[WebSocketService] isConnected:', this.isConnected());
+       console.log('[WebSocketService] readyState:', this.ws?.readyState);
+
+       if (this.isConnected()) {
+         console.log('[WebSocketService] Sending heartbeat...');
+         const result = this.send({ type: 'heartbeat' });
+         console.log('[WebSocketService] Heartbeat send result:', result);
+       } else {
+         console.warn('[WebSocketService] Cannot send heartbeat - not connected');
+       }
+     }, this.heartbeatInterval);
+   }
+   ```
+
+3. **send()メソッドの詳細ログ**
+   ```typescript
+   send(data: any): boolean {
+     console.log('[WebSocketService] ==== SEND CALLED ====');
+     console.log('[WebSocketService] WS exists:', !!this.ws);
+     console.log('[WebSocketService] ReadyState:', this.ws?.readyState);
+
+     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+       console.warn('[WebSocketService] Cannot send message: not connected');
+       return false;
+     }
+
+     try {
+       const message = typeof data === 'string' ? data : JSON.stringify(data);
+       console.log('[WebSocketService] About to send:', message);
+       this.ws.send(message);
+       console.log('[WebSocketService] Send completed successfully');
+       return true;
+     } catch (error) {
+       console.error('[WebSocketService] Error sending message:', error);
+       return false;
+     }
+   }
+   ```
+
+### 優先度中：ブラウザDevToolsで確認
+
+1. **Network タブ > WS (WebSocket)**
+   - WebSocket接続の詳細を確認
+   - Frames タブで送受信フレームを確認
+   - ハートビート送信後にフレームが停止しているか確認
+
+2. **Console タブ**
+   - 上記のログ追加後に再度確認
+   - エラーや警告がないか確認
+
+### 優先度低：回避策の検討
+
+1. **ハートビート間隔を変更**
+   - 30秒 → 15秒に短縮してタイムアウトを回避
+   - または60秒に延長して様子を見る
+
+2. **ハートビートを一時的に無効化**
+   - startHeartbeat()をコメントアウト
+   - タイムアウトとの関連を確認
+
+3. **Render固有の問題を調査**
+   - RenderのドキュメントでWebSocket関連の制限を確認
+   - タイムアウト設定やプロキシの動作を確認
+
+## 重要な観察事項
+
+**サーバー側は完全に正常** → 問題は以下のいずれかにある可能性が高い：
+1. **ブラウザ側のWebSocket受信処理**
+2. **WebSocket接続の中間ネットワーク層**（プロキシ、CDN、Render等）
+3. **ハートビート送信処理による副作用**
+
+## 過去の対応履歴
+
+### Render Blueprint エラー対応
+- **問題**: services[6].type changing service type not supported
+- **原因**: Renderは既存サービスのtype変更をサポートしない
+- **対応**: fukumado-web-beta → fukumado-web-beta-proxy にリネーム
+- **コミット**: e20a544
+
+### TypeScript ビルドエラー対応
+- **問題**: TMI.js の error イベントが型定義に存在しない
+- **原因**: TMI.js の TypeScript 型定義が不完全
+- **対応**: 型アサーション `(this.client as any).on('error', ...)` を使用
+- **コミット**: 75b4344
+
+### WebSocket 接続失敗対応
+- **問題**: 本番環境でWebSocket接続が失敗
+- **原因**: backendOrigin が全環境で同一オリジンを使用
+- **対応**: VITE_IS_BETA による環境判定を追加
+- **コミット**: 1b7f2fc
+
+### package-lock.json 同期エラー対応
+- **問題**: Renderビルドで依存関係の不一致
+- **対応**: npm install 実行してlock fileを更新
+- **コミット**: 905d0da
+
+## 補足：[chatcheck] ログについて
+
+調査用に追加した詳細ログ。以下の箇所に追加：
+- `server/src/services/twitchChatService.ts`: TMI.jsメッセージ受信時
+- `server/src/index.ts`: WebSocketメッセージハンドラー
+
+**現時点の結論**: これらのログは全て正常に出力されており、サーバー側の問題ではないことが確認された。
+
+---
+次回作業時はブラウザ側のWebSocketログを重点的に調査する必要がある。

@@ -74,7 +74,9 @@ function createPVCounterMiddleware(pvTracker) {
             // IPアドレスを取得
             const ip = getClientIP(req);
             // PVをカウント（非同期で実行、エラーでもブロックしない）
-            pvTracker.trackPageView(ip).catch((error) => {
+            pvTracker.trackPageView(ip, req.path, req.headers['referer'], userAgent, undefined, // userId (セッションから取得可能だが後で実装)
+            undefined // deviceType (User-Agentから判定可能だが後で実装)
+            ).catch((error) => {
                 console.error('[PVCounter] Error tracking page view:', error);
             });
             console.log('[PVCounter] Page view tracked:', {

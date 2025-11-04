@@ -38,6 +38,8 @@ const express_1 = require("express");
 const googleOAuth_1 = require("../utils/googleOAuth");
 const twitchOAuth_1 = require("../utils/twitchOAuth");
 const twitchService_1 = require("../services/twitchService");
+const userService_1 = require("../services/userService");
+const channelService_1 = require("../services/channelService");
 const env_1 = require("../config/env");
 exports.authRouter = (0, express_1.Router)();
 // Google OAuth
@@ -78,6 +80,12 @@ exports.authRouter.get('/google/callback', async (req, res) => {
             name: userInfo.name,
             picture: userInfo.picture
         };
+        // DBにユーザー情報とトークンを保存
+        await (0, userService_1.upsertGoogleUser)(userInfo, {
+            accessToken: tokenResponse.access_token,
+            refreshToken: tokenResponse.refresh_token,
+            expiryDate: Date.now() + tokenResponse.expires_in * 1000
+        });
         res.redirect('/auth/success');
     }
     catch (err) {
@@ -85,15 +93,37 @@ exports.authRouter.get('/google/callback', async (req, res) => {
         res.status(500).json({ error: message });
     }
 });
-exports.authRouter.get('/status', (req, res) => {
-    if (!req.session.googleTokens || !req.session.googleUser) {
+exports.authRouter.get('/status', async (req, res) => {
+    const hasGoogle = req.session.googleTokens && req.session.googleUser;
+    const hasTwitch = req.session.twitchTokens && req.session.twitchUser;
+    if (!hasGoogle && !hasTwitch) {
         return res.json({ authenticated: false });
     }
-    res.json({
-        authenticated: true,
-        user: req.session.googleUser,
-        scope: req.session.googleTokens.scope
-    });
+    try {
+        // ユーザーIDを取得（TwitchまたはGoogle）
+        const userId = req.session.twitchUser?.id || req.session.googleUser?.id;
+        // フォローチャンネルリストを取得
+        let followedChannels = [];
+        if (userId) {
+            followedChannels = await (0, channelService_1.getFollowedChannelsWithDetails)(userId);
+        }
+        res.json({
+            authenticated: true,
+            user: req.session.twitchUser || req.session.googleUser,
+            scope: req.session.twitchTokens?.scope || req.session.googleTokens?.scope,
+            followedChannels: followedChannels,
+        });
+    }
+    catch (error) {
+        console.error('[Auth Status] Error getting followed channels:', error);
+        // エラーがあってもステータスは返す
+        res.json({
+            authenticated: true,
+            user: req.session.twitchUser || req.session.googleUser,
+            scope: req.session.twitchTokens?.scope || req.session.googleTokens?.scope,
+            followedChannels: [],
+        });
+    }
 });
 exports.authRouter.post('/logout', (req, res) => {
     req.session.googleTokens = undefined;
@@ -157,6 +187,12 @@ exports.authRouter.get('/twitch/callback', async (req, res) => {
         console.log('[Twitch Callback] Session data set:', {
             hasTokens: !!req.session.twitchTokens,
             hasUser: !!req.session.twitchUser
+        });
+        // DBにユーザー情報とトークンを保存
+        await (0, userService_1.upsertTwitchUser)(userInfo, {
+            accessToken: tokenResponse.access_token,
+            refreshToken: tokenResponse.refresh_token,
+            expiryDate: Date.now() + tokenResponse.expires_in * 1000
         });
         // 管理ダッシュボード用の認証の場合
         const isAdminAuth = req.session.isAdminAuth;

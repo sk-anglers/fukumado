@@ -346,7 +346,79 @@ function useStreamUpdates(
 - **重複購読防止**: チャンネルとsessionIdが同じ場合は再送信しない
 - **グローバル接続**: WebSocket接続はグローバルで1つのみ（複数フック間で共有）
 
-## 7.12 フック設計のベストプラクティス
+## 7.12 useAnalytics (src/hooks/useAnalytics.ts)
+
+**目的**: ユーザー行動のアナリティクストラッキング
+
+### 機能
+
+```typescript
+export function useAnalytics() {
+  // セッション開始（アプリ起動時に1度だけ）
+  // 画面遷移を監視（popstate/hashchange）
+
+  // レイアウト変更を追跡
+  const trackLayout: (data: { preset: LayoutPreset; slotCount: number }) => void;
+
+  // ボタンクリックを追跡
+  const trackButton: (buttonType: ButtonType, metadata?: Record<string, any>) => void;
+
+  // 機能使用を追跡
+  const trackFeature: (featureType: FeatureType, metadata?: Record<string, any>) => void;
+
+  // 配信アクションを追跡
+  const trackStream: (data: { actionType: StreamActionType; platform: Platform; streamId?: string }) => void;
+
+  // 認証アクションを追跡
+  const trackAuth: (action: 'login' | 'logout' | 'failed', platform?: Platform) => void;
+
+  return { trackLayout, trackButton, trackFeature, trackStream, trackAuth };
+}
+```
+
+### 使用例
+
+```typescript
+const { trackButton, trackLayout, trackStream } = useAnalytics();
+
+// ボタンクリック追跡
+const handleClick = () => {
+  trackButton('fullscreen_toggle', { enabled: true });
+};
+
+// レイアウト変更追跡
+const handleLayoutChange = (preset: LayoutPreset) => {
+  trackLayout({ preset, slotCount: 4 });
+};
+
+// 配信アクション追跡
+const handleStreamAdd = (stream: Streamer) => {
+  trackStream({
+    actionType: 'add_stream',
+    platform: stream.platform,
+    streamId: stream.id
+  });
+};
+```
+
+### 追跡されるイベント
+
+- **レイアウト変更**: プリセット切り替え、スロット数変更
+- **ボタンクリック**: 全画面、ミュート、音量調整、検索など
+- **機能使用**: データ使用量表示、音声同期、通知設定など
+- **配信アクション**: 配信追加、削除、プラットフォーム切り替え
+- **認証アクション**: ログイン、ログアウト、認証失敗
+- **セッション**: セッション開始、ページビュー
+
+### 特徴
+
+- **自動セッション管理**: アプリ起動時にセッションを自動開始
+- **画面遷移監視**: popstate/hashchangeイベントを監視してページビューをカウント
+- **型安全**: すべてのイベントタイプが型定義されている
+- **メタデータサポート**: 各イベントに任意のメタデータを追加可能
+- **バックエンド送信**: アナリティクスデータはバックエンドに送信され、永続化される
+
+## 7.13 フック設計のベストプラクティス
 
 ### 単一責任の原則
 各フックは1つの明確な責務を持ちます。

@@ -26,6 +26,12 @@
 - **Persist Middleware**: Zustandの永続化ミドルウェア。
 - **Shallow Comparison**: 浅い比較（オブジェクトの第1レベルのみ比較）。
 - **Memoization**: 計算結果をキャッシュして再利用する最適化手法。
+- **EventSub**: Twitchのリアルタイムイベント通知システム。
+- **Conduit**: EventSubの大規模運用モード（最大100,000サブスクリプション）。
+- **Shard**: Conduit内の個別WebSocket接続単位。
+- **TTL (Time To Live)**: キャッシュの有効期限。
+- **Health Check**: サービス稼働状態の定期確認。
+- **Exponential Backoff**: 失敗時の再試行間隔を指数的に増やすパターン。
 
 ## 14.2 参考リンク
 
@@ -68,11 +74,41 @@ A: 現在、デスクトップ向けに最適化されています。モバイ�
 
 ## 14.4 バージョン履歴
 
+**注記**: 仕様書のバージョン番号は機能ベースで管理されています。実際のpackage.jsonのバージョンは以下の通りです：
+- `web/package.json`: 0.1.0
+- `server/package.json`: 1.0.0
+- `admin-web/package.json`: 1.0.0
+- `admin-server/package.json`: 1.0.0
+
+### v0.3.3 (最新) - 機能ベース
+- 負荷テスト実施（k6）とパフォーマンス最適化
+- レスポンシブ対応強化（MobileRestriction、UnsupportedBrowser）
+- モバイルデバイス対応改善
+
+### v0.3.2
+- Twitch EventSub Conduit統合（WebSocket接続数96%削減）
+- 動的チャンネル割り当て（DynamicChannelAllocator）
+- 優先度ベースのリソース管理（PriorityManager）
+- 多層キャッシング（エモート、フォローチャンネル、配信リスト）
+
+### v0.3.1
+- メンテナンスモード実装
+- Cookie同意管理（GDPR準拠）
+- 利用規約・プライバシーポリシー動的配信
+- 法的文書管理機能
+
+### v0.3.0
+- 管理者ダッシュボード実装（12タブ）
+- リアルタイムアナリティクスとPVトラッキング
+- 異常検知とセキュリティ監視強化
+- セキュリティレポート機能
+
 ### v0.2.1 (2025-10-26)
 - バックエンド駆動型アーキテクチャへの移行
 - StreamSyncServiceの実装
 - WebSocketによる配信リスト更新通知
 - キャッシング最適化（チャンネル検索: 5分TTL）
+- Twitchチャットヘルスチェック機能（接続安定化）
 
 ### v0.2.0
 - チャンネル検索のキャッシング実装

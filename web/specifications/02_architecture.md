@@ -33,19 +33,19 @@
 ┌────────────────────────────────────────────────────────────────────┐
 │                     Frontend (Vite + React)                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
-│  │  Components  │  │    Stores    │  │    Hooks     │             │
-│  │              │◄─┤  (Zustand)   │◄─┤              │             │
-│  │  - AppShell  │  │              │  │ - useStreamUp│             │
-│  │  - Header    │  │ - layout     │  │ - useTwitchCh│             │
-│  │  - Sidebar   │  │ - chat       │  │ - useAuth... │             │
-│  │  - Grid      │  │ - auth       │  │              │             │
-│  │  - ChatPanel │  │ - user       │  └──────────────┘             │
-│  │  - Footer    │  │ - sync       │                                │
-│  └──────────────┘  │ - notify     │  ┌──────────────┐             │
-│                     │ - dataUsage  │  │   Services   │             │
-│                     └──────────────┘  │              │             │
-│                                       │ - WebSocketSvc│             │
-│                                       │  (Singleton) │             │
+│  │  Components  │  │    Stores     │  │    Hooks     │             │
+│  │              │◄─┤  (Zustand)    │◄─┤              │             │
+│  │  - AppShell  │  │  9 stores:    │  │ - useStreamUp│             │
+│  │  - Header    │  │ - layout      │  │ - useTwitchCh│             │
+│  │  - Sidebar   │  │ - chat        │  │ - useAuth... │             │
+│  │  - Grid      │  │ - auth        │  │              │             │
+│  │  - ChatPanel │  │ - user        │  └──────────────┘             │
+│  │  - Footer    │  │ - sync        │                                │
+│  └──────────────┘  │ - notification│  ┌──────────────┐             │
+│                     │ - dataUsage   │  │   Services   │             │
+│                     │ - maintenance │  │              │             │
+│                     │ - mobileMenu  │  │ - WebSocketSvc│             │
+│                     └───────────────┘  │  (Singleton) │             │
 │                                       │  ※Strict Mode│             │
 │                                       │    対応      │             │
 │                                       └──────────────┘             │
@@ -57,30 +57,43 @@
 │                    Backend (Node.js + Express)                      │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                     Routes (API Endpoints)                    │  │
+│  │                 Routes (API Endpoints) - 15ルート             │  │
 │  │  ┌────────────┐  ┌────────────┐  ┌────────────┐              │  │
 │  │  │   /auth    │  │/api/youtube│  │/api/twitch │              │  │
 │  │  │  OAuth2.0  │  │   (3 EPs)  │  │  (13 EPs)  │              │  │
 │  │  └────────────┘  └────────────┘  └────────────┘              │  │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐              │  │
+│  │  │ /api/admin │  │/api/streams│  │ /api/users │              │  │
+│  │  │(管理API)   │  │(配信管理)  │  │(ユーザー)  │              │  │
+│  │  └────────────┘  └────────────┘  └────────────┘              │  │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐              │  │
+│  │  │/api/eventsub│ │/api/analytics│ │/api/security│            │  │
+│  │  │(EventSub)  │  │(分析)      │  │(監視)      │              │  │
+│  │  └────────────┘  └────────────┘  └────────────┘              │  │
+│  │  他: maintenance, cache, consent, legal, logs                 │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                        Services                               │  │
-│  │  ┌─────────────────┐  ┌──────────────┐  ┌────────────────┐  │  │
-│  │  │ StreamSyncSvc   │  │ TwitchChatSvc│  │  CacheSvc      │  │  │
-│  │  │  (60s間隔)      │  │  (tmi.js)    │  │  (Redis)       │  │  │
-│  │  │  - YouTube同期  │  │  - IRC接続   │  │  - TTL管理     │  │  │
-│  │  │  - Twitch同期   │  │  - メッセージ│  │                │  │  │
-│  │  │  - 差分検出     │  │  - バッジ取得│  └────────────────┘  │  │
-│  │  │  - forceNotify  │  │              │                      │  │
-│  │  │  - WebSocket通知│  │              │                      │  │
-│  │  └─────────────────┘  └──────────────┘  ┌────────────────┐  │  │
-│  │                                          │ TokenStorage   │  │  │
-│  │  ┌─────────────────┐  ┌──────────────┐  │  (sessionId→   │  │  │
-│  │  │ YouTubeService  │  │ TwitchService│  │   tokens)      │  │  │
-│  │  │  - API呼び出し  │  │  - バッチ処理│  └────────────────┘  │  │
-│  │  │  - レート制限   │  │  - 100件/回  │                      │  │
-│  │  └─────────────────┘  └──────────────┘                      │  │
+│  │                    Services (26サービス)                      │  │
+│  │  【コア】                                                      │  │
+│  │  StreamSyncSvc, TwitchChatSvc, CacheSvc                      │  │
+│  │  YouTubeService, TwitchService, TokenStorage                 │  │
+│  │                                                                │  │
+│  │  【EventSub/Conduit】                                         │  │
+│  │  TwitchConduitManager, EventSubManager, EventSubConnection   │  │
+│  │  DynamicChannelAllocator, PriorityManager                    │  │
+│  │                                                                │  │
+│  │  【キャッシング】                                              │  │
+│  │  EmoteCacheSvc, FollowedChannelsCacheSvc, LiveStreamsCacheSvc│  │
+│  │                                                                │  │
+│  │  【アナリティクス】                                            │  │
+│  │  AnalyticsTracker, PVTracker, MetricsCollector               │  │
+│  │                                                                │  │
+│  │  【セキュリティ】                                              │  │
+│  │  AnomalyDetection, SecurityReporter                          │  │
+│  │                                                                │  │
+│  │  【その他】                                                    │  │
+│  │  MaintenanceSvc, ConsentManager, SystemMetricsCollector      │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐  │
@@ -119,13 +132,15 @@
 - **現在**: バックエンドが60秒間隔で配信同期 → フロントエンドはWebSocketで通知受信
 - **利点**: API呼び出し回数削減、複数ユーザー間でキャッシュ共有
 
-#### キャッシング戦略
+#### キャッシング戦略（多層キャッシュ）
 | 対象 | 方式 | TTL | 実装場所 |
 |---|---|---|---|
-| 配信リスト（全プラットフォーム） | Redis | 70秒 | StreamSyncService |
+| 配信リスト（全プラットフォーム） | Redis | 70秒 | LiveStreamsCacheService |
+| フォローチャンネル | Redis | 5分 | FollowedChannelsCacheService |
+| エモート（グローバル） | Redis | 24時間 | EmoteCacheService |
+| エモート（チャンネル） | Redis | 1時間 | EmoteCacheService |
 | 配信情報（個別リクエスト） | メモリ | 60秒 | twitch.ts, youtube.ts |
 | チャンネル検索結果 | メモリ | 5分 | twitch.ts, youtube.ts |
-| エモート（グローバル/チャンネル） | なし | - | 今後の改善課題 |
 
 #### TokenStorage パターン
 - **課題**: HTTPセッションとWebSocketでトークン共有が必要
