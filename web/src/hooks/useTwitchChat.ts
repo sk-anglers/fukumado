@@ -104,6 +104,17 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
             isVip: message.isVip
           };
 
+          // 重複チェック：最近送信したメッセージかどうか確認
+          const isDuplicate = useChatStore.getState().isDuplicateSentMessage(
+            chatMessage.message,
+            chatMessage.author
+          );
+
+          if (isDuplicate) {
+            console.log('[useTwitchChat] Skipping duplicate sent message:', chatMessage.message);
+            return;
+          }
+
           console.log('[useTwitchChat] Adding chat message to store:', chatMessage);
           // getState()を使用してストアのアクションを直接呼び出す（再レンダリング防止）
           useChatStore.getState().addMessage(chatMessage);

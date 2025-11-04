@@ -74,13 +74,15 @@ const filterLabels: Record<ChatFilter, string> = {
 };
 
 export const ChatPanel = (): JSX.Element => {
-  const { filter, messages, setFilter, highlightedCount, selectedChannelId, setSelectedChannelId } = useChatStore((state) => ({
+  const { filter, messages, setFilter, highlightedCount, selectedChannelId, setSelectedChannelId, addMessage, addSentMessage } = useChatStore((state) => ({
     filter: state.filter,
     messages: state.messages,
     setFilter: state.setFilter,
     highlightedCount: state.highlightedCount,
     selectedChannelId: state.selectedChannelId,
-    setSelectedChannelId: state.setSelectedChannelId
+    setSelectedChannelId: state.setSelectedChannelId,
+    addMessage: state.addMessage,
+    addSentMessage: state.addSentMessage
   }));
 
   const twitchUser = useAuthStore((state) => state.twitchUser);
@@ -164,8 +166,36 @@ export const ChatPanel = (): JSX.Element => {
         throw new Error(errorData.error || 'メッセージの送信に失敗しました');
       }
 
+      // レスポンスからエモート情報を取得
+      const responseData = await response.json();
+      const emotes = responseData.emotes || [];
+
+      // 送信したメッセージをチャットストアに追加
+      if (selectedStream.platform === 'twitch' && twitchUser) {
+        const messageId = `sent-${Date.now()}-${Math.random()}`;
+        const sentMessage: ChatMessage = {
+          id: messageId,
+          platform: 'twitch',
+          author: twitchUser.displayName,
+          message: messageInput.trim(),
+          timestamp: new Date().toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Tokyo'
+          }),
+          avatarColor: getRandomColor(),
+          channelName: selectedStream.displayName || selectedStream.channelLogin,
+          emotes: emotes.length > 0 ? emotes : undefined
+        };
+
+        // 送信したメッセージをキャッシュに追加（重複防止用）
+        addSentMessage(messageInput.trim(), twitchUser.displayName);
+
+        // メッセージを表示
+        addMessage(sentMessage);
+      }
+
       // 送信成功：入力欄をクリア
-      // Note: 送信したメッセージはサーバーから返ってくるメッセージとして表示される
       setMessageInput('');
     } catch (error) {
       console.error('[ChatPanel] メッセージ送信エラー:', error);
