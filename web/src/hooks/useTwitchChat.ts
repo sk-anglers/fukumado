@@ -15,7 +15,6 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
   const wsRef = useRef<WebSocket | null>(null);
   const previousChannelsRef = useRef<string>('');
   const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const addMessage = useChatStore((state) => state.addMessage);
 
   // チャンネルリストを文字列化して比較用に保持
   const channelsKey = JSON.stringify(channels.map(ch => ch.login).sort());
@@ -72,15 +71,18 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
+          console.log('[useTwitchChat] Received message:', message);
 
           // チャットメッセージのみを処理（typeフィールドがない、またはplatformがtwitchのメッセージ）
           // EventSub通知、配信リスト更新、優先度変更などは無視する
           if (message.type && message.type !== 'chat') {
+            console.log('[useTwitchChat] Ignoring non-chat message:', message.type);
             return;
           }
 
           // チャットメッセージかどうかを確認（platformまたはchannelLoginフィールドの存在）
           if (!message.platform && !message.channelLogin) {
+            console.log('[useTwitchChat] Ignoring message without platform/channelLogin');
             return;
           }
 
@@ -102,7 +104,9 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
             isVip: message.isVip
           };
 
-          addMessage(chatMessage);
+          console.log('[useTwitchChat] Adding chat message to store:', chatMessage);
+          // getState()を使用してストアのアクションを直接呼び出す（再レンダリング防止）
+          useChatStore.getState().addMessage(chatMessage);
         } catch (error) {
           console.error('[useTwitchChat] Error parsing message:', error);
         }
@@ -135,7 +139,7 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
     return () => {
       // チャンネル変更時には切断しない
     };
-  }, [channelsKey, channels, addMessage]);
+  }, [channelsKey, channels]);
 
   // コンポーネントアンマウント時のクリーンアップ
   useEffect(() => {

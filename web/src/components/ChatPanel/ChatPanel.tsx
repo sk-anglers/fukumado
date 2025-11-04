@@ -74,14 +74,13 @@ const filterLabels: Record<ChatFilter, string> = {
 };
 
 export const ChatPanel = (): JSX.Element => {
-  const { filter, messages, setFilter, highlightedCount, selectedChannelId, setSelectedChannelId, addMessage } = useChatStore((state) => ({
+  const { filter, messages, setFilter, highlightedCount, selectedChannelId, setSelectedChannelId } = useChatStore((state) => ({
     filter: state.filter,
     messages: state.messages,
     setFilter: state.setFilter,
     highlightedCount: state.highlightedCount,
     selectedChannelId: state.selectedChannelId,
-    setSelectedChannelId: state.setSelectedChannelId,
-    addMessage: state.addMessage
+    setSelectedChannelId: state.setSelectedChannelId
   }));
 
   const twitchUser = useAuthStore((state) => state.twitchUser);
@@ -165,30 +164,8 @@ export const ChatPanel = (): JSX.Element => {
         throw new Error(errorData.error || 'メッセージの送信に失敗しました');
       }
 
-      // レスポンスからエモート情報を取得
-      const responseData = await response.json();
-      const emotes = responseData.emotes || [];
-
-      // 送信したメッセージをチャットストアに追加
-      if (selectedStream.platform === 'twitch' && twitchUser) {
-        const sentMessage: ChatMessage = {
-          id: `${Date.now()}-${Math.random()}`,
-          platform: 'twitch',
-          author: twitchUser.displayName,
-          message: messageInput.trim(),
-          timestamp: new Date().toLocaleTimeString('ja-JP', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'Asia/Tokyo'
-          }),
-          avatarColor: getRandomColor(),
-          channelName: selectedStream.displayName || selectedStream.channelLogin,
-          emotes: emotes.length > 0 ? emotes : undefined
-        };
-        addMessage(sentMessage);
-      }
-
       // 送信成功：入力欄をクリア
+      // Note: 送信したメッセージはサーバーから返ってくるメッセージとして表示される
       setMessageInput('');
     } catch (error) {
       console.error('[ChatPanel] メッセージ送信エラー:', error);

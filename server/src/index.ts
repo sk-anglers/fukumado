@@ -465,6 +465,7 @@ wss.on('connection', (ws, request) => {
       // channelLoginをdisplayNameに変換
       const displayName = clientData.channelMapping[message.channelLogin] || message.channelLogin;
       const payload = JSON.stringify({
+        type: 'chat',
         ...message,
         channelName: displayName
       });
