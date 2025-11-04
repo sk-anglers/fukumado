@@ -6,8 +6,14 @@ import { getWebSocketStats, pvTracker, analyticsTracker, streamSyncService } fro
 import { systemMetricsCollector } from '../services/systemMetricsCollector';
 import { priorityManager } from '../services/priorityManager';
 import { ipBlocklist } from '../middleware/security';
+import { SystemMetricsService } from '../services/systemMetricsService';
+import { DatabaseMetricsService } from '../services/databaseMetricsService';
 
 export const adminRouter = Router();
+
+// インスタンス作成
+const systemMetricsService = new SystemMetricsService();
+const databaseMetricsService = new DatabaseMetricsService();
 
 /**
  * GET /api/admin/system/metrics
@@ -710,6 +716,130 @@ adminRouter.post('/security/remove-from-whitelist', async (req: Request, res: Re
     });
   } catch (error) {
     console.error('[Admin] Error removing IP from whitelist:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ========================================
+// データベースメトリクスAPI
+// ========================================
+
+/**
+ * GET /api/admin/database/stats
+ * データベース統計情報を取得
+ */
+adminRouter.get('/database/stats', async (req: Request, res: Response) => {
+  try {
+    const stats = await databaseMetricsService.getDatabaseStats();
+
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting database stats:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/database/connections
+ * データベース接続情報を取得
+ */
+adminRouter.get('/database/connections', async (req: Request, res: Response) => {
+  try {
+    const connections = await databaseMetricsService.getConnectionStats();
+
+    res.json({
+      success: true,
+      data: connections,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting database connections:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/database/tables
+ * テーブル統計情報を取得
+ */
+adminRouter.get('/database/tables', async (req: Request, res: Response) => {
+  try {
+    const tables = await databaseMetricsService.getTableStats();
+
+    res.json({
+      success: true,
+      data: tables,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting database tables:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/database/queries
+ * アクティブなクエリを取得
+ */
+adminRouter.get('/database/queries', async (req: Request, res: Response) => {
+  try {
+    const queries = await databaseMetricsService.getActiveQueries();
+
+    res.json({
+      success: true,
+      data: queries,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting active queries:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/system/detailed-metrics
+ * 詳細なシステムメトリクスを取得（CPU、メモリ、ロードアベレージ）
+ */
+adminRouter.get('/system/detailed-metrics', (req: Request, res: Response) => {
+  try {
+    const metrics = systemMetricsService.getSystemMetrics();
+
+    res.json({
+      success: true,
+      data: metrics,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting detailed system metrics:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       success: false,
