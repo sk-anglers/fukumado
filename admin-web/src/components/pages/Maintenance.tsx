@@ -5,7 +5,8 @@ import {
   enableMaintenance as apiEnableMaintenance,
   disableMaintenance as apiDisableMaintenance,
   migrateSeverity,
-  migrateAuditLogsTable
+  migrateAuditLogsTable,
+  migrateAlertsTable
 } from '../../services/apiClient';
 import { MaintenanceStatus as MaintenanceStatusType } from '../../types';
 import styles from './Maintenance.module.css';
@@ -106,6 +107,24 @@ export const Maintenance: React.FC = () => {
       setIsSubmitting(true);
       await migrateAuditLogsTable();
       alert('マイグレーションが正常に完了しました。\naudit_logsテーブルが作成されました。');
+    } catch (error) {
+      console.error('Failed to run migration:', error);
+      const message = error instanceof Error ? error.message : 'マイグレーションの実行に失敗しました';
+      alert(`エラー: ${message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMigrateAlertsTable = async () => {
+    if (!confirm('alerts と alert_settings テーブルを作成します。\n\nこの操作により、アラート・通知機能が利用可能になります。\n実行しますか？')) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await migrateAlertsTable();
+      alert('マイグレーションが正常に完了しました。\nalertsとalert_settingsテーブルが作成されました。');
     } catch (error) {
       console.error('Failed to run migration:', error);
       const message = error instanceof Error ? error.message : 'マイグレーションの実行に失敗しました';
@@ -328,6 +347,32 @@ export const Maintenance: React.FC = () => {
           <Button
             variant="primary"
             onClick={handleMigrateAuditLogsTable}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? '実行中...' : 'テーブルを作成'}
+          </Button>
+        </Card>
+
+        <Card title="アラートテーブルの作成">
+          <p className={styles.description}>
+            システムアラート・通知を管理するためのalertsとalert_settingsテーブルを作成します。
+          </p>
+          <p className={styles.description}>
+            アラート・通知機能を利用する前に、このマイグレーションを実行してください。
+          </p>
+          <div className={styles.info}>
+            <h4>実行内容</h4>
+            <ul className={styles.notesList}>
+              <li>alertsテーブルを作成（アラート一覧）</li>
+              <li>alert_settingsテーブルを作成（設定）</li>
+              <li>デフォルト設定を挿入</li>
+              <li>必要なインデックスを作成</li>
+              <li>システム監視とアラート通知が可能になります</li>
+            </ul>
+          </div>
+          <Button
+            variant="primary"
+            onClick={handleMigrateAlertsTable}
             disabled={isSubmitting}
           >
             {isSubmitting ? '実行中...' : 'テーブルを作成'}
