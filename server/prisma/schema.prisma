@@ -329,3 +329,39 @@ model Session {
   @@index([userId])
   @@map("sessions")
 }
+
+// ============================================
+// Audit Log (監査ログ)
+// ============================================
+
+model AuditLog {
+  id BigInt @id @default(autoincrement())
+
+  // 操作情報
+  action     String  @db.VarChar(100)  // 操作種別
+  actor      String  @db.VarChar(255)  // 操作者（管理者名、IPアドレス等）
+  actorIp    String  @map("actor_ip") @db.VarChar(45)
+  actorAgent String? @map("actor_agent") @db.Text  // User-Agent
+
+  // 対象情報
+  targetType String  @map("target_type") @db.VarChar(50)  // system, cache, database, maintenance等
+  targetId   String? @map("target_id") @db.VarChar(255)   // 対象のID（オプション）
+
+  // 詳細情報
+  details Json?  // 操作の詳細（JSONで保存）
+
+  // 結果
+  status       String  @db.VarChar(20)  // success, failure
+  errorMessage String? @map("error_message") @db.Text  // エラーメッセージ（失敗時）
+
+  // メタデータ
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([action, createdAt(sort: Desc)])
+  @@index([actor, createdAt(sort: Desc)])
+  @@index([actorIp, createdAt(sort: Desc)])
+  @@index([targetType, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}

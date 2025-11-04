@@ -8,6 +8,7 @@ import { priorityManager } from '../services/priorityManager';
 import { ipBlocklist } from '../middleware/security';
 import { SystemMetricsService } from '../services/systemMetricsService';
 import { DatabaseMetricsService } from '../services/databaseMetricsService';
+import { auditLogService } from '../services/auditLogService';
 import prisma from '../services/prismaService';
 
 export const adminRouter = Router();
@@ -855,6 +856,9 @@ adminRouter.get('/system/detailed-metrics', (req: Request, res: Response) => {
  * security_logs の severity 制約を修正（warn を許可）
  */
 adminRouter.post('/database/migrate-severity', async (req: Request, res: Response) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const userAgent = req.headers['user-agent'];
+
   try {
     console.log('[Admin] Running severity constraint migration...');
 
@@ -871,6 +875,18 @@ adminRouter.post('/database/migrate-severity', async (req: Request, res: Respons
     `);
     console.log('[Admin] ✓ Added new constraint (allows: info, warn, error)');
 
+    // 監査ログ記録
+    await auditLogService.log({
+      action: 'database_migration_severity',
+      actor: 'admin',
+      actorIp: ip,
+      actorAgent: userAgent,
+      targetType: 'database',
+      targetId: 'security_logs',
+      details: { migration: 'severity_constraint', allowedValues: ['info', 'warn', 'error'] },
+      status: 'success'
+    });
+
     res.json({
       success: true,
       data: {
@@ -882,6 +898,231 @@ adminRouter.post('/database/migrate-severity', async (req: Request, res: Respons
   } catch (error) {
     console.error('[Admin] Error running migration:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
+
+    // 監査ログ記録（失敗）
+    await auditLogService.log({
+      action: 'database_migration_severity',
+      actor: 'admin',
+      actorIp: ip,
+      actorAgent: userAgent,
+      targetType: 'database',
+      targetId: 'security_logs',
+      status: 'failure',
+      errorMessage: message
+    });
+
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ============================================
+// 監査ログ (Audit Log)
+// ============================================
+
+/**
+ * GET /api/admin/audit-logs
+ * 監査ログ一覧を取得
+ */
+adminRouter.get('/audit-logs', async (req: Request, res: Response) => {
+  try {
+    const {
+      limit,
+      offset,
+      action,
+      actor,
+      actorIp,
+      targetType,
+      status,
+      startDate,
+      endDate
+    } = req.query;
+
+    const options: any = {};
+    if (limit) options.limit = parseInt(limit as string);
+    if (offset) options.offset = parseInt(offset as string);
+    if (action) options.action = action as string;
+    if (actor) options.actor = actor as string;
+    if (actorIp) options.actorIp = actorIp as string;
+    if (targetType) options.targetType = targetType as string;
+    if (status) options.status = status as 'success' | 'failure';
+    if (startDate) options.startDate = new Date(startDate as string);
+    if (endDate) options.endDate = new Date(endDate as string);
+
+    const result = await auditLogService.getLogs(options);
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting audit logs:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/audit-logs/summary
+ * 監査ログサマリーを取得
+ */
+adminRouter.get('/audit-logs/summary', async (req: Request, res: Response) => {
+  try {
+    const days = req.query.days ? parseInt(req.query.days as string) : 7;
+    const summary = await auditLogService.getSummary(days);
+
+    res.json({
+      success: true,
+      data: summary,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting audit log summary:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/audit-logs/cleanup
+ * 古い監査ログをクリーンアップ
+ */
+adminRouter.post('/audit-logs/cleanup', async (req: Request, res: Response) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const userAgent = req.headers['user-agent'];
+
+  try {
+    const { days = 90 } = req.body;
+    const deletedCount = await auditLogService.cleanup(days);
+
+    // 監査ログ記録
+    await auditLogService.log({
+      action: 'audit_log_cleanup',
+      actor: 'admin',
+      actorIp: ip,
+      actorAgent: userAgent,
+      targetType: 'system',
+      details: { days, deletedCount },
+      status: 'success'
+    });
+
+    res.json({
+      success: true,
+      data: { deletedCount, days },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error cleaning up audit logs:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    // 監査ログ記録（失敗）
+    await auditLogService.log({
+      action: 'audit_log_cleanup',
+      actor: 'admin',
+      actorIp: ip,
+      actorAgent: userAgent,
+      targetType: 'system',
+      status: 'failure',
+      errorMessage: message
+    });
+
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/database/migrate-audit-logs
+ * audit_logsテーブルを作成（初回セットアップ用）
+ */
+adminRouter.post('/database/migrate-audit-logs', async (req: Request, res: Response) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const userAgent = req.headers['user-agent'];
+
+  try {
+    console.log('[Admin] Creating audit_logs table...');
+
+    // テーブル作成SQL実行
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id BIGSERIAL PRIMARY KEY,
+        action VARCHAR(100) NOT NULL,
+        actor VARCHAR(255) NOT NULL,
+        actor_ip VARCHAR(45) NOT NULL,
+        actor_agent TEXT,
+        target_type VARCHAR(50) NOT NULL,
+        target_id VARCHAR(255),
+        details JSONB,
+        status VARCHAR(20) NOT NULL,
+        error_message TEXT,
+        created_at TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('[Admin] ✓ Created audit_logs table');
+
+    // インデックス作成
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_action_created_at ON audit_logs(action, created_at DESC);
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_created_at ON audit_logs(actor, created_at DESC);
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_ip_created_at ON audit_logs(actor_ip, created_at DESC);
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_target_type_created_at ON audit_logs(target_type, created_at DESC);
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_status_created_at ON audit_logs(status, created_at DESC);
+    `);
+    console.log('[Admin] ✓ Created indexes');
+
+    // Prisma Clientを再生成（非同期で実行、応答には含めない）
+    console.log('[Admin] Note: Run "npx prisma generate" to update Prisma Client');
+
+    // 初回の監査ログを記録（テーブルが作成されたので記録可能）
+    await auditLogService.log({
+      action: 'database_migration_audit_logs',
+      actor: 'admin',
+      actorIp: ip,
+      actorAgent: userAgent,
+      targetType: 'database',
+      targetId: 'audit_logs',
+      details: { migration: 'create_audit_logs_table' },
+      status: 'success'
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Audit logs table created successfully',
+        note: 'Run "npx prisma generate" to update Prisma Client'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error creating audit_logs table:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
     res.status(500).json({
       success: false,
       error: message,
