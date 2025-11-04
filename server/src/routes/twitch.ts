@@ -9,6 +9,7 @@ import { tokenStorage, streamSyncService } from '../services/streamSyncService';
 import { priorityManager } from '../services/priorityManager';
 import { dynamicChannelAllocator } from '../services/dynamicChannelAllocator';
 import { followedChannelsCacheService } from '../services/followedChannelsCacheService';
+import { upsertTwitchChannels, searchChannelsInDB } from '../services/channelService';
 import { env } from '../config/env';
 
 export const twitchRouter = Router();
@@ -121,10 +122,24 @@ twitchRouter.get('/channels', async (req, res) => {
       return res.json(cached.data);
     }
 
-    // キャッシュミス - APIから取得
-    console.log(`[Twitch Channel Search Cache] キャッシュミス: "${query}" - APIから取得します`);
-    const maxResults = maxResultsParam ? Number(maxResultsParam) : undefined;
-    const channels = await searchChannels(accessToken, query, maxResults);
+    // キャッシュミス - まずDBから検索
+    console.log(`[Twitch Channel Search Cache] キャッシュミス: "${query}" - まずDBから検索します`);
+    const maxResults = maxResultsParam ? Number(maxResultsParam) : 20;
+    let channels = await searchChannelsInDB(query, maxResults);
+
+    // DB検索結果が少ない場合はAPIから取得
+    if (channels.length < 5) {
+      console.log(`[Twitch Channel Search] DB検索結果が少ないためAPIから取得: ${channels.length}件`);
+      channels = await searchChannels(accessToken, query, maxResults);
+
+      // 検索結果をDBに保存（非同期）
+      upsertTwitchChannels(channels).catch(err => {
+        console.error('[Twitch Channel Search] Failed to save channels to DB:', err);
+      });
+    } else {
+      console.log(`[Twitch Channel Search] DB検索成功: ${channels.length}件`);
+    }
+
     const responseData = { items: channels };
 
     // キャッシュに保存

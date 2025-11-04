@@ -19,6 +19,8 @@ services:
         value: production
       - key: SESSION_SECRET
         generateValue: true # 自動生成
+      - key: DATABASE_URL
+        sync: false # Renderダッシュボードで手動設定（PostgreSQL接続文字列）
       - key: REDIS_URL
         sync: false # Renderダッシュボードで手動設定
       - key: FRONTEND_URL
@@ -63,6 +65,8 @@ services:
         value: admin
       - key: ADMIN_PASSWORD
         sync: false # Renderダッシュボードで手動設定（強力なパスワード）
+      - key: DATABASE_URL
+        sync: false # Renderダッシュボードで手動設定（PostgreSQL接続文字列）
       - key: REDIS_URL
         sync: false # Renderダッシュボードで手動設定
       - key: MAIN_BACKEND_URL
@@ -139,6 +143,8 @@ services:
         value: production
       - key: SESSION_SECRET
         generateValue: true # 自動生成
+      - key: DATABASE_URL
+        sync: false # Renderダッシュボードで手動設定（PostgreSQL接続文字列）
       - key: REDIS_URL
         sync: false # Renderダッシュボードで手動設定
       - key: FRONTEND_URL
@@ -183,6 +189,8 @@ services:
         value: admin
       - key: ADMIN_PASSWORD
         sync: false # Renderダッシュボードで手動設定（強力なパスワード）
+      - key: DATABASE_URL
+        sync: false # Renderダッシュボードで手動設定（PostgreSQL接続文字列）
       - key: REDIS_URL
         sync: false # Renderダッシュボードで手動設定
       - key: MAIN_BACKEND_URL

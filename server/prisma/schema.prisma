@@ -1,0 +1,319 @@
+// Prisma Schema for ふくまど！
+// Version: 1.0.0
+// PostgreSQL 15+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// User Management
+// ============================================
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Platform IDs
+  youtubeUserId String? @unique @map("youtube_user_id") @db.VarChar(255)
+  twitchUserId  String? @unique @map("twitch_user_id") @db.VarChar(255)
+
+  // Basic Info
+  displayName String  @map("display_name") @db.VarChar(255)
+  email       String? @db.VarChar(255)
+  avatarUrl   String? @map("avatar_url") @db.Text
+
+  // OAuth Tokens (YouTube)
+  youtubeAccessToken    String?   @map("youtube_access_token") @db.Text
+  youtubeRefreshToken   String?   @map("youtube_refresh_token") @db.Text
+  youtubeTokenExpiresAt DateTime? @map("youtube_token_expires_at") @db.Timestamptz(6)
+
+  // OAuth Tokens (Twitch)
+  twitchAccessToken    String?   @map("twitch_access_token") @db.Text
+  twitchRefreshToken   String?   @map("twitch_refresh_token") @db.Text
+  twitchTokenExpiresAt DateTime? @map("twitch_token_expires_at") @db.Timestamptz(6)
+
+  // Metadata
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz(6)
+
+  // Relations
+  followedChannels FollowedChannel[]
+  pageViews        PageView[]
+  analyticsEvents  AnalyticsEvent[]
+  securityLogs     SecurityLog[]
+  userPreferences  UserPreference?
+  sessions         Session[]
+
+  @@map("users")
+}
+
+// ============================================
+// Channel Management
+// ============================================
+
+model Channel {
+  id        BigInt @id @default(autoincrement())
+  platform  String @db.VarChar(20)
+  channelId String @map("channel_id") @db.VarChar(255)
+
+  // Basic Info
+  displayName String  @map("display_name") @db.VarChar(255)
+  username    String? @db.VarChar(255)
+  description String? @db.Text
+  avatarUrl   String? @map("avatar_url") @db.Text
+  bannerUrl   String? @map("banner_url") @db.Text
+
+  // Statistics
+  subscriberCount Int    @default(0) @map("subscriber_count")
+  followerCount   Int    @default(0) @map("follower_count")
+  viewCount       BigInt @default(0) @map("view_count")
+  videoCount      Int    @default(0) @map("video_count")
+
+  // Live Status
+  isLive              Boolean @default(false) @map("is_live")
+  currentStreamId     String? @map("current_stream_id") @db.VarChar(255)
+  currentStreamTitle  String? @map("current_stream_title") @db.Text
+  currentViewerCount  Int?    @map("current_viewer_count")
+
+  // Metadata
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastSyncedAt   DateTime @default(now()) @map("last_synced_at") @db.Timestamptz(6)
+  lastAccessedAt DateTime @default(now()) @map("last_accessed_at") @db.Timestamptz(6)
+
+  @@unique([platform, channelId])
+  @@index([platform])
+  @@index([platform, isLive, followerCount])
+  @@index([platform, followerCount])
+  @@index([platform, displayName])
+  @@index([lastSyncedAt])
+  @@index([lastAccessedAt])
+  @@map("channels")
+}
+
+// ============================================
+// Follow Management
+// ============================================
+
+model FollowedChannel {
+  id        BigInt  @id @default(autoincrement())
+  userId    String  @map("user_id") @db.Uuid
+  platform  String  @db.VarChar(20)
+  channelId String  @map("channel_id") @db.VarChar(255)
+
+  // Metadata
+  followedAt         DateTime  @default(now()) @map("followed_at") @db.Timestamptz(6)
+  lastNotifiedAt     DateTime? @map("last_notified_at") @db.Timestamptz(6)
+  notificationEnabled Boolean  @default(true) @map("notification_enabled")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform, channelId])
+  @@index([userId])
+  @@index([platform, channelId])
+  @@index([userId, notificationEnabled])
+  @@map("followed_channels")
+}
+
+// ============================================
+// Emote Management
+// ============================================
+
+model Emote {
+  id        BigInt @id @default(autoincrement())
+  platform  String @db.VarChar(20)
+  emoteId   String @map("emote_id") @db.VarChar(255)
+  emoteCode String @map("emote_code") @db.VarChar(255)
+
+  // Scope
+  scope     String  @db.VarChar(20)
+  channelId String? @map("channel_id") @db.VarChar(255)
+
+  // Image URLs
+  imageUrl1x String  @map("image_url_1x") @db.Text
+  imageUrl2x String? @map("image_url_2x") @db.Text
+  imageUrl4x String? @map("image_url_4x") @db.Text
+
+  // Metadata
+  emoteType String? @map("emote_type") @db.VarChar(50)
+  tier      String? @db.VarChar(10)
+
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at") @db.Timestamptz(6)
+
+  @@unique([platform, emoteId])
+  @@index([platform, scope])
+  @@index([platform, channelId, scope])
+  @@index([emoteCode])
+  @@index([lastSyncedAt])
+  @@map("emotes")
+}
+
+// ============================================
+// Badge Management
+// ============================================
+
+model Badge {
+  id           BigInt @id @default(autoincrement())
+  platform     String @db.VarChar(20)
+  badgeSetId   String @map("badge_set_id") @db.VarChar(255)
+  badgeVersion String @map("badge_version") @db.VarChar(50)
+
+  // Scope
+  scope     String  @db.VarChar(20)
+  channelId String? @map("channel_id") @db.VarChar(255)
+
+  // Image URLs
+  imageUrl1x String  @map("image_url_1x") @db.Text
+  imageUrl2x String? @map("image_url_2x") @db.Text
+  imageUrl4x String? @map("image_url_4x") @db.Text
+
+  // Metadata
+  title       String? @db.VarChar(255)
+  description String? @db.Text
+
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at") @db.Timestamptz(6)
+
+  @@unique([platform, badgeSetId, badgeVersion, channelId])
+  @@index([platform, scope])
+  @@index([platform, channelId])
+  @@map("badges")
+}
+
+// ============================================
+// Analytics & PV
+// ============================================
+
+model PageView {
+  id       BigInt  @id @default(autoincrement())
+  ipHash   String  @map("ip_hash") @db.VarChar(64)
+  path     String  @db.VarChar(255)
+  referrer String? @db.Text
+  userAgent String? @map("user_agent") @db.Text
+
+  userId     String? @map("user_id") @db.Uuid
+  deviceType String? @map("device_type") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([ipHash, createdAt])
+  @@map("page_views")
+}
+
+model AnalyticsEvent {
+  id        BigInt @id @default(autoincrement())
+  eventType String @map("event_type") @db.VarChar(50)
+  eventData Json   @map("event_data")
+
+  userId    String? @map("user_id") @db.Uuid
+  sessionId String? @map("session_id") @db.VarChar(255)
+  ipHash    String  @map("ip_hash") @db.VarChar(64)
+  userAgent String? @map("user_agent") @db.Text
+
+  deviceType  String? @map("device_type") @db.VarChar(20)
+  screenWidth Int?    @map("screen_width")
+  screenHeight Int?   @map("screen_height")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([sessionId, createdAt(sort: Desc)])
+  @@map("analytics_events")
+}
+
+// ============================================
+// Security
+// ============================================
+
+model SecurityLog {
+  id       BigInt @id @default(autoincrement())
+  logType  String @map("log_type") @db.VarChar(50)
+  severity String @db.VarChar(20)
+  ip       String @db.VarChar(45)
+  ipHash   String @map("ip_hash") @db.VarChar(64)
+
+  endpoint   String? @db.VarChar(255)
+  method     String? @db.VarChar(10)
+  statusCode Int?    @map("status_code")
+  userAgent  String? @map("user_agent") @db.Text
+
+  message  String? @db.Text
+  metadata Json?
+
+  userId   String? @map("user_id") @db.Uuid
+  username String? @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([ipHash, createdAt(sort: Desc)])
+  @@index([logType, createdAt(sort: Desc)])
+  @@index([severity, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("security_logs")
+}
+
+// ============================================
+// User Preferences
+// ============================================
+
+model UserPreference {
+  userId String @id @map("user_id") @db.Uuid
+
+  defaultLayout        String @default("grid_2x2") @map("default_layout") @db.VarChar(20)
+  savedLayouts         Json   @default("[]") @map("saved_layouts")
+  notificationSettings Json   @default("{\"enabled\":true,\"sound\":true}") @map("notification_settings")
+  preferences          Json   @default("{}") @db.Json
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+// ============================================
+// Session Management (Optional)
+// ============================================
+
+model Session {
+  sid    String   @id @db.VarChar(255)
+  sess   Json
+  expire DateTime @db.Timestamptz(6)
+
+  userId String? @map("user_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expire])
+  @@index([userId])
+  @@map("sessions")
+}

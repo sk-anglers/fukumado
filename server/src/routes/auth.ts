@@ -14,6 +14,7 @@ import {
   refreshTwitchAccessToken
 } from '../utils/twitchOAuth';
 import { fetchGlobalEmotes } from '../services/twitchService';
+import { upsertGoogleUser, upsertTwitchUser } from '../services/userService';
 import { env } from '../config/env';
 
 export const authRouter = Router();
@@ -59,6 +60,13 @@ authRouter.get('/google/callback', async (req, res) => {
       name: userInfo.name,
       picture: userInfo.picture
     };
+
+    // DBにユーザー情報とトークンを保存
+    await upsertGoogleUser(userInfo, {
+      accessToken: tokenResponse.access_token,
+      refreshToken: tokenResponse.refresh_token,
+      expiryDate: Date.now() + tokenResponse.expires_in * 1000
+    });
 
     res.redirect('/auth/success');
   } catch (err) {
@@ -148,6 +156,13 @@ authRouter.get('/twitch/callback', async (req, res) => {
     console.log('[Twitch Callback] Session data set:', {
       hasTokens: !!req.session.twitchTokens,
       hasUser: !!req.session.twitchUser
+    });
+
+    // DBにユーザー情報とトークンを保存
+    await upsertTwitchUser(userInfo, {
+      accessToken: tokenResponse.access_token,
+      refreshToken: tokenResponse.refresh_token,
+      expiryDate: Date.now() + tokenResponse.expires_in * 1000
     });
 
     // 管理ダッシュボード用の認証の場合
