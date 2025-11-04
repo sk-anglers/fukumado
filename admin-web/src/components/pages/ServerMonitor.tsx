@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import styles from './Database.module.css';
+import styles from './ServerMonitor.module.css';
 
 // 型定義
 interface SystemMetrics {
@@ -154,7 +154,7 @@ const fetchActiveQueries = async (): Promise<ActiveQuery[]> => {
   }
 };
 
-export const Database: React.FC = () => {
+export const ServerMonitor: React.FC = () => {
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
   const [dbStats, setDbStats] = useState<DatabaseStats | null>(null);
   const [tableStats, setTableStats] = useState<TableStats[]>([]);
@@ -181,7 +181,7 @@ export const Database: React.FC = () => {
         setTableStats(tables);
         setActiveQueries(queries);
       } catch (error) {
-        console.error('[Database] Failed to fetch metrics:', error);
+        console.error('[ServerMonitor] Failed to fetch metrics:', error);
       } finally {
         if (isInitialLoad) {
           setLoading(false);
@@ -201,7 +201,7 @@ export const Database: React.FC = () => {
   }, []);
 
   if (loading && !systemMetrics && !dbStats) {
-    return <Loader text="データベースメトリクスを読み込んでいます..." />;
+    return <Loader text="サーバ監視データを読み込んでいます..." />;
   }
 
   // アップタイムをフォーマット
@@ -214,7 +214,7 @@ export const Database: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>データベースモニタリング</h1>
+      <h1 className={styles.pageTitle}>サーバ監視</h1>
 
       {/* システムメトリクス */}
       {systemMetrics && (

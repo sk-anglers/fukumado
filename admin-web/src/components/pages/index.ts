@@ -1,6 +1,6 @@
 export { Dashboard } from './Dashboard';
 export { System } from './System';
-export { Database } from './Database';
+export { ServerMonitor } from './ServerMonitor';
 export { Security } from './Security';
 export { Maintenance } from './Maintenance';
 export { Streams } from './Streams';
