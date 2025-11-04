@@ -92,15 +92,6 @@ export const Analytics: React.FC = () => {
     .map(([slots, count]) => ({ name: `${slots}分割`, count }))
     .sort((a, b) => parseInt(a.name) - parseInt(b.name));
 
-  // プリセットデータの整形
-  const presetLabels: Record<string, string> = {
-    twoByTwo: '2x2グリッド',
-    oneByTwo: '1+2レイアウト',
-    focus: 'フォーカス'
-  };
-  const presetData = Object.entries(stats.layout.presetDistribution || {})
-    .map(([preset, count]) => ({ name: presetLabels[preset] || preset, count }));
-
   // デバイス分布データの整形
   const deviceLabels: Record<string, string> = {
     mobile: 'モバイル',
@@ -196,42 +187,18 @@ export const Analytics: React.FC = () => {
       {/* レイアウト統計 */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>レイアウト使用状況</h2>
-        <div className={styles.chartsGrid}>
-          <Card>
-            <h3 className={styles.chartTitle}>画面分割数</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={slotsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#3498DB" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-          <Card>
-            <h3 className={styles.chartTitle}>プリセット使用率</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={presetData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry) => `${entry.name}: ${entry.count}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {presetData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </Card>
-        </div>
+        <Card>
+          <h3 className={styles.chartTitle}>画面分割数</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={slotsData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="count" fill="#3498DB" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
       </section>
 
       {/* デバイス統計 */}
