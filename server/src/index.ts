@@ -42,6 +42,7 @@ import {
   authRateLimiter,
   checkBlockedIP,
   validateRequestSize,
+  ipBlocklist,
 } from './middleware/security';
 import { maintenanceMode } from './middleware/maintenanceMode';
 import { adminApiAuth } from './middleware/adminAuth';
@@ -685,6 +686,14 @@ server.listen(env.port, async () => {
   // eslint-disable-next-line no-console
   console.log(`[server] listening on http://localhost:${env.port}`);
   console.log('[server] StreamSyncService will start automatically when clients connect');
+
+  // IPブロックリストの初期化（PostgreSQLからホワイトリストを読み込み）
+  try {
+    await ipBlocklist.initialize();
+    console.log('[server] IP blocklist initialized');
+  } catch (error) {
+    console.error('[server] Failed to initialize IP blocklist:', error);
+  }
 
   // SystemMetricsCollectorを開始
   systemMetricsCollector.start();

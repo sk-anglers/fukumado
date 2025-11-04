@@ -647,9 +647,9 @@ adminRouter.get('/security/whitelisted-ips', (req: Request, res: Response) => {
  * POST /api/admin/security/whitelist-ip
  * IPをホワイトリストに追加
  */
-adminRouter.post('/security/whitelist-ip', (req: Request, res: Response) => {
+adminRouter.post('/security/whitelist-ip', async (req: Request, res: Response) => {
   try {
-    const { ip } = req.body;
+    const { ip, reason } = req.body;
 
     if (!ip) {
       return res.status(400).json({
@@ -659,7 +659,7 @@ adminRouter.post('/security/whitelist-ip', (req: Request, res: Response) => {
       });
     }
 
-    ipBlocklist.addToWhitelist(ip);
+    await ipBlocklist.addToWhitelist(ip, reason);
 
     res.json({
       success: true,
@@ -685,7 +685,7 @@ adminRouter.post('/security/whitelist-ip', (req: Request, res: Response) => {
  * POST /api/admin/security/remove-from-whitelist
  * IPをホワイトリストから削除
  */
-adminRouter.post('/security/remove-from-whitelist', (req: Request, res: Response) => {
+adminRouter.post('/security/remove-from-whitelist', async (req: Request, res: Response) => {
   try {
     const { ip } = req.body;
 
@@ -697,7 +697,7 @@ adminRouter.post('/security/remove-from-whitelist', (req: Request, res: Response
       });
     }
 
-    const wasWhitelisted = ipBlocklist.removeFromWhitelist(ip);
+    const wasWhitelisted = await ipBlocklist.removeFromWhitelist(ip);
 
     res.json({
       success: true,

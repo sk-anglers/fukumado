@@ -278,6 +278,16 @@ model SecurityLog {
   @@map("security_logs")
 }
 
+model IPWhitelist {
+  id        BigInt   @id @default(autoincrement())
+  ip        String   @unique @db.VarChar(45)
+  reason    String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([ip])
+  @@map("ip_whitelist")
+}
+
 // ============================================
 // User Preferences
 // ============================================
