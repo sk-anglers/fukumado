@@ -35,6 +35,11 @@ function App(): JSX.Element {
   const setSessionId = useAuthStore((state) => state.setSessionId);
   const triggerManualSync = useSyncStore((state) => state.triggerManualSync);
   const maintenanceEnabled = useMaintenanceStore((state) => state.enabled);
+  const loadFromServer = useLayoutStore((state) => state.loadFromServer);
+  const saveToServer = useLayoutStore((state) => state.saveToServer);
+  const autoQualityEnabled = useLayoutStore((state) => state.autoQualityEnabled);
+  const mutedAll = useLayoutStore((state) => state.mutedAll);
+  const masterVolume = useLayoutStore((state) => state.masterVolume);
 
   // メモ化してuseEffectの不要な再実行を防ぐ
   const followedChannelIds = useMemo(
@@ -311,6 +316,48 @@ function App(): JSX.Element {
       hasSyncedTwitchSubscriptions.current = false;
     }
   }, [twitchAuthenticated]);
+
+  // 認証完了時にユーザー設定をサーバーからロード
+  useEffect(() => {
+    const hasAuthentication = authenticated || twitchAuthenticated;
+    if (hasAuthentication) {
+      console.log('[App] Loading user preferences from server...');
+      loadFromServer();
+    }
+  }, [authenticated, twitchAuthenticated, loadFromServer]);
+
+  // 設定変更時にサーバーに自動保存（デバウンス: 2秒）
+  const saveTimeoutRef = useRef<number | null>(null);
+  useEffect(() => {
+    const hasAuthentication = authenticated || twitchAuthenticated;
+    if (!hasAuthentication) return;
+
+    // 前回のタイマーをクリア
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current);
+    }
+
+    // 2秒後に保存
+    saveTimeoutRef.current = window.setTimeout(() => {
+      console.log('[App] Auto-saving user preferences to server...');
+      saveToServer();
+    }, 2000);
+
+    return () => {
+      if (saveTimeoutRef.current !== null) {
+        window.clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [
+    authenticated,
+    twitchAuthenticated,
+    activeSlotsCount,
+    preset,
+    autoQualityEnabled,
+    mutedAll,
+    masterVolume,
+    saveToServer
+  ]);
 
   // メンテナンス中の場合はメンテナンス画面を表示
   if (maintenanceEnabled) {

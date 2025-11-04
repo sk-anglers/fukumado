@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { LayoutPreset, Platform, StreamSlot, Streamer, ChannelSearchResult, VideoQuality } from '../types';
+import { getUserPreferences, updateUserPreferences } from '../api/userPreferences';
 
 const DEFAULT_ACTIVE_SLOTS = 4;
 const TOTAL_SLOT_CAPACITY = 8;
@@ -97,6 +98,8 @@ export interface LayoutState {
   setSlotReady: (slotId: string, ready: boolean) => void;
   setSlotPlaying: (slotId: string, playing: boolean) => void;
   resetAutoUnmuted: () => void;
+  loadFromServer: () => Promise<void>;
+  saveToServer: () => Promise<void>;
 }
 
 const initialSlots = createInitialSlots();
@@ -375,7 +378,45 @@ export const useLayoutStore = create<LayoutState>()(
             [slotId]: playing
           }
         })),
-      resetAutoUnmuted: () => set({ autoUnmutedApplied: false })
+      resetAutoUnmuted: () => set({ autoUnmutedApplied: false }),
+      loadFromServer: async () => {
+        try {
+          const preferences = await getUserPreferences();
+          if (!preferences) {
+            // 未認証またはエラーの場合は何もしない
+            return;
+          }
+
+          const serverPrefs = preferences.preferences || {};
+
+          set((state) => ({
+            autoQualityEnabled: serverPrefs.autoQualityEnabled ?? state.autoQualityEnabled,
+            mutedAll: serverPrefs.mutedAll ?? state.mutedAll,
+            masterVolume: serverPrefs.masterVolume ?? state.masterVolume,
+            activeSlotsCount: serverPrefs.activeSlotsCount ?? state.activeSlotsCount
+          }));
+
+          console.log('[LayoutStore] Loaded preferences from server');
+        } catch (error) {
+          console.error('[LayoutStore] Failed to load preferences from server:', error);
+        }
+      },
+      saveToServer: async () => {
+        try {
+          const state = get();
+          await updateUserPreferences({
+            preferences: {
+              autoQualityEnabled: state.autoQualityEnabled,
+              mutedAll: state.mutedAll,
+              masterVolume: state.masterVolume,
+              activeSlotsCount: state.activeSlotsCount
+            }
+          });
+          console.log('[LayoutStore] Saved preferences to server');
+        } catch (error) {
+          console.error('[LayoutStore] Failed to save preferences to server:', error);
+        }
+      }
     }),
     {
       name: 'fukumado-layout',

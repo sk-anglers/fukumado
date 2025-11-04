@@ -22,6 +22,7 @@ import { eventsubRouter } from './routes/eventsub';
 import { cacheRouter } from './routes/cache';
 import { adminStreamsRouter } from './routes/adminStreams';
 import { adminRouter } from './routes/admin';
+import { userPreferencesRouter } from './routes/userPreferences';
 import { twitchChatService } from './services/twitchChatService';
 import { streamSyncService, tokenStorage } from './services/streamSyncService';
 import { fetchChannelEmotes } from './services/twitchService';
@@ -194,6 +195,7 @@ app.use('/api/channels', apiRateLimiter, channelsRouter);
 app.use('/api/security', apiRateLimiter, securityRouter);
 app.use('/api/consent', apiRateLimiter, consentRouter);
 app.use('/api/legal', apiRateLimiter, legalRouter);
+app.use('/api/user/preferences', apiRateLimiter, userPreferencesRouter);
 
 // 管理APIルーター（APIキー認証必須）
 app.use('/api/admin/maintenance', adminApiAuth, maintenanceRouter);
