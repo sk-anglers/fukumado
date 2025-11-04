@@ -31,10 +31,10 @@ export const syncGlobalEmotes = async (accessToken: string): Promise<void> => {
         },
         update: {
           emoteCode: emote.name,
-          imageUrl1x: emote.images.url_1x,
-          imageUrl2x: emote.images.url_2x,
-          imageUrl4x: emote.images.url_4x,
-          emoteType: emote.emote_type || null,
+          imageUrl1x: emote.imageUrl,
+          imageUrl2x: null,
+          imageUrl4x: null,
+          emoteType: emote.emoteType || null,
           lastSyncedAt: new Date(),
         },
         create: {
@@ -43,10 +43,10 @@ export const syncGlobalEmotes = async (accessToken: string): Promise<void> => {
           emoteCode: emote.name,
           scope: 'global',
           channelId: null,
-          imageUrl1x: emote.images.url_1x,
-          imageUrl2x: emote.images.url_2x,
-          imageUrl4x: emote.images.url_4x,
-          emoteType: emote.emote_type || null,
+          imageUrl1x: emote.imageUrl,
+          imageUrl2x: null,
+          imageUrl4x: null,
+          emoteType: emote.emoteType || null,
         },
       });
     }
@@ -76,11 +76,11 @@ export const syncChannelEmotes = async (accessToken: string, channelId: string):
         },
         update: {
           emoteCode: emote.name,
-          imageUrl1x: emote.images.url_1x,
-          imageUrl2x: emote.images.url_2x,
-          imageUrl4x: emote.images.url_4x,
-          emoteType: emote.emote_type || null,
-          tier: emote.tier || null,
+          imageUrl1x: emote.imageUrl,
+          imageUrl2x: null,
+          imageUrl4x: null,
+          emoteType: emote.emoteType || null,
+          tier: null,
           lastSyncedAt: new Date(),
         },
         create: {
@@ -89,11 +89,11 @@ export const syncChannelEmotes = async (accessToken: string, channelId: string):
           emoteCode: emote.name,
           scope: 'channel',
           channelId: channelId,
-          imageUrl1x: emote.images.url_1x,
-          imageUrl2x: emote.images.url_2x,
-          imageUrl4x: emote.images.url_4x,
-          emoteType: emote.emote_type || null,
-          tier: emote.tier || null,
+          imageUrl1x: emote.imageUrl,
+          imageUrl2x: null,
+          imageUrl4x: null,
+          emoteType: emote.emoteType || null,
+          tier: null,
         },
       });
     }
@@ -136,15 +136,13 @@ export const syncStaleChannels = async (accessToken: string): Promise<void> => {
       for (const freshData of freshChannels) {
         const existingChannel = staleChannels.find(ch => ch.channelId === freshData.id);
         if (existingChannel) {
+          // TwitchChannelInfo には id, login, displayName のみが含まれています
+          // description, avatarUrl, bannerUrl, viewCount は取得できません
           await prisma.channel.update({
             where: { id: existingChannel.id },
             data: {
-              displayName: freshData.display_name,
-              username: freshData.broadcaster_login,
-              description: freshData.description || null,
-              avatarUrl: freshData.profile_image_url || null,
-              bannerUrl: freshData.offline_image_url || null,
-              viewCount: freshData.view_count ? BigInt(freshData.view_count) : BigInt(0),
+              displayName: freshData.displayName,
+              username: freshData.login,
               lastSyncedAt: new Date(),
             },
           });
