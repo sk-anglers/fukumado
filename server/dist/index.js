@@ -9,7 +9,6 @@ const express_1 = __importDefault(require("express"));
 const express_session_1 = __importDefault(require("express-session"));
 const connect_pg_simple_1 = __importDefault(require("connect-pg-simple"));
 const pg_1 = require("pg");
-const ioredis_1 = __importDefault(require("ioredis"));
 const cors_1 = __importDefault(require("cors"));
 const http_1 = require("http");
 const ws_1 = require("ws");
@@ -29,6 +28,7 @@ const eventsub_1 = require("./routes/eventsub");
 const cache_1 = require("./routes/cache");
 const adminStreams_1 = require("./routes/adminStreams");
 const admin_1 = require("./routes/admin");
+const userPreferences_1 = require("./routes/userPreferences");
 const twitchChatService_1 = require("./services/twitchChatService");
 const streamSyncService_1 = require("./services/streamSyncService");
 Object.defineProperty(exports, "streamSyncService", { enumerable: true, get: function () { return streamSyncService_1.streamSyncService; } });
@@ -57,21 +57,6 @@ const analytics_1 = require("./routes/analytics");
 const app = (0, express_1.default)();
 // Renderのリバースプロキシを信頼
 app.set('trust proxy', true);
-// Redisクライアントの作成（ioredis）
-const redisClient = new ioredis_1.default(env_1.env.redisUrl, {
-    maxRetriesPerRequest: null,
-    retryStrategy: (times) => {
-        if (times > 10) {
-            console.error('[Redis] Max reconnection attempts reached');
-            return null;
-        }
-        return Math.min(times * 100, 3000);
-    }
-});
-redisClient.on('error', (err) => console.error('[Redis] Client Error:', err));
-redisClient.on('connect', () => console.log('[Redis] Client Connected'));
-redisClient.on('ready', () => console.log('[Redis] Client Ready'));
-redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...'));
 // PV計測サービスの初期化（PostgreSQL版）
 exports.pvTracker = new pvTrackerService_1.PVTrackerService();
 console.log('[PVTrackerService] PV tracking service initialized');
@@ -171,6 +156,7 @@ app.use('/api/channels', security_2.apiRateLimiter, channels_1.channelsRouter);
 app.use('/api/security', security_2.apiRateLimiter, security_1.securityRouter);
 app.use('/api/consent', security_2.apiRateLimiter, consent_1.consentRouter);
 app.use('/api/legal', security_2.apiRateLimiter, legal_1.legalRouter);
+app.use('/api/user/preferences', security_2.apiRateLimiter, userPreferences_1.userPreferencesRouter);
 // 管理APIルーター（APIキー認証必須）
 app.use('/api/admin/maintenance', adminAuth_1.adminApiAuth, maintenance_1.maintenanceRouter);
 app.use('/api/admin/users', adminAuth_1.adminApiAuth, users_1.usersRouter);
@@ -579,6 +565,14 @@ server.listen(env_1.env.port, async () => {
     // eslint-disable-next-line no-console
     console.log(`[server] listening on http://localhost:${env_1.env.port}`);
     console.log('[server] StreamSyncService will start automatically when clients connect');
+    // IPブロックリストの初期化（PostgreSQLからホワイトリストを読み込み）
+    try {
+        await security_2.ipBlocklist.initialize();
+        console.log('[server] IP blocklist initialized');
+    }
+    catch (error) {
+        console.error('[server] Failed to initialize IP blocklist:', error);
+    }
     // SystemMetricsCollectorを開始
     systemMetricsCollector_1.systemMetricsCollector.start();
     // 動的閾値モニタリングを開始

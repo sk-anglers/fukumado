@@ -9,7 +9,12 @@ const index_1 = require("../index");
 const systemMetricsCollector_1 = require("../services/systemMetricsCollector");
 const priorityManager_1 = require("../services/priorityManager");
 const security_1 = require("../middleware/security");
+const systemMetricsService_1 = require("../services/systemMetricsService");
+const databaseMetricsService_1 = require("../services/databaseMetricsService");
 exports.adminRouter = (0, express_1.Router)();
+// インスタンス作成
+const systemMetricsService = new systemMetricsService_1.SystemMetricsService();
+const databaseMetricsService = new databaseMetricsService_1.DatabaseMetricsService();
 /**
  * GET /api/admin/system/metrics
  * システムメトリクス（CPU、メモリ、稼働時間）を取得
@@ -610,9 +615,9 @@ exports.adminRouter.get('/security/whitelisted-ips', (req, res) => {
  * POST /api/admin/security/whitelist-ip
  * IPをホワイトリストに追加
  */
-exports.adminRouter.post('/security/whitelist-ip', (req, res) => {
+exports.adminRouter.post('/security/whitelist-ip', async (req, res) => {
     try {
-        const { ip } = req.body;
+        const { ip, reason } = req.body;
         if (!ip) {
             return res.status(400).json({
                 success: false,
@@ -620,7 +625,7 @@ exports.adminRouter.post('/security/whitelist-ip', (req, res) => {
                 timestamp: new Date().toISOString()
             });
         }
-        security_1.ipBlocklist.addToWhitelist(ip);
+        await security_1.ipBlocklist.addToWhitelist(ip, reason);
         res.json({
             success: true,
             data: {
@@ -645,7 +650,7 @@ exports.adminRouter.post('/security/whitelist-ip', (req, res) => {
  * POST /api/admin/security/remove-from-whitelist
  * IPをホワイトリストから削除
  */
-exports.adminRouter.post('/security/remove-from-whitelist', (req, res) => {
+exports.adminRouter.post('/security/remove-from-whitelist', async (req, res) => {
     try {
         const { ip } = req.body;
         if (!ip) {
@@ -655,7 +660,7 @@ exports.adminRouter.post('/security/remove-from-whitelist', (req, res) => {
                 timestamp: new Date().toISOString()
             });
         }
-        const wasWhitelisted = security_1.ipBlocklist.removeFromWhitelist(ip);
+        const wasWhitelisted = await security_1.ipBlocklist.removeFromWhitelist(ip);
         res.json({
             success: true,
             data: {
@@ -668,6 +673,124 @@ exports.adminRouter.post('/security/remove-from-whitelist', (req, res) => {
     }
     catch (error) {
         console.error('[Admin] Error removing IP from whitelist:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        res.status(500).json({
+            success: false,
+            error: message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+// ========================================
+// データベースメトリクスAPI
+// ========================================
+/**
+ * GET /api/admin/database/stats
+ * データベース統計情報を取得
+ */
+exports.adminRouter.get('/database/stats', async (req, res) => {
+    try {
+        const stats = await databaseMetricsService.getDatabaseStats();
+        res.json({
+            success: true,
+            data: stats,
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('[Admin] Error getting database stats:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        res.status(500).json({
+            success: false,
+            error: message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+/**
+ * GET /api/admin/database/connections
+ * データベース接続情報を取得
+ */
+exports.adminRouter.get('/database/connections', async (req, res) => {
+    try {
+        const connections = await databaseMetricsService.getConnectionStats();
+        res.json({
+            success: true,
+            data: connections,
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('[Admin] Error getting database connections:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        res.status(500).json({
+            success: false,
+            error: message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+/**
+ * GET /api/admin/database/tables
+ * テーブル統計情報を取得
+ */
+exports.adminRouter.get('/database/tables', async (req, res) => {
+    try {
+        const tables = await databaseMetricsService.getTableStats();
+        res.json({
+            success: true,
+            data: tables,
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('[Admin] Error getting database tables:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        res.status(500).json({
+            success: false,
+            error: message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+/**
+ * GET /api/admin/database/queries
+ * アクティブなクエリを取得
+ */
+exports.adminRouter.get('/database/queries', async (req, res) => {
+    try {
+        const queries = await databaseMetricsService.getActiveQueries();
+        res.json({
+            success: true,
+            data: queries,
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('[Admin] Error getting active queries:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        res.status(500).json({
+            success: false,
+            error: message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+/**
+ * GET /api/admin/system/detailed-metrics
+ * 詳細なシステムメトリクスを取得（CPU、メモリ、ロードアベレージ）
+ */
+exports.adminRouter.get('/system/detailed-metrics', (req, res) => {
+    try {
+        const metrics = systemMetricsService.getSystemMetrics();
+        res.json({
+            success: true,
+            data: metrics,
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('[Admin] Error getting detailed system metrics:', error);
         const message = error instanceof Error ? error.message : 'Unknown error';
         res.status(500).json({
             success: false,

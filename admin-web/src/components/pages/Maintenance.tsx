@@ -3,7 +3,8 @@ import { Card, Button, Loader } from '../common';
 import {
   getMaintenanceStatus,
   enableMaintenance as apiEnableMaintenance,
-  disableMaintenance as apiDisableMaintenance
+  disableMaintenance as apiDisableMaintenance,
+  migrateSeverity
 } from '../../services/apiClient';
 import { MaintenanceStatus as MaintenanceStatusType } from '../../types';
 import styles from './Maintenance.module.css';
@@ -72,6 +73,24 @@ export const Maintenance: React.FC = () => {
     } catch (error) {
       console.error('Failed to disable maintenance:', error);
       alert('メンテナンスモードの無効化に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMigrateSeverity = async () => {
+    if (!confirm('security_logsテーブルのseverity制約を修正します。\n\nこの操作により、\'warn\'値が許可されるようになります。\n実行しますか？')) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await migrateSeverity();
+      alert('マイグレーションが正常に完了しました。\nseverity制約が修正され、\'warn\'値が許可されるようになりました。');
+    } catch (error) {
+      console.error('Failed to run migration:', error);
+      const message = error instanceof Error ? error.message : 'マイグレーションの実行に失敗しました';
+      alert(`エラー: ${message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -244,6 +263,33 @@ export const Maintenance: React.FC = () => {
             </div>
           </Card>
         )}
+      </section>
+
+      {/* データベースメンテナンス */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>データベースメンテナンス</h2>
+        <Card title="severity制約の修正">
+          <p className={styles.description}>
+            security_logsテーブルのseverity列に'warn'値を許可するための制約を修正します。
+          </p>
+          <p className={styles.description}>
+            現在、security_logsへの'warn'値の挿入がエラーになっている場合に実行してください。
+          </p>
+          <div className={styles.info}>
+            <h4>実行内容</h4>
+            <ul className={styles.notesList}>
+              <li>既存のsecurity_logs_severity_check制約を削除</li>
+              <li>新しい制約を追加（'info', 'warn', 'error'を許可）</li>
+            </ul>
+          </div>
+          <Button
+            variant="primary"
+            onClick={handleMigrateSeverity}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? '実行中...' : 'マイグレーションを実行'}
+          </Button>
+        </Card>
       </section>
 
       {/* 説明 */}

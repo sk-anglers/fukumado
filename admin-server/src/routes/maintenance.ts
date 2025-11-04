@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { maintenanceService } from '../services/maintenanceService';
 import { ApiResponse, MaintenanceStatus } from '../types';
+import { env } from '../config/env';
 
 export const maintenanceRouter = Router();
 
@@ -100,5 +101,45 @@ maintenanceRouter.post('/disable', async (req, res) => {
       timestamp: new Date().toISOString()
     };
     res.status(500).json(response);
+  }
+});
+
+/**
+ * POST /admin/api/maintenance/migrate-severity
+ * security_logs の severity 制約を修正（warn を許可）
+ */
+maintenanceRouter.post('/migrate-severity', async (req, res) => {
+  try {
+    console.log('[Admin] Proxying severity migration request to main server...');
+
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/database/migrate-severity`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Migration failed');
+    }
+
+    const apiResponse: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(apiResponse);
+  } catch (error) {
+    console.error('[API] Error running migration:', error);
+    const apiResponse: ApiResponse = {
+      success: false,
+      error: error instanceof Error ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(apiResponse);
   }
 });

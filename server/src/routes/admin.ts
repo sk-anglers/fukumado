@@ -8,6 +8,7 @@ import { priorityManager } from '../services/priorityManager';
 import { ipBlocklist } from '../middleware/security';
 import { SystemMetricsService } from '../services/systemMetricsService';
 import { DatabaseMetricsService } from '../services/databaseMetricsService';
+import prisma from '../services/prismaService';
 
 export const adminRouter = Router();
 
@@ -840,6 +841,46 @@ adminRouter.get('/system/detailed-metrics', (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[Admin] Error getting detailed system metrics:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/database/migrate-severity
+ * security_logs の severity 制約を修正（warn を許可）
+ */
+adminRouter.post('/database/migrate-severity', async (req: Request, res: Response) => {
+  try {
+    console.log('[Admin] Running severity constraint migration...');
+
+    // Drop existing constraint
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE security_logs DROP CONSTRAINT IF EXISTS security_logs_severity_check;
+    `);
+    console.log('[Admin] ✓ Dropped existing constraint');
+
+    // Add new constraint that allows 'info', 'warn', 'error'
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE security_logs ADD CONSTRAINT security_logs_severity_check
+        CHECK (severity IN ('info', 'warn', 'error'));
+    `);
+    console.log('[Admin] ✓ Added new constraint (allows: info, warn, error)');
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Migration completed successfully',
+        allowedValues: ['info', 'warn', 'error']
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error running migration:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       success: false,

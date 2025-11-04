@@ -7,6 +7,7 @@ exports.validateRequestSize = exports.checkBlockedIP = exports.ipBlocklist = exp
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const helmet_1 = __importDefault(require("helmet"));
 const crypto_1 = __importDefault(require("crypto"));
+const prismaService_1 = __importDefault(require("../services/prismaService"));
 /**
  * Nonce生成ミドルウェア
  * リクエストごとに一意のnonceを生成し、res.localsに保存
@@ -102,6 +103,30 @@ class IPBlocklist {
         this.blockedIPs = new Map();
         this.violationCount = new Map();
         this.whitelistedIPs = new Set();
+        this.initialized = false;
+    }
+    /**
+     * PostgreSQLからホワイトリストを読み込んで初期化
+     */
+    async initialize() {
+        if (this.initialized) {
+            return;
+        }
+        try {
+            const whitelistedEntries = await prismaService_1.default.iPWhitelist.findMany({
+                select: { ip: true }
+            });
+            whitelistedEntries.forEach(entry => {
+                this.whitelistedIPs.add(entry.ip);
+            });
+            this.initialized = true;
+            console.log(`[Security] Loaded ${whitelistedEntries.length} whitelisted IPs from database`);
+        }
+        catch (error) {
+            console.error('[Security] Failed to load whitelist from database:', error);
+            // エラーが発生してもアプリケーションは続行
+            this.initialized = true;
+        }
     }
     /**
      * IPをブロック
@@ -195,23 +220,47 @@ class IPBlocklist {
     /**
      * IPをホワイトリストに追加
      */
-    addToWhitelist(ip) {
-        this.whitelistedIPs.add(ip);
-        // ホワイトリストに追加されたIPのブロックと違反カウントを削除
-        this.blockedIPs.delete(ip);
-        this.violationCount.delete(ip);
-        console.log(`[Security] Added IP to whitelist: ${ip}`);
+    async addToWhitelist(ip, reason) {
+        try {
+            // PostgreSQLに保存（upsert: 既に存在する場合は更新）
+            await prismaService_1.default.iPWhitelist.upsert({
+                where: { ip },
+                create: { ip, reason: reason || null },
+                update: { reason: reason || null }
+            });
+            // メモリにも追加
+            this.whitelistedIPs.add(ip);
+            // ホワイトリストに追加されたIPのブロックと違反カウントを削除
+            this.blockedIPs.delete(ip);
+            this.violationCount.delete(ip);
+            console.log(`[Security] Added IP to whitelist: ${ip}`);
+        }
+        catch (error) {
+            console.error(`[Security] Failed to add IP to whitelist in database: ${ip}`, error);
+            throw error;
+        }
     }
     /**
      * IPをホワイトリストから削除
      */
-    removeFromWhitelist(ip) {
-        const wasWhitelisted = this.whitelistedIPs.has(ip);
-        this.whitelistedIPs.delete(ip);
-        if (wasWhitelisted) {
-            console.log(`[Security] Removed IP from whitelist: ${ip}`);
+    async removeFromWhitelist(ip) {
+        try {
+            // PostgreSQLから削除
+            const result = await prismaService_1.default.iPWhitelist.deleteMany({
+                where: { ip }
+            });
+            // メモリからも削除
+            const wasWhitelisted = this.whitelistedIPs.has(ip);
+            this.whitelistedIPs.delete(ip);
+            if (wasWhitelisted || result.count > 0) {
+                console.log(`[Security] Removed IP from whitelist: ${ip}`);
+            }
+            return wasWhitelisted;
         }
-        return wasWhitelisted;
+        catch (error) {
+            console.error(`[Security] Failed to remove IP from whitelist in database: ${ip}`, error);
+            throw error;
+        }
     }
     /**
      * ホワイトリストに登録されているIPのリストを取得

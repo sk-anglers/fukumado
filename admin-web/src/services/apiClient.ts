@@ -741,3 +741,16 @@ export const removeFromWhitelist = async (ip: string): Promise<void> => {
     body: JSON.stringify({ ip })
   });
 };
+
+// ========================================
+// データベース管理API
+// ========================================
+
+/**
+ * security_logs の severity 制約を修正（warn を許可）
+ */
+export const migrateSeverity = async (): Promise<void> => {
+  await fetchAPI('/maintenance/migrate-severity', {
+    method: 'POST'
+  });
+};
