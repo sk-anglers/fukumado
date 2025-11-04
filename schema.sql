@@ -106,8 +106,8 @@ CREATE INDEX idx_channels_popularity ON channels(platform, popularity_score DESC
 CREATE INDEX idx_channels_display_name ON channels(platform, display_name);
 CREATE INDEX idx_channels_username ON channels(platform, username) WHERE username IS NOT NULL;
 CREATE INDEX idx_channels_search ON channels USING gin(search_vector);
-CREATE INDEX idx_channels_last_synced ON channels(last_synced_at) WHERE last_synced_at < NOW() - INTERVAL '24 hours';
-CREATE INDEX idx_channels_last_accessed ON channels(last_accessed_at) WHERE last_accessed_at < NOW() - INTERVAL '90 days';
+CREATE INDEX idx_channels_last_synced ON channels(last_synced_at);
+CREATE INDEX idx_channels_last_accessed ON channels(last_accessed_at);
 
 CREATE OR REPLACE FUNCTION channels_search_vector_update()
 RETURNS TRIGGER AS $$
@@ -185,7 +185,7 @@ CREATE TABLE emotes (
 CREATE INDEX idx_emotes_global ON emotes(platform) WHERE scope = 'global';
 CREATE INDEX idx_emotes_channel ON emotes(platform, channel_id, scope) WHERE channel_id IS NOT NULL;
 CREATE INDEX idx_emotes_code ON emotes(emote_code);
-CREATE INDEX idx_emotes_last_synced ON emotes(last_synced_at) WHERE last_synced_at < NOW() - INTERVAL '24 hours';
+CREATE INDEX idx_emotes_last_synced ON emotes(last_synced_at);
 
 CREATE TRIGGER emotes_updated_at BEFORE UPDATE ON emotes
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
