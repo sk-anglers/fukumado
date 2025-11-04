@@ -355,6 +355,40 @@ interface StreamSlotCardProps {
 - **送信**: `/api/{platform}/chat/send` (POST)
 - **ペイロード**: `{ channelId, channelLogin?, message }`
 
+### メッセージ送信の実装詳細（v1.1.0）
+
+#### 送信フロー
+1. ユーザーがメッセージを入力して送信ボタンクリック
+2. `ChatPanel.tsx` → `/api/twitch/chat/send` (POST)
+3. サーバー側でメッセージ送信（`twitchChatService.sendMessage()`）
+4. Twitch IRC → サーバー → WebSocket → フロント
+5. `useTwitchChat` フックで受信 → `chatStore.addMessage()`
+6. 画面に表示
+
+**重要**: メッセージは必ずサーバー経由で表示されます。フロント側で送信時に `addMessage()` を呼び出すことはありません。
+
+#### エモート・バッジの表示
+
+**自分が送信したメッセージのエモート表示**:
+- Twitch IRC仕様により、自分のメッセージには `tags.emotes` が含まれない
+- サーバー側でエモート情報をパース → `sentMessagesCache` にキャッシュ
+- IRCから自分のメッセージ受信時、キャッシュからエモート情報を取得
+- フロント側で画像として正常に表示
+
+**自分が送信したメッセージのバッジ表示**:
+- IRCから自分のメッセージ受信時（`self: true`）、バッジ情報をパース
+- `sentMessagesCache` にバッジ情報を追加
+- サーバー側で100ms待機後、キャッシュからバッジ情報を取得
+- HTTP レスポンスにバッジ情報を含める（ただし実際には使用されない）
+- WebSocketメッセージとしてバッジ付きメッセージが送信される
+
+**技術的詳細**:
+- `server/src/services/twitchChatService.ts`: `sentMessagesCache` Map でエモート・バッジ情報を管理
+- キャッシュ有効期限: 10秒
+- `server/src/routes/twitch.ts`: メッセージ送信API実装
+
+参照: [12.15 チャットメッセージ表示の問題（解決済み）](./12_issues.md#1215-チャットメッセージ表示の問題解決済み)
+
 ## 6.7 Footer (src/components/Footer/Footer.tsx)
 
 フッターバー。

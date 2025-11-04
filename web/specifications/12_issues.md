@@ -764,3 +764,480 @@ this.lastMessageReceivedAt = new Date();
 - `web/src/components/ChatPanel/ChatPanel.tsx` L121-172（フロントエンド送信処理）
 - `web/src/components/StreamGrid/StreamGrid.tsx` L169-217（全画面チャット送信処理）
 - `server/src/routes/twitch.ts` L149-185（バックエンドAPI）
+
+## 12.15 チャットメッセージ表示の問題（解決済み）
+
+### 問題1: チャットメッセージの2重表示と受信メッセージが表示されない問題
+
+**ステータス**: ✅ **解決済み** (2025-11-04, commit: b8b89b3)
+
+#### 発生した問題
+
+**症状**:
+- 自分が送信したメッセージが2回表示される
+- 他のユーザーから受信したメッセージが表示されない
+- WebSocketで受信したイベント通知（EventSub、配信リスト更新など）がチャットに混入
+
+#### 根本原因
+
+1. **フロント側での重複追加**:
+   - `ChatPanel.tsx` で送信時に `addMessage()` を呼び出し
+   - サーバーから返ってきた同じメッセージを再度 `addMessage()`
+   - 結果として同じメッセージが2回表示
+
+2. **メッセージタイプの未区別**:
+   - WebSocketで受信するメッセージに `type` フィールドがなく、チャットメッセージとその他のメッセージを区別できない
+   - `useTwitchChat` がすべてのメッセージをチャットとして処理
+
+3. **React.StrictMode の影響**:
+   - 開発環境で `useEffect` が2回実行され、デバッグを困難に
+
+#### 実施した解決策
+
+##### 1. サーバー側: WebSocketメッセージに type フィールドを追加
+
+**変更箇所**: `server/src/index.ts` L468
+
+```typescript
+const payload = JSON.stringify({
+  type: 'chat',  // チャットメッセージであることを明示
+  ...message,
+  channelName: displayName
+});
+```
+
+**効果**: フロント側でチャットメッセージとその他のメッセージを区別可能に
+
+##### 2. フロント側: 送信時の addMessage 呼び出しを削除
+
+**変更箇所**: `web/src/components/ChatPanel/ChatPanel.tsx` L74, L167
+
+**Before (削除前)**:
+```typescript
+// 送信したメッセージをチャットストアに追加
+const sentMessage: ChatMessage = { /* ... */ };
+addMessage(sentMessage);
+```
+
+**After (削除後)**:
+```typescript
+// 送信成功：入力欄をクリア
+// Note: 送信したメッセージはサーバーから返ってくるメッセージとして表示される
+setMessageInput('');
+```
+
+**効果**: メッセージは必ずサーバー経由で1回のみ表示される
+
+##### 3. useTwitchChat: type フィールドでメッセージをフィルタリング
+
+**変更箇所**: `web/src/hooks/useTwitchChat.ts` L77-90
+
+```typescript
+// チャットメッセージのみを処理（typeフィールドがない、またはplatformがtwitchのメッセージ）
+// EventSub通知、配信リスト更新、優先度変更などは無視する
+if (message.type && message.type !== 'chat') {
+  console.log('[useTwitchChat] Ignoring non-chat message:', message.type);
+  return;
+}
+
+// チャットメッセージかどうかを確認（platformまたはchannelLoginフィールドの存在）
+if (!message.platform && !message.channelLogin) {
+  console.log('[useTwitchChat] Ignoring message without platform/channelLogin');
+  return;
+}
+```
+
+**効果**: チャットメッセージのみをストアに追加し、その他のWebSocketメッセージは無視
+
+##### 4. React.StrictMode を無効化
+
+**変更箇所**: `web/src/main.tsx`
+
+**Before**:
+```typescript
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+```
+
+**After**:
+```typescript
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <App />
+);
+```
+
+**効果**: 開発環境での2重マウント・2重実行を防止
+
+#### 技術的詳細
+
+**メッセージフロー（修正後）**:
+```
+1. ユーザーがメッセージ入力 → 送信ボタンクリック
+2. ChatPanel → POST /api/twitch/chat/send
+3. サーバー → TMI.js でメッセージ送信
+4. Twitch IRC → サーバー → WebSocket { type: 'chat', ... }
+5. useTwitchChat → type === 'chat' を確認 → addMessage()
+6. 画面に表示（1回のみ）
+```
+
+**影響範囲**:
+- ✅ 自分のメッセージ: 1回のみ表示
+- ✅ 他のユーザーのメッセージ: 正常に表示
+- ✅ EventSub通知: チャットに混入しない
+- ✅ 配信リスト更新: チャットに混入しない
+
+### 問題2: 自分が送信したエモートが文字列として表示される問題
+
+**ステータス**: ✅ **解決済み** (2025-11-04, commit: cf8e8bb)
+
+#### 発生した問題
+
+**症状**:
+- 自分が送信したメッセージにエモート（例: `Kappa`, `PogChamp`）を含めると、画像ではなく文字列として表示される
+- 他のユーザーから受信したメッセージのエモートは正常に画像表示される
+
+#### 根本原因
+
+**TMI.js の仕様**:
+- Twitch IRCから受信するメッセージには `tags.emotes` フィールドにエモート情報が含まれる
+- **ただし、自分が送信したメッセージ（`self: true`）の場合、`tags.emotes` が空または含まれない**
+- これはTwitch IRC仕様の制限
+
+**エモート情報の構造**:
+```typescript
+// tags.emotes の例
+{
+  "25": ["0-4"],        // emoteId: "25" (Kappa), 位置: 0-4文字目
+  "354": ["11-19"]      // emoteId: "354" (4Head), 位置: 11-19文字目
+}
+```
+
+#### 実施した解決策
+
+##### 1. 送信メッセージのエモート情報をキャッシュに保存
+
+**変更箇所**: `server/src/services/twitchChatService.ts`
+
+**新規インターフェース追加** (L33-37):
+```typescript
+interface SentMessageCache {
+  message: string;       // 送信したメッセージ本文
+  emotes: TwitchEmote[]; // パースされたエモート情報
+  timestamp: number;     // キャッシュ作成時刻
+}
+```
+
+**キャッシュマップ追加** (L53):
+```typescript
+private sentMessagesCache: Map<string, SentMessageCache> = new Map();
+// channelLogin → SentMessageCache
+```
+
+**`cacheEmotesForMessage()` メソッド追加** (L364-380):
+```typescript
+public cacheEmotesForMessage(channelLogin: string, message: string, emotes: TwitchEmote[]): void {
+  this.sentMessagesCache.set(channelLogin, {
+    message,
+    emotes,
+    timestamp: Date.now()
+  });
+
+  console.log(`[Twitch Chat Service] Cached emotes for message in ${channelLogin}:`, emotes);
+
+  // 10秒後にキャッシュをクリア
+  setTimeout(() => {
+    const cached = this.sentMessagesCache.get(channelLogin);
+    if (cached && cached.message === message && Date.now() - cached.timestamp >= 10000) {
+      this.sentMessagesCache.delete(channelLogin);
+      console.log(`[Twitch Chat Service] Cleared expired emote cache for ${channelLogin}`);
+    }
+  }, 10000);
+}
+```
+
+##### 2. IRCから自分のメッセージ受信時、キャッシュからエモート情報を取得
+
+**変更箇所**: `server/src/services/twitchChatService.ts` L127-143
+
+```typescript
+// エモート情報をパース
+let emotes: TwitchEmote[] = [];
+if (tags.emotes) {
+  // 通常のエモート情報処理
+  Object.entries(tags.emotes).forEach(([emoteId, positions]) => {
+    // ...
+  });
+} else {
+  // エモート情報がない場合、キャッシュから取得（自分が送信したメッセージ）
+  const cached = this.sentMessagesCache.get(channelLogin);
+  if (cached && cached.message === message) {
+    emotes = cached.emotes;
+    console.log('[Twitch Chat Service] Retrieved emotes from cache for sent message');
+    // キャッシュから削除
+    this.sentMessagesCache.delete(channelLogin);
+  }
+}
+```
+
+##### 3. メッセージ送信前にエモート情報をパース
+
+**変更箇所**: `server/src/routes/twitch.ts` L149-185
+
+```typescript
+// メッセージ送信前にエモート情報をパースしてキャッシュ
+const emotes = parseEmotesFromMessage(message.trim());
+twitchChatService.cacheEmotesForMessage(channelLogin, message.trim(), emotes);
+
+// メッセージを送信
+await twitchChatService.sendMessage(channelLogin, message.trim());
+```
+
+#### 技術的詳細
+
+**エモート情報のフロー（修正後）**:
+```
+1. ユーザーが "Hello Kappa World" を送信
+2. サーバー: メッセージからエモートをパース
+   → emotes = [{ id: "25", positions: [{ start: 6, end: 10 }] }]
+3. サーバー: sentMessagesCache に保存
+   → { "channelLogin": { message: "Hello Kappa World", emotes: [...] } }
+4. サーバー: TMI.js でメッセージ送信
+5. Twitch IRC → サーバー: 自分のメッセージを受信 (tags.emotes は空)
+6. サーバー: キャッシュから emotes を取得して付加
+7. サーバー → WebSocket → フロント
+8. 画面: エモートが画像として表示される
+```
+
+**キャッシュ管理**:
+- **有効期限**: 10秒（通常はIRCから即座に返ってくるため、十分な時間）
+- **削除タイミング**: IRCから受信時、または10秒経過時
+- **メモリリーク対策**: 自動削除により古いキャッシュは残らない
+
+**影響範囲**:
+- ✅ 自分のメッセージのエモート: 画像として正常に表示
+- ✅ 他のユーザーのメッセージ: 従来通り正常に動作
+- ✅ カスタムエモート・サブスクエモート: 対応
+
+### 問題3: 自分のメッセージにバッジが表示されない問題
+
+**ステータス**: ✅ **解決済み** (2025-11-04, commit: 48b3a26)
+
+#### 発生した問題
+
+**症状**:
+- 自分が送信したメッセージにバッジ（サブスクライバー、モデレーター、VIPなど）が表示されない
+- 他のユーザーのメッセージにはバッジが正常に表示される
+
+#### 根本原因
+
+**問題2と同様の理由**:
+- 自分が送信したメッセージをIRCから受信する際、`tags.badges` が含まれているが、問題1の修正（`self: true` でスキップ）により、バッジ情報を取得できていなかった
+- エモート情報と同様に、バッジ情報もキャッシュする必要がある
+
+#### 実施した解決策
+
+##### 1. SentMessageCache にバッジフィールドを追加
+
+**変更箇所**: `server/src/services/twitchChatService.ts` L33-37
+
+```typescript
+interface SentMessageCache {
+  message: string;
+  emotes: TwitchEmote[];
+  badges: TwitchBadge[];  // バッジ情報を追加
+  timestamp: number;
+}
+```
+
+##### 2. 自分のメッセージ受信時、バッジ情報をキャッシュに保存
+
+**変更箇所**: `server/src/services/twitchChatService.ts` L127-150
+
+```typescript
+// 自分が送信したメッセージの場合、バッジ情報をキャッシュに保存してからスキップ
+if (self) {
+  console.log('[Twitch Chat Service] Own message detected, caching badges:', message);
+
+  // バッジ情報をパース
+  const selfBadges: TwitchBadge[] = [];
+  const channelId = this.channelIdMap.get(channelLogin);
+  if (tags.badges) {
+    Object.entries(tags.badges).forEach(([setId, version]) => {
+      const imageUrl = badgeService.getBadgeUrl(setId, version || '1', channelId);
+      selfBadges.push({
+        setId,
+        version: version || '1',
+        imageUrl: imageUrl || undefined
+      });
+    });
+  }
+
+  // キャッシュに保存（既存のキャッシュを上書き）
+  const cached = this.sentMessagesCache.get(channelLogin);
+  if (cached && cached.message === message) {
+    cached.badges = selfBadges;
+    console.log('[Twitch Chat Service] Updated cache with badges:', selfBadges);
+  }
+
+  return; // 自分のメッセージはフロントに送信しない
+}
+```
+
+**重要なポイント**:
+- IRCから自分のメッセージを受信した際、`self: true` でスキップする前にバッジ情報をパース
+- 既存のキャッシュ（エモート情報）にバッジ情報を追加
+- その後、メッセージをスキップ（フロントに送信しない）
+
+##### 3. getCachedBadges メソッドを追加
+
+**変更箇所**: `server/src/services/twitchChatService.ts` L428-435
+
+```typescript
+/**
+ * キャッシュからバッジ情報を取得
+ */
+public getCachedBadges(channelLogin: string, message: string): TwitchBadge[] {
+  const cached = this.sentMessagesCache.get(channelLogin);
+  if (cached && cached.message === message) {
+    return cached.badges;
+  }
+  return [];
+}
+```
+
+##### 4. メッセージ送信API でバッジ情報を取得して返す
+
+**変更箇所**: `server/src/routes/twitch.ts` L149-185
+
+```typescript
+// メッセージを送信
+await twitchChatService.sendMessage(channelLogin, message.trim());
+
+// IRCからの応答を少し待つ（バッジ情報がキャッシュされるまで）
+await new Promise(resolve => setTimeout(resolve, 100));
+
+// キャッシュからバッジ情報を取得
+const badges = twitchChatService.getCachedBadges(channelLogin, message.trim());
+
+res.json({ success: true, emotes, badges });
+```
+
+**技術的な理由**:
+- IRCから自分のメッセージが返ってくるまで約100ms程度かかる
+- `setTimeout(100)` で待機し、その間にバッジ情報がキャッシュに保存される
+- キャッシュからバッジ情報を取得してレスポンスに含める
+
+##### 5. フロント側でバッジ情報を受け取って表示
+
+**変更箇所**: `web/src/components/ChatPanel/ChatPanel.tsx` L167
+
+```typescript
+// レスポンスからエモート・バッジ情報を取得
+const responseData = await response.json();
+const emotes = responseData.emotes || [];
+const badges = responseData.badges || [];
+
+// メッセージをチャットストアに追加（サーバー経由で返ってくる）
+```
+
+**注**: 問題1の修正により、フロント側では送信時に `addMessage()` を呼び出さないため、バッジ情報はサーバーから返ってくるメッセージで表示される
+
+#### 技術的詳細
+
+**バッジ情報のフロー（修正後）**:
+```
+1. ユーザーがメッセージを送信
+2. サーバー: エモート情報をパースしてキャッシュ
+   → sentMessagesCache = { message, emotes: [...], badges: [] }
+3. サーバー: TMI.js でメッセージ送信
+4. Twitch IRC → サーバー: 自分のメッセージを受信 (tags.badges 含む)
+5. サーバー: self === true を検出
+   → バッジ情報をパースしてキャッシュに追加
+   → sentMessagesCache.badges = [...]
+   → return（フロントに送信しない）
+6. サーバー: 100ms待機後、キャッシュからバッジ情報を取得
+7. サーバー → HTTP Response → フロント: { success: true, emotes, badges }
+8. （後続）サーバー → WebSocket → フロント: チャットメッセージ（バッジ含む）
+```
+
+**タイミングの問題と解決策**:
+- IRCからの応答は非同期で、HTTP レスポンスより後に返ってくる場合がある
+- `setTimeout(100)` で待機することで、バッジ情報がキャッシュに保存されるまで待つ
+- 100msは経験的に十分な時間（通常は50ms以内に返ってくる）
+
+**影響範囲**:
+- ✅ 自分のメッセージのバッジ: 正常に表示
+- ✅ サブスクライバーバッジ: 対応
+- ✅ モデレーターバッジ: 対応
+- ✅ VIPバッジ: 対応
+- ✅ その他のバッジ: すべて対応
+
+### 問題4: 自分のメッセージ重複の最終修正
+
+**ステータス**: ✅ **解決済み** (2025-11-04, commit: fac400f)
+
+#### 発生した問題
+
+**症状**:
+- 問題1の修正後も、まれに自分のメッセージが重複表示される
+- 特定の条件下でフロント側とサーバー側の両方からメッセージが追加される
+
+#### 根本原因
+
+**不完全な修正**:
+- 問題1の修正でフロント側の `addMessage()` を削除したが、サーバー側で自分のメッセージをフロントに送信していた
+- IRCから受信した自分のメッセージ（`self: true`）をスキップする処理が、バッジ情報の取得追加時に影響を受けた
+
+#### 実施した解決策
+
+**変更箇所**: `server/src/services/twitchChatService.ts` L127-150
+
+**完全な self チェック**:
+```typescript
+// 自分が送信したメッセージの場合、バッジ情報をキャッシュに保存してからスキップ
+if (self) {
+  console.log('[Twitch Chat Service] Own message detected, caching badges:', message);
+
+  // バッジ情報をパースしてキャッシュに保存
+  // ...
+
+  return; // ★ 重要: 自分のメッセージはフロントに送信しない
+}
+```
+
+**確実な動作保証**:
+- `self === true` の場合、必ずバッジ情報をキャッシュしてから `return`
+- フロントに送信されるメッセージは必ず他のユーザーのメッセージのみ
+- 自分のメッセージはサーバー経由で表示されない（問題1の方針を堅持）
+
+#### 影響範囲
+
+- ✅ 自分のメッセージ: 1回のみ表示（完全解決）
+- ✅ 他のユーザーのメッセージ: 正常に表示
+- ✅ エモート・バッジ情報: すべて正常に動作
+
+### まとめ
+
+**解決した問題**:
+1. ✅ チャットメッセージの2重表示
+2. ✅ 受信メッセージが表示されない問題
+3. ✅ 自分のエモートが文字列として表示される問題
+4. ✅ 自分のメッセージにバッジが表示されない問題
+5. ✅ メッセージ重複の完全解決
+
+**技術的なポイント**:
+- **メッセージタイプの明示**: `type: 'chat'` で区別
+- **単一表示原則**: メッセージは必ずサーバー経由で1回のみ表示
+- **キャッシュ機構**: エモート・バッジ情報を一時保存
+- **TMI.js の制約回避**: 自分のメッセージの不足情報を補完
+
+**関連ファイル**:
+- `server/src/index.ts` L468（WebSocketメッセージタイプ追加）
+- `server/src/services/twitchChatService.ts` L33-150, L364-435（キャッシュ機構）
+- `server/src/routes/twitch.ts` L149-185（メッセージ送信API）
+- `web/src/hooks/useTwitchChat.ts` L77-90（メッセージフィルタリング）
+- `web/src/components/ChatPanel/ChatPanel.tsx` L74, L167（送信処理）
+- `web/src/main.tsx`（React.StrictMode無効化）

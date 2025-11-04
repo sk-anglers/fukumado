@@ -274,10 +274,23 @@ Twitchチャット送信。
 }
 ```
 
-**レスポンス**:
+**レスポンス** (v1.1.0):
 ```json
 {
-  "success": true
+  "success": true,
+  "emotes": [
+    {
+      "id": "25",
+      "positions": [{ "start": 6, "end": 10 }]
+    }
+  ],
+  "badges": [
+    {
+      "setId": "subscriber",
+      "version": "1",
+      "imageUrl": "https://static-cdn.jtvnw.net/badges/v1/..."
+    }
+  ]
 }
 ```
 
@@ -289,12 +302,41 @@ Twitchチャット送信。
 }
 ```
 
-**既知の問題（2025-10-28）**:
-- ❌ **Unknown error**: チャット送信時に500エラーが発生する問題が報告されています
-- **症状**: `POST /api/twitch/chat/send` が500ステータスを返し、エラーメッセージが "Unknown error"
-- **原因**: `twitchChatService.setCredentials()` の認証クライアントリセットロジックに問題がある可能性
-- **状態**: 調査中（詳細は [12. 制限事項・既知の問題 - 12.14](./12_issues.md#1214-チャット送信機能のトラブルシューティング2025-10-28追加) を参照）
-- **ワークアラウンド**: なし（現在チャット送信機能は使用不可）
+#### 実装詳細（v1.1.0）
+
+**エモート・バッジのキャッシング機構**:
+
+1. **メッセージ送信前**:
+   - サーバー側でメッセージからエモート情報をパース
+   - `twitchChatService.cacheEmotesForMessage()` でキャッシュに保存
+   - `sentMessagesCache` Map: `channelLogin` → `{ message, emotes, badges, timestamp }`
+
+2. **TMI.js でメッセージ送信**:
+   - Twitch IRCにメッセージを送信
+   - IRCから自分のメッセージがエコーバックされる（`self: true`）
+
+3. **IRCからのエコーバック受信時**:
+   - `self === true` を検出
+   - バッジ情報をパース → キャッシュに追加
+   - `return` で処理を終了（WebSocketにメッセージを送信しない）
+
+4. **HTTP レスポンス**:
+   - 100ms待機（IRCからのエコーバックを待つ）
+   - `twitchChatService.getCachedBadges()` でバッジ情報を取得
+   - エモート・バッジ情報を含むレスポンスを返す
+
+**キャッシュ管理**:
+- 有効期限: 10秒
+- 削除タイミング: IRCエコーバック受信時、または10秒経過時
+- メモリリーク対策: 自動削除により古いキャッシュは残らない
+
+**実装箇所**:
+- `server/src/routes/twitch.ts` L149-185
+- `server/src/services/twitchChatService.ts` L33-150, L364-435
+
+参照:
+- [12.14 チャット送信機能のトラブルシューティング（解決済み）](./12_issues.md#1214-チャット送信機能のトラブルシューティング2025-10-28追加)
+- [12.15 チャットメッセージ表示の問題（解決済み）](./12_issues.md#1215-チャットメッセージ表示の問題解決済み)
 
 ### GET `/api/twitch/emotes/global`
 Twitchグローバルエモート取得。

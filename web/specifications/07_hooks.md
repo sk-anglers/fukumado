@@ -119,6 +119,55 @@ function useTwitchChat(channels: TwitchChannel[]): void
 ### 依存
 - chatStore
 
+### メッセージフィルタリング（v1.1.0）
+
+**実装背景**: WebSocketで受信するメッセージには、チャットメッセージ以外にEventSub通知や配信リスト更新などが含まれるため、チャットメッセージのみを抽出する必要がある。
+
+#### フィルタリングロジック (L77-90)
+
+```typescript
+// チャットメッセージのみを処理（typeフィールドがない、またはplatformがtwitchのメッセージ）
+// EventSub通知、配信リスト更新、優先度変更などは無視する
+if (message.type && message.type !== 'chat') {
+  console.log('[useTwitchChat] Ignoring non-chat message:', message.type);
+  return;
+}
+
+// チャットメッセージかどうかを確認（platformまたはchannelLoginフィールドの存在）
+if (!message.platform && !message.channelLogin) {
+  console.log('[useTwitchChat] Ignoring message without platform/channelLogin');
+  return;
+}
+```
+
+**フィルタリング条件**:
+1. `message.type === 'chat'` のメッセージのみ処理
+2. `message.type` が存在しない場合、`platform` または `channelLogin` フィールドの存在を確認
+3. 上記条件を満たさないメッセージは無視
+
+**無視されるメッセージタイプ**:
+- EventSub通知（`type: 'eventsub'`）
+- 配信リスト更新（`type: 'streams'`）
+- 優先度変更（`type: 'priority'`）
+- その他のシステムメッセージ
+
+### ハートビート送信（v1.1.0）
+
+**目的**: WebSocket接続を維持し、タイムアウトを防止
+
+```typescript
+// 30秒ごとにハートビートを送信
+heartbeatTimerRef.current = setInterval(() => {
+  if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    wsRef.current.send(JSON.stringify({ type: 'heartbeat' }));
+  }
+}, 30000);
+```
+
+**実装箇所**: `web/src/hooks/useTwitchChat.ts` L27-40
+
+参照: [12.15 チャットメッセージ表示の問題（解決済み）](./12_issues.md#1215-チャットメッセージ表示の問題解決済み)
+
 ## 7.6 useYouTubeIframeApi (src/hooks/useYouTubeIframeApi.ts)
 
 YouTube IFrame APIをロード・プレイヤー制御。
