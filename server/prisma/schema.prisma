@@ -184,7 +184,9 @@ model Badge {
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   lastSyncedAt DateTime @default(now()) @map("last_synced_at") @db.Timestamptz(6)
 
-  @@unique([platform, badgeSetId, badgeVersion, channelId])
+  // Note: UNIQUE制約は Partial Indexes で実装されています
+  // - グローバル: idx_badges_unique_global (WHERE channel_id IS NULL)
+  // - チャンネル: idx_badges_unique_channel (WHERE channel_id IS NOT NULL)
   @@index([platform, scope])
   @@index([platform, channelId])
   @@map("badges")

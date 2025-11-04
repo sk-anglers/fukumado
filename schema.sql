@@ -8,7 +8,7 @@
 -- 拡張機能の有効化
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";  -- 類似検索用
-CREATE EXTENSION IF NOT EXISTS "pg_cron";  -- 自動タスク用
+-- CREATE EXTENSION IF NOT EXISTS "pg_cron";  -- 自動タスク用（Renderではサポートされていないためコメントアウト）
 
 -- ============================================
 -- 共通関数
@@ -214,10 +214,18 @@ CREATE TABLE badges (
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  last_synced_at TIMESTAMPTZ DEFAULT NOW(),
-
-  UNIQUE(platform, badge_set_id, badge_version, COALESCE(channel_id, ''))
+  last_synced_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- グローバルバッジのユニーク制約（channel_id IS NULL）
+CREATE UNIQUE INDEX idx_badges_unique_global
+  ON badges(platform, badge_set_id, badge_version)
+  WHERE channel_id IS NULL;
+
+-- チャンネル固有バッジのユニーク制約（channel_id IS NOT NULL）
+CREATE UNIQUE INDEX idx_badges_unique_channel
+  ON badges(platform, badge_set_id, badge_version, channel_id)
+  WHERE channel_id IS NOT NULL;
 
 CREATE INDEX idx_badges_global ON badges(platform) WHERE scope = 'global';
 CREATE INDEX idx_badges_channel ON badges(platform, channel_id) WHERE channel_id IS NOT NULL;
@@ -492,25 +500,27 @@ $$ LANGUAGE plpgsql;
 -- ============================================
 -- 自動タスクスケジュール（pg_cron）
 -- ============================================
+-- NOTE: Renderのマネージドデータベースではpg_cronがサポートされていません
+-- これらの自動タスクは、アプリケーション側（Node.jsのcronジョブやRenderのCron Jobs）で実装する必要があります
 
--- 毎日午前3時にクリーンアップ
-SELECT cron.schedule('cleanup-old-data', '0 3 * * *', $$
-  SELECT cleanup_old_channels();
-  SELECT cleanup_expired_sessions();
-  SELECT cleanup_old_page_views();
-  SELECT cleanup_old_analytics();
-  SELECT cleanup_old_security_logs();
-$$);
+-- -- 毎日午前3時にクリーンアップ
+-- SELECT cron.schedule('cleanup-old-data', '0 3 * * *', $$
+--   SELECT cleanup_old_channels();
+--   SELECT cleanup_expired_sessions();
+--   SELECT cleanup_old_page_views();
+--   SELECT cleanup_old_analytics();
+--   SELECT cleanup_old_security_logs();
+-- $$);
 
--- 毎時間、PV統計を更新
-SELECT cron.schedule('refresh-pv-stats', '0 * * * *', $$
-  SELECT refresh_pv_daily_stats();
-$$);
+-- -- 毎時間、PV統計を更新
+-- SELECT cron.schedule('refresh-pv-stats', '0 * * * *', $$
+--   SELECT refresh_pv_daily_stats();
+-- $$);
 
--- 毎週日曜日午前4時にインデックスメンテナンス
-SELECT cron.schedule('weekly-maintenance', '0 4 * * 0', $$
-  SELECT weekly_index_maintenance();
-$$);
+-- -- 毎週日曜日午前4時にインデックスメンテナンス
+-- SELECT cron.schedule('weekly-maintenance', '0 4 * * 0', $$
+--   SELECT weekly_index_maintenance();
+-- $$);
 
 -- ============================================
 -- 初期データ挿入（オプション）
