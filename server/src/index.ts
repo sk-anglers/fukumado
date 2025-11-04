@@ -12,6 +12,7 @@ import { authRouter } from './routes/auth';
 import { youtubeRouter } from './routes/youtube';
 import { twitchRouter } from './routes/twitch';
 import { streamsRouter } from './routes/streams';
+import { channelsRouter } from './routes/channels';
 import { securityRouter } from './routes/security';
 import { consentRouter } from './routes/consent';
 import { legalRouter } from './routes/legal';
@@ -203,6 +204,7 @@ if (env.enableYoutube) {
 // APIルーター（レート制限付き）
 app.use('/api/twitch', apiRateLimiter, twitchRouter);
 app.use('/api/streams', apiRateLimiter, streamsRouter);
+app.use('/api/channels', apiRateLimiter, channelsRouter);
 app.use('/api/security', apiRateLimiter, securityRouter);
 app.use('/api/consent', apiRateLimiter, consentRouter);
 app.use('/api/legal', apiRateLimiter, legalRouter);

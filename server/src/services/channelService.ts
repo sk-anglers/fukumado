@@ -184,10 +184,89 @@ export const getFollowedChannels = async (
   }
 };
 
+/**
+ * ユーザーのフォローチャンネルを詳細情報付きで取得
+ */
+export const getFollowedChannelsWithDetails = async (
+  userId: string
+): Promise<any[]> => {
+  try {
+    const followed = await prisma.followedChannel.findMany({
+      where: { userId },
+      select: {
+        platform: true,
+        channelId: true,
+        followedAt: true,
+        notificationEnabled: true,
+      },
+    });
+
+    return followed;
+  } catch (error) {
+    console.error('❌ Failed to get followed channels with details:', error);
+    return [];
+  }
+};
+
+/**
+ * ユーザーがチャンネルをアンフォロー
+ */
+export const unfollowChannel = async (
+  userId: string,
+  platform: string,
+  channelId: string
+): Promise<void> => {
+  try {
+    await prisma.followedChannel.deleteMany({
+      where: {
+        userId,
+        platform,
+        channelId,
+      },
+    });
+
+    console.log(`✅ Unfollowed channel: ${userId} -> ${platform}:${channelId}`);
+  } catch (error) {
+    console.error('❌ Failed to unfollow channel:', error);
+    throw error;
+  }
+};
+
+/**
+ * 通知設定を更新
+ */
+export const updateNotificationSetting = async (
+  userId: string,
+  platform: string,
+  channelId: string,
+  enabled: boolean
+): Promise<void> => {
+  try {
+    await prisma.followedChannel.updateMany({
+      where: {
+        userId,
+        platform,
+        channelId,
+      },
+      data: {
+        notificationEnabled: enabled,
+      },
+    });
+
+    console.log(`✅ Updated notification setting: ${platform}:${channelId} -> ${enabled}`);
+  } catch (error) {
+    console.error('❌ Failed to update notification setting:', error);
+    throw error;
+  }
+};
+
 export default {
   upsertTwitchChannel,
   upsertTwitchChannels,
   searchChannelsInDB,
   addFollowedChannel,
   getFollowedChannels,
+  getFollowedChannelsWithDetails,
+  unfollowChannel,
+  updateNotificationSetting,
 };

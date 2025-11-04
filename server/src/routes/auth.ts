@@ -15,6 +15,7 @@ import {
 } from '../utils/twitchOAuth';
 import { fetchGlobalEmotes } from '../services/twitchService';
 import { upsertGoogleUser, upsertTwitchUser } from '../services/userService';
+import { getFollowedChannelsWithDetails } from '../services/channelService';
 import { env } from '../config/env';
 
 export const authRouter = Router();
@@ -75,15 +76,40 @@ authRouter.get('/google/callback', async (req, res) => {
   }
 });
 
-authRouter.get('/status', (req, res) => {
-  if (!req.session.googleTokens || !req.session.googleUser) {
+authRouter.get('/status', async (req, res) => {
+  const hasGoogle = req.session.googleTokens && req.session.googleUser;
+  const hasTwitch = req.session.twitchTokens && req.session.twitchUser;
+
+  if (!hasGoogle && !hasTwitch) {
     return res.json({ authenticated: false });
   }
-  res.json({
-    authenticated: true,
-    user: req.session.googleUser,
-    scope: req.session.googleTokens.scope
-  });
+
+  try {
+    // ユーザーIDを取得（TwitchまたはGoogle）
+    const userId = req.session.twitchUser?.id || req.session.googleUser?.id;
+
+    // フォローチャンネルリストを取得
+    let followedChannels = [];
+    if (userId) {
+      followedChannels = await getFollowedChannelsWithDetails(userId);
+    }
+
+    res.json({
+      authenticated: true,
+      user: req.session.twitchUser || req.session.googleUser,
+      scope: req.session.twitchTokens?.scope || req.session.googleTokens?.scope,
+      followedChannels: followedChannels,
+    });
+  } catch (error) {
+    console.error('[Auth Status] Error getting followed channels:', error);
+    // エラーがあってもステータスは返す
+    res.json({
+      authenticated: true,
+      user: req.session.twitchUser || req.session.googleUser,
+      scope: req.session.twitchTokens?.scope || req.session.googleTokens?.scope,
+      followedChannels: [],
+    });
+  }
 });
 
 authRouter.post('/logout', (req, res) => {
