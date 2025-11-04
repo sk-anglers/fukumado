@@ -812,3 +812,88 @@ export const migrateAuditLogsTable = async (): Promise<void> => {
     method: 'POST'
   });
 };
+
+// ========================================
+// アラート・通知API
+// ========================================
+
+/**
+ * アラート一覧を取得
+ */
+export const getAlerts = async (options: {
+  limit?: number;
+  offset?: number;
+  type?: string;
+  severity?: string;
+  acknowledged?: boolean;
+  resolved?: boolean;
+}): Promise<any> => {
+  const params = new URLSearchParams();
+  if (options.limit) params.set('limit', options.limit.toString());
+  if (options.offset) params.set('offset', options.offset.toString());
+  if (options.type) params.set('type', options.type);
+  if (options.severity) params.set('severity', options.severity);
+  if (options.acknowledged !== undefined) params.set('acknowledged', options.acknowledged.toString());
+  if (options.resolved !== undefined) params.set('resolved', options.resolved.toString());
+
+  return fetchAPI(`/alerts?${params.toString()}`);
+};
+
+/**
+ * 未読アラート数を取得
+ */
+export const getUnreadAlertCount = async (): Promise<number> => {
+  const result = await fetchAPI<{ count: number }>('/alerts/unread-count');
+  return result.count;
+};
+
+/**
+ * アラートを確認済みにする
+ */
+export const acknowledgeAlert = async (id: string, acknowledgedBy: string): Promise<void> => {
+  await fetchAPI(`/alerts/${id}/acknowledge`, {
+    method: 'POST',
+    body: JSON.stringify({ acknowledgedBy })
+  });
+};
+
+/**
+ * アラートを解決済みにする
+ */
+export const resolveAlert = async (id: string): Promise<void> => {
+  await fetchAPI(`/alerts/${id}/resolve`, {
+    method: 'POST'
+  });
+};
+
+/**
+ * アラート設定を取得
+ */
+export const getAlertSettings = async (): Promise<any[]> => {
+  return fetchAPI('/alert-settings/settings');
+};
+
+/**
+ * アラート設定を更新
+ */
+export const updateAlertSetting = async (type: string, data: {
+  enabled?: boolean;
+  threshold?: number;
+  notifyEmail?: boolean;
+  notifySlack?: boolean;
+  notifyWebhook?: boolean;
+}): Promise<void> => {
+  await fetchAPI(`/alert-settings/settings/${type}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+};
+
+/**
+ * alerts と alert_settings テーブルを作成
+ */
+export const migrateAlertsTable = async (): Promise<void> => {
+  await fetchAPI('/maintenance/migrate-alerts', {
+    method: 'POST'
+  });
+};

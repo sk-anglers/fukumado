@@ -9,6 +9,7 @@ import { ipBlocklist } from '../middleware/security';
 import { SystemMetricsService } from '../services/systemMetricsService';
 import { DatabaseMetricsService } from '../services/databaseMetricsService';
 import { auditLogService } from '../services/auditLogService';
+import { alertService, AlertType, AlertSeverity } from '../services/alertService';
 import prisma from '../services/prismaService';
 
 export const adminRouter = Router();
@@ -1121,6 +1122,247 @@ adminRouter.post('/database/migrate-audit-logs', async (req: Request, res: Respo
     });
   } catch (error) {
     console.error('[Admin] Error creating audit_logs table:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ============================================
+// アラート・通知 (Alerts & Notifications)
+// ============================================
+
+/**
+ * GET /api/admin/alerts
+ * アラート一覧を取得
+ */
+adminRouter.get('/alerts', async (req: Request, res: Response) => {
+  try {
+    const {
+      limit,
+      offset,
+      type,
+      severity,
+      acknowledged,
+      resolved
+    } = req.query;
+
+    const options: any = {};
+    if (limit) options.limit = parseInt(limit as string);
+    if (offset) options.offset = parseInt(offset as string);
+    if (type) options.type = type as AlertType;
+    if (severity) options.severity = severity as AlertSeverity;
+    if (acknowledged !== undefined) options.acknowledged = acknowledged === 'true';
+    if (resolved !== undefined) options.resolved = resolved === 'true';
+
+    const result = await alertService.getAlerts(options);
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting alerts:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/alerts/unread-count
+ * 未読アラート数を取得
+ */
+adminRouter.get('/alerts/unread-count', async (req: Request, res: Response) => {
+  try {
+    const count = await alertService.getUnreadCount();
+
+    res.json({
+      success: true,
+      data: { count },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting unread alert count:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/alerts/:id/acknowledge
+ * アラートを確認済みにする
+ */
+adminRouter.post('/alerts/:id/acknowledge', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { acknowledgedBy } = req.body;
+
+    if (!acknowledgedBy) {
+      return res.status(400).json({
+        success: false,
+        error: 'acknowledgedBy is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    await alertService.acknowledgeAlert(id, acknowledgedBy);
+
+    res.json({
+      success: true,
+      data: { message: 'Alert acknowledged' },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error acknowledging alert:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/alerts/:id/resolve
+ * アラートを解決済みにする
+ */
+adminRouter.post('/alerts/:id/resolve', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    await alertService.resolveAlert(id);
+
+    res.json({
+      success: true,
+      data: { message: 'Alert resolved' },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error resolving alert:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/admin/alert-settings
+ * アラート設定を取得
+ */
+adminRouter.get('/alert-settings', async (req: Request, res: Response) => {
+  try {
+    const settings = await alertService.getSettings();
+
+    res.json({
+      success: true,
+      data: settings,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error getting alert settings:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * PUT /api/admin/alert-settings/:type
+ * アラート設定を更新
+ */
+adminRouter.put('/alert-settings/:type', async (req: Request, res: Response) => {
+  try {
+    const { type } = req.params;
+    const { enabled, threshold, notifyEmail, notifySlack, notifyWebhook } = req.body;
+
+    const data: any = {};
+    if (enabled !== undefined) data.enabled = enabled;
+    if (threshold !== undefined) data.threshold = threshold;
+    if (notifyEmail !== undefined) data.notifyEmail = notifyEmail;
+    if (notifySlack !== undefined) data.notifySlack = notifySlack;
+    if (notifyWebhook !== undefined) data.notifyWebhook = notifyWebhook;
+
+    await alertService.updateSetting(type as AlertType, data);
+
+    res.json({
+      success: true,
+      data: { message: 'Alert setting updated' },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error updating alert setting:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/database/migrate-alerts
+ * alerts と alert_settings テーブルを作成
+ */
+adminRouter.post('/database/migrate-alerts', async (req: Request, res: Response) => {
+  try {
+    console.log('[Admin] Creating alerts and alert_settings tables...');
+
+    // マイグレーションSQLファイルを読み込んで実行
+    const fs = require('fs');
+    const path = require('path');
+    const sqlPath = path.join(__dirname, '../../prisma/migrations/create_alerts.sql');
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+
+    // トランザクション内で実行
+    await prisma.$executeRawUnsafe(sql);
+
+    console.log('[Admin] Alerts tables created successfully');
+
+    // 監査ログに記録
+    await auditLogService.log({
+      action: 'database_migration_alerts',
+      actor: 'admin',
+      actorIp: req.ip || 'unknown',
+      actorAgent: req.headers['user-agent'],
+      targetType: 'database',
+      targetId: 'alerts',
+      details: {
+        description: 'Created alerts and alert_settings tables'
+      },
+      status: 'success'
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Alerts tables created successfully',
+        tables: ['alerts', 'alert_settings']
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error creating alerts tables:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
 
     res.status(500).json({

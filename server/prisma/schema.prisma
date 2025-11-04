@@ -365,3 +365,57 @@ model AuditLog {
   @@index([status, createdAt(sort: Desc)])
   @@map("audit_logs")
 }
+
+// ============================================
+// アラート・通知 (Alerts & Notifications)
+// ============================================
+
+model Alert {
+  id BigInt @id @default(autoincrement())
+
+  // アラート情報
+  type        String  @db.VarChar(50)   // cpu_high, memory_high, rate_limit_low, quota_low, security, error_spike
+  severity    String  @db.VarChar(20)   // info, warning, error, critical
+  title       String  @db.VarChar(255)  // アラートタイトル
+  message     String  @db.Text          // アラートメッセージ
+  details     Json?                     // 詳細情報（JSON）
+
+  // ステータス
+  acknowledged Boolean  @default(false)                   // 確認済みフラグ
+  acknowledgedAt DateTime? @map("acknowledged_at") @db.Timestamptz(6)  // 確認日時
+  acknowledgedBy String?   @map("acknowledged_by") @db.VarChar(255)    // 確認者
+
+  resolved Boolean  @default(false)                   // 解決済みフラグ
+  resolvedAt DateTime? @map("resolved_at") @db.Timestamptz(6)  // 解決日時
+
+  // メタデータ
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([type, createdAt(sort: Desc)])
+  @@index([severity, createdAt(sort: Desc)])
+  @@index([acknowledged, createdAt(sort: Desc)])
+  @@index([resolved, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("alerts")
+}
+
+model AlertSetting {
+  id Int @id @default(autoincrement())
+
+  // 設定情報
+  type      String  @unique @db.VarChar(50)  // cpu_high, memory_high等
+  enabled   Boolean @default(true)           // 有効/無効
+  threshold Float?                           // 閾値（パーセント等）
+
+  // 通知設定
+  notifyEmail   Boolean @default(false) @map("notify_email")
+  notifySlack   Boolean @default(false) @map("notify_slack")
+  notifyWebhook Boolean @default(false) @map("notify_webhook")
+
+  // メタデータ
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("alert_settings")
+}
