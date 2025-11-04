@@ -120,7 +120,7 @@ maintenanceRouter.post('/migrate-severity', async (req, res) => {
       }
     });
 
-    const data = await response.json();
+    const data = await response.json() as any;
 
     if (!response.ok) {
       throw new Error(data.error || 'Migration failed');
