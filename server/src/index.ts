@@ -152,7 +152,10 @@ app.use((req, res, next) => {
 // PostgreSQLセッションストア
 const PgSession = connectPg(session);
 const pgPool = new Pool({
-  connectionString: env.databaseUrl
+  connectionString: env.databaseUrl,
+  ssl: {
+    rejectUnauthorized: false // Render PostgreSQLのSSL証明書を受け入れる
+  }
 });
 
 // セッションミドルウェア（WebSocketでも使用するためexport）
