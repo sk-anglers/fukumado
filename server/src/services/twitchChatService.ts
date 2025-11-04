@@ -133,14 +133,25 @@ class TwitchChatService {
               });
               emotes.push({ id: emoteId, positions: parsedPositions });
             });
+            console.log(`[Twitch Chat Service] Emotes from tags for ${channelLogin}:`, emotes.length);
           } else {
             // エモート情報がない場合、キャッシュから取得（自分が送信したメッセージ）
+            console.log(`[Twitch Chat Service] No emotes in tags for ${channelLogin}, checking cache...`);
+            console.log(`[Twitch Chat Service]   - Message: "${message}"`);
             const cached = this.sentMessagesCache.get(channelLogin);
+            console.log(`[Twitch Chat Service]   - Cache exists: ${!!cached}`);
+            if (cached) {
+              console.log(`[Twitch Chat Service]   - Cached message: "${cached.message}"`);
+              console.log(`[Twitch Chat Service]   - Message match: ${cached.message === message}`);
+              console.log(`[Twitch Chat Service]   - Cached emotes count: ${cached.emotes.length}`);
+            }
             if (cached && cached.message === message) {
               emotes = cached.emotes;
-              console.log('[Twitch Chat Service] Retrieved emotes from cache for sent message');
+              console.log('[Twitch Chat Service] ✓ Retrieved emotes from cache for sent message:', emotes);
               // キャッシュから削除
               this.sentMessagesCache.delete(channelLogin);
+            } else {
+              console.log('[Twitch Chat Service] ✗ Cache miss or message mismatch');
             }
           }
 
@@ -368,7 +379,10 @@ class TwitchChatService {
       timestamp: Date.now()
     });
 
-    console.log(`[Twitch Chat Service] Cached emotes for message in ${channelLogin}:`, emotes);
+    console.log(`[Twitch Chat Service] Cached emotes for message in ${channelLogin}:`);
+    console.log(`[Twitch Chat Service]   - Message: "${message}"`);
+    console.log(`[Twitch Chat Service]   - Emotes count: ${emotes.length}`);
+    console.log(`[Twitch Chat Service]   - Emotes:`, JSON.stringify(emotes, null, 2));
 
     // 10秒後にキャッシュをクリア
     setTimeout(() => {

@@ -190,6 +190,9 @@ twitchRouter.post('/chat/send', async (req, res) => {
 
     // エモート情報をパース（送信前に）
     const emotes = await parseEmotesFromMessage(accessToken, channelId, message.trim());
+    console.log('[Twitch Chat] Parsed emotes:', JSON.stringify(emotes, null, 2));
+    console.log('[Twitch Chat] Message:', message.trim());
+    console.log('[Twitch Chat] Channel:', channelLogin);
 
     // エモート情報をキャッシュに保存（自分のメッセージ受信時に付加するため）
     twitchChatService.cacheEmotesForMessage(channelLogin, message.trim(), emotes);
