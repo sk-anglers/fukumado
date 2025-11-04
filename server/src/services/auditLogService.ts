@@ -28,12 +28,12 @@ class AuditLogService {
           action: entry.action,
           actor: entry.actor,
           actorIp: entry.actorIp,
-          actorAgent: entry.actorAgent || null,
+          actorAgent: entry.actorAgent || undefined,
           targetType: entry.targetType,
-          targetId: entry.targetId || null,
-          details: entry.details || null,
+          targetId: entry.targetId || undefined,
+          details: entry.details || undefined,
           status: entry.status,
-          errorMessage: entry.errorMessage || null
+          errorMessage: entry.errorMessage || undefined
         }
       });
       console.log(`[AuditLog] Recorded: ${entry.action} by ${entry.actor} (${entry.status})`);
