@@ -123,6 +123,12 @@ class TwitchChatService {
 
           const channelLogin = channel.replace('#', '');
 
+          // 自分が送信したメッセージは無視（フロント側で既に表示済み）
+          if (self) {
+            console.log('[Twitch Chat Service] Skipping own message:', message);
+            return;
+          }
+
           // エモート情報をパース
           let emotes: TwitchEmote[] = [];
           if (tags.emotes) {
