@@ -1,6 +1,7 @@
 import express from 'express';
 import session from 'express-session';
-import RedisStore from 'connect-redis';
+import connectPg from 'connect-pg-simple';
+import { Pool } from 'pg';
 import Redis from 'ioredis';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -24,6 +25,7 @@ import { adminRouter } from './routes/admin';
 import { twitchChatService } from './services/twitchChatService';
 import { streamSyncService, tokenStorage } from './services/streamSyncService';
 import { fetchChannelEmotes } from './services/twitchService';
+import { startDataSync } from './services/dataSyncService';
 import { maintenanceService } from './services/maintenanceService';
 import { twitchEventSubService } from './services/twitchEventSubService';
 import { twitchEventSubManager } from './services/twitchEventSubManager';
@@ -146,9 +148,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// PostgreSQLセッションストア
+const PgSession = connectPg(session);
+const pgPool = new Pool({
+  connectionString: env.databaseUrl
+});
+
 // セッションミドルウェア（WebSocketでも使用するためexport）
 const sessionMiddleware = session({
-  store: new RedisStore({ client: redisClient }),
+  store: new PgSession({
+    pool: pgPool,
+    tableName: 'sessions' // schema.sqlで作成したsessionsテーブルを使用
+  }),
   secret: env.sessionSecret,
   resave: false,
   saveUninitialized: false,
@@ -697,6 +708,10 @@ server.listen(env.port, async () => {
     priorityManager.setAccessToken(appAccessToken);
     priorityManager.startDynamicThresholdMonitoring();
     console.log('[server] Dynamic threshold monitoring started');
+
+    // データ同期サービスを開始（グローバルエモート、古いチャンネルデータの同期）
+    startDataSync(appAccessToken);
+    console.log('[server] Data sync service started');
   } catch (error) {
     console.error('[server] Failed to start dynamic threshold monitoring:', error);
     console.log('[server] Using default threshold (10 viewers)');
