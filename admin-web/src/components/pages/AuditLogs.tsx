@@ -8,7 +8,7 @@ import {
 import styles from './AuditLogs.module.css';
 
 interface AuditLog {
-  id: number;
+  id: string;
   action: string;
   actor: string;
   actorIp: string;

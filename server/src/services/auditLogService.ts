@@ -107,8 +107,12 @@ class AuditLogService {
       prisma.auditLog.count({ where })
     ]);
 
+    // BigInt を String に変換（JSONシリアライズ対応）
     return {
-      logs,
+      logs: logs.map(log => ({
+        ...log,
+        id: log.id.toString()
+      })),
       total,
       limit,
       offset
