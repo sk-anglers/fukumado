@@ -2,7 +2,6 @@ import express from 'express';
 import session from 'express-session';
 import connectPg from 'connect-pg-simple';
 import { Pool } from 'pg';
-import Redis from 'ioredis';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -65,23 +64,6 @@ const app = express();
 
 // Renderのリバースプロキシを信頼
 app.set('trust proxy', true);
-
-// Redisクライアントの作成（ioredis）
-const redisClient = new Redis(env.redisUrl, {
-  maxRetriesPerRequest: null,
-  retryStrategy: (times) => {
-    if (times > 10) {
-      console.error('[Redis] Max reconnection attempts reached');
-      return null;
-    }
-    return Math.min(times * 100, 3000);
-  }
-});
-
-redisClient.on('error', (err) => console.error('[Redis] Client Error:', err));
-redisClient.on('connect', () => console.log('[Redis] Client Connected'));
-redisClient.on('ready', () => console.log('[Redis] Client Ready'));
-redisClient.on('reconnecting', () => console.log('[Redis] Client Reconnecting...'));
 
 // PV計測サービスの初期化（PostgreSQL版）
 export const pvTracker = new PVTrackerService();
