@@ -100,7 +100,7 @@ const API_BASE_URL = import.meta.env.VITE_ADMIN_API_URL || '';
 // API クライアント
 const fetchSystemMetrics = async (): Promise<SystemMetrics | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/admin/system/detailed-metrics`, {
+    const response = await fetch(`${API_BASE_URL}/admin/api/metrics/system/detailed-metrics`, {
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to fetch system metrics');
@@ -114,7 +114,7 @@ const fetchSystemMetrics = async (): Promise<SystemMetrics | null> => {
 
 const fetchDatabaseStats = async (): Promise<DatabaseStats | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/admin/database/stats`, {
+    const response = await fetch(`${API_BASE_URL}/admin/api/metrics/database/stats`, {
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to fetch database stats');
@@ -128,7 +128,7 @@ const fetchDatabaseStats = async (): Promise<DatabaseStats | null> => {
 
 const fetchTableStats = async (): Promise<TableStats[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/admin/database/tables`, {
+    const response = await fetch(`${API_BASE_URL}/admin/api/metrics/database/tables`, {
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to fetch table stats');
@@ -142,7 +142,7 @@ const fetchTableStats = async (): Promise<TableStats[]> => {
 
 const fetchActiveQueries = async (): Promise<ActiveQuery[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/admin/database/queries`, {
+    const response = await fetch(`${API_BASE_URL}/admin/api/metrics/database/queries`, {
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to fetch active queries');

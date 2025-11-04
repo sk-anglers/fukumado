@@ -186,3 +186,99 @@ metricsRouter.get('/api/youtube', async (req, res) => {
     res.status(500).json(apiResponse);
   }
 });
+
+/**
+ * GET /admin/api/metrics/system/detailed-metrics
+ * 詳細なシステムメトリクス取得（CPU、メモリ、ロードアベレージ）
+ */
+metricsRouter.get('/system/detailed-metrics', async (req, res) => {
+  try {
+    const response = await fetch(`${SERVER_API_BASE}/system/detailed-metrics`, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('[API] Error getting detailed system metrics:', error);
+    const apiResponse: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(apiResponse);
+  }
+});
+
+/**
+ * GET /admin/api/metrics/database/stats
+ * データベース統計情報取得
+ */
+metricsRouter.get('/database/stats', async (req, res) => {
+  try {
+    const response = await fetch(`${SERVER_API_BASE}/database/stats`, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('[API] Error getting database stats:', error);
+    const apiResponse: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(apiResponse);
+  }
+});
+
+/**
+ * GET /admin/api/metrics/database/tables
+ * テーブル統計情報取得
+ */
+metricsRouter.get('/database/tables', async (req, res) => {
+  try {
+    const response = await fetch(`${SERVER_API_BASE}/database/tables`, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('[API] Error getting database tables:', error);
+    const apiResponse: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(apiResponse);
+  }
+});
+
+/**
+ * GET /admin/api/metrics/database/queries
+ * アクティブなクエリを取得
+ */
+metricsRouter.get('/database/queries', async (req, res) => {
+  try {
+    const response = await fetch(`${SERVER_API_BASE}/database/queries`, {
+      headers: {
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('[API] Error getting active queries:', error);
+    const apiResponse: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(apiResponse);
+  }
+});
