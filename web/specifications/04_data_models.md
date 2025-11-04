@@ -551,3 +551,257 @@ export function isStreamer(value: unknown): value is Streamer {
   );
 }
 ```
+
+## 4.10 管理ダッシュボード関連型（admin-web）
+
+### AuditLog（監査ログ）
+
+```typescript
+export interface AuditLog {
+  id: string;                 // ログID（BigInt → String変換）
+  action: string;             // 操作種別
+  actor: string;              // 操作者
+  actorIp: string;            // 操作者IPアドレス
+  actorAgent?: string;        // User-Agent
+  targetType: string;         // 対象種別
+  targetId?: string;          // 対象ID
+  details?: any;              // 詳細情報（JSON）
+  status: string;             // 結果（success/failure）
+  errorMessage?: string;      // エラーメッセージ
+  createdAt: string;          // 作成日時（ISO 8601）
+}
+```
+
+**プロパティ詳細:**
+
+| プロパティ | 型 | 必須 | 説明 | 例 |
+|-----------|-----|------|------|-----|
+| `id` | string | ✅ | ログID | "123456" |
+| `action` | string | ✅ | 操作種別 | "maintenance_enabled", "cache_cleared" |
+| `actor` | string | ✅ | 操作者 | "admin" |
+| `actorIp` | string | ✅ | IPアドレス | "192.168.1.1" |
+| `actorAgent` | string | - | User-Agent | "Mozilla/5.0..." |
+| `targetType` | string | ✅ | 対象種別 | "maintenance", "cache", "database" |
+| `targetId` | string | - | 対象ID | "alerts" |
+| `details` | any | - | 詳細情報 | `{message: "完了"}` |
+| `status` | string | ✅ | 結果 | "success", "failure" |
+| `errorMessage` | string | - | エラー | "テーブルが既に存在" |
+| `createdAt` | string | ✅ | 作成日時 | "2025-11-04T10:00:00Z" |
+
+**使用例:**
+```typescript
+const auditLog: AuditLog = {
+  id: "123456",
+  action: "database_migration_alerts",
+  actor: "admin",
+  actorIp: "192.168.1.1",
+  actorAgent: "Mozilla/5.0...",
+  targetType: "database",
+  targetId: "alerts",
+  details: {
+    tables: ["alerts", "alert_settings"]
+  },
+  status: "success",
+  createdAt: "2025-11-04T10:00:00.000Z"
+};
+```
+
+---
+
+### Alert（アラート）
+
+```typescript
+export interface Alert {
+  id: string;                 // アラートID（BigInt → String変換）
+  type: string;               // アラートタイプ
+  severity: string;           // 重要度
+  title: string;              // アラートタイトル
+  message: string;            // アラートメッセージ
+  details?: any;              // 詳細情報（JSON）
+  acknowledged: boolean;      // 確認済みフラグ
+  acknowledgedAt?: string;    // 確認日時（ISO 8601）
+  acknowledgedBy?: string;    // 確認者
+  resolved: boolean;          // 解決済みフラグ
+  resolvedAt?: string;        // 解決日時（ISO 8601）
+  createdAt: string;          // 作成日時（ISO 8601）
+  updatedAt: string;          // 更新日時（ISO 8601）
+}
+```
+
+**アラートタイプ:**
+```typescript
+export type AlertType =
+  | 'cpu_high'          // CPU使用率が高い
+  | 'memory_high'       // メモリ使用率が高い
+  | 'rate_limit_low'    // レート制限の残りが少ない
+  | 'quota_low'         // クォータの残りが少ない
+  | 'security'          // セキュリティアラート
+  | 'error_spike';      // エラー急増
+```
+
+**重要度レベル:**
+```typescript
+export type AlertSeverity =
+  | 'info'              // 情報（青）
+  | 'warning'           // 警告（黄）
+  | 'error'             // エラー（赤）
+  | 'critical';         // 重大（濃赤）
+```
+
+**プロパティ詳細:**
+
+| プロパティ | 型 | 必須 | 説明 | 例 |
+|-----------|-----|------|------|-----|
+| `id` | string | ✅ | アラートID | "789" |
+| `type` | string | ✅ | タイプ | "cpu_high" |
+| `severity` | string | ✅ | 重要度 | "warning" |
+| `title` | string | ✅ | タイトル | "CPU使用率が高い" |
+| `message` | string | ✅ | メッセージ | "85%に達しました" |
+| `details` | any | - | 詳細 | `{cpuUsage: 85.5}` |
+| `acknowledged` | boolean | ✅ | 確認済み | false |
+| `acknowledgedAt` | string | - | 確認日時 | "2025-11-04T10:05:00Z" |
+| `acknowledgedBy` | string | - | 確認者 | "admin" |
+| `resolved` | boolean | ✅ | 解決済み | false |
+| `resolvedAt` | string | - | 解決日時 | "2025-11-04T10:30:00Z" |
+| `createdAt` | string | ✅ | 作成日時 | "2025-11-04T10:00:00Z" |
+| `updatedAt` | string | ✅ | 更新日時 | "2025-11-04T10:00:00Z" |
+
+**使用例:**
+```typescript
+const alert: Alert = {
+  id: "789",
+  type: "cpu_high",
+  severity: "warning",
+  title: "CPU使用率が高くなっています",
+  message: "CPU使用率が85%に達しました",
+  details: {
+    cpuUsage: 85.5,
+    timestamp: "2025-11-04T09:55:00.000Z"
+  },
+  acknowledged: false,
+  resolved: false,
+  createdAt: "2025-11-04T10:00:00.000Z",
+  updatedAt: "2025-11-04T10:00:00.000Z"
+};
+```
+
+---
+
+### AlertSetting（アラート設定）
+
+```typescript
+export interface AlertSetting {
+  id: number;                 // 設定ID
+  type: string;               // アラートタイプ
+  enabled: boolean;           // 有効/無効
+  threshold?: number;         // 閾値
+  notifyEmail: boolean;       // メール通知
+  notifySlack: boolean;       // Slack通知
+  notifyWebhook: boolean;     // Webhook通知
+  createdAt: string;          // 作成日時（ISO 8601）
+  updatedAt: string;          // 更新日時（ISO 8601）
+}
+```
+
+**プロパティ詳細:**
+
+| プロパティ | 型 | 必須 | 説明 | 例 |
+|-----------|-----|------|------|-----|
+| `id` | number | ✅ | 設定ID | 1 |
+| `type` | string | ✅ | タイプ | "cpu_high" |
+| `enabled` | boolean | ✅ | 有効/無効 | true |
+| `threshold` | number | - | 閾値 | 80.0 |
+| `notifyEmail` | boolean | ✅ | メール通知 | false |
+| `notifySlack` | boolean | ✅ | Slack通知 | false |
+| `notifyWebhook` | boolean | ✅ | Webhook通知 | false |
+| `createdAt` | string | ✅ | 作成日時 | "2025-11-04T00:00:00Z" |
+| `updatedAt` | string | ✅ | 更新日時 | "2025-11-04T10:00:00Z" |
+
+**使用例:**
+```typescript
+const setting: AlertSetting = {
+  id: 1,
+  type: "cpu_high",
+  enabled: true,
+  threshold: 80.0,
+  notifyEmail: false,
+  notifySlack: false,
+  notifyWebhook: false,
+  createdAt: "2025-11-04T00:00:00.000Z",
+  updatedAt: "2025-11-04T10:00:00.000Z"
+};
+```
+
+---
+
+### MaintenanceStatus（メンテナンス状態）
+
+```typescript
+export interface MaintenanceStatus {
+  enabled: boolean;           // メンテナンス有効/無効
+  message?: string;           // メンテナンスメッセージ
+  enabledAt?: string;         // 有効化日時（ISO 8601）
+  duration?: number;          // メンテナンス時間（分）
+  scheduledEndAt?: string;    // 終了予定日時（ISO 8601）
+  bypassToken?: string;       // バイパストークン
+  expiresAt?: string;         // トークン有効期限（ISO 8601）
+}
+```
+
+**使用例:**
+```typescript
+const maintenanceStatus: MaintenanceStatus = {
+  enabled: true,
+  message: "システムメンテナンス中です。しばらくお待ちください。",
+  enabledAt: "2025-11-04T10:00:00.000Z",
+  duration: 60,
+  scheduledEndAt: "2025-11-04T11:00:00.000Z",
+  bypassToken: "abc123def456",
+  expiresAt: "2025-11-04T11:00:00.000Z"
+};
+```
+
+---
+
+### SystemMetrics（システムメトリクス）
+
+```typescript
+export interface SystemMetrics {
+  cpu: {
+    usage: number;            // CPU使用率（%）
+    count: number;            // CPU数
+  };
+  memory: {
+    total: number;            // 総メモリ（バイト）
+    used: number;             // 使用メモリ（バイト）
+    free: number;             // 空きメモリ（バイト）
+    usagePercent: number;     // 使用率（%）
+  };
+  disk?: {
+    total: number;            // 総容量（バイト）
+    used: number;             // 使用量（バイト）
+    free: number;             // 空き容量（バイト）
+    usagePercent: number;     // 使用率（%）
+  };
+  uptime: number;             // 稼働時間（秒）
+  timestamp: string;          // タイムスタンプ（ISO 8601）
+}
+```
+
+**使用例:**
+```typescript
+const systemMetrics: SystemMetrics = {
+  cpu: {
+    usage: 45.2,
+    count: 8
+  },
+  memory: {
+    total: 16000000000,
+    used: 8000000000,
+    free: 8000000000,
+    usagePercent: 50.0
+  },
+  uptime: 86400,
+  timestamp: "2025-11-04T10:00:00.000Z"
+};
+```

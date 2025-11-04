@@ -315,7 +315,11 @@ C:\Users\s_kus\開発\admin-web\
 │   │   │   ├── Layout.tsx       # レイアウトフレーム
 │   │   │   ├── Layout.module.css
 │   │   │   ├── Sidebar.tsx      # サイドバーナビゲーション
-│   │   │   └── Sidebar.module.css
+│   │   │   ├── Sidebar.module.css
+│   │   │   ├── Button.tsx       # ボタンコンポーネント
+│   │   │   ├── Card.tsx         # カードコンポーネント
+│   │   │   ├── Loader.tsx       # ローディングコンポーネント
+│   │   │   └── ConnectionStatus.tsx  # 接続状態表示
 │   │   └── pages/               # ページコンポーネント
 │   │       ├── Dashboard.tsx    # ダッシュボードページ
 │   │       ├── Dashboard.module.css
@@ -325,6 +329,8 @@ C:\Users\s_kus\開発\admin-web\
 │   │       ├── Analytics.module.css
 │   │       ├── System.tsx       # システムページ
 │   │       ├── System.module.css
+│   │       ├── ServerMonitor.tsx  # サーバー監視ページ (v1.1.0)
+│   │       ├── ServerMonitor.module.css
 │   │       ├── Security.tsx     # セキュリティページ
 │   │       ├── Security.module.css
 │   │       ├── Streams.tsx      # 配信管理ページ
@@ -333,6 +339,10 @@ C:\Users\s_kus\開発\admin-web\
 │   │       ├── Users.module.css
 │   │       ├── Logs.tsx         # ログ閲覧ページ
 │   │       ├── Logs.module.css
+│   │       ├── AuditLogs.tsx    # 監査ログページ (v1.1.0)
+│   │       ├── AuditLogs.module.css
+│   │       ├── Alerts.tsx       # アラートページ (v1.1.0)
+│   │       ├── Alerts.module.css
 │   │       ├── EventSub.tsx     # EventSub管理ページ
 │   │       ├── EventSub.module.css
 │   │       ├── Cache.tsx        # キャッシュ/DBページ
@@ -343,11 +353,15 @@ C:\Users\s_kus\開発\admin-web\
 │   │       ├── Maintenance.module.css
 │   │       └── index.ts         # ページエクスポート
 │   ├── services/
-│   │   └── apiClient.ts         # APIクライアント
+│   │   ├── apiClient.ts         # APIクライアント
+│   │   └── websocketClient.ts   # WebSocketクライアント
+│   ├── stores/
+│   │   ├── metricsStore.ts      # メトリクスストア (Zustand)
+│   │   └── securityStore.ts     # セキュリティストア (Zustand)
 │   ├── types/
 │   │   └── index.ts             # 型定義
 │   ├── App.tsx                  # ルートコンポーネント
-│   ├── App.css
+│   ├── App.module.css
 │   ├── main.tsx                 # エントリーポイント
 │   └── vite-env.d.ts
 ├── index.html
@@ -369,7 +383,10 @@ C:\Users\s_kus\開発\admin-server\
 │   │   ├── auth.ts              # Basic認証ミドルウェア
 │   │   └── cors.ts              # CORSミドルウェア
 │   ├── routes/
-│   │   └── auth.ts              # Twitch OAuth（未使用）
+│   │   ├── auth.ts              # Twitch OAuth（未使用）
+│   │   ├── alerts.ts            # アラート管理プロキシ (v1.1.0)
+│   │   ├── auditLogs.ts         # 監査ログプロキシ (v1.1.0)
+│   │   └── maintenance.ts       # メンテナンスプロキシ (v1.1.0)
 │   ├── index.ts                 # エントリーポイント
 │   └── types.ts                 # 型定義
 ├── .env                         # 環境変数
@@ -381,13 +398,22 @@ C:\Users\s_kus\開発\admin-server\
 
 ```
 C:\Users\s_kus\開発\server\
+├── prisma/
+│   ├── schema.prisma            # Prismaスキーマ定義
+│   └── migrations/              # マイグレーションSQL
+│       ├── fix_severity_constraint.sql
+│       ├── create_audit_logs.sql     # 監査ログテーブル (v1.1.0)
+│       └── create_alerts.sql         # アラートテーブル (v1.1.0)
 ├── src/
 │   ├── routes/
 │   │   ├── auth.ts              # 認証ルート（Twitch OAuth Proxy含む）
-│   │   └── eventsub.ts          # EventSub管理API
+│   │   ├── eventsub.ts          # EventSub管理API
+│   │   └── admin.ts             # 管理API（全エンドポイント統合）
 │   ├── services/
 │   │   ├── twitchEventSubManager.ts  # EventSub管理サービス
-│   │   └── twitchAppAuth.ts     # Twitch App認証
+│   │   ├── twitchAppAuth.ts     # Twitch App認証
+│   │   ├── auditLogService.ts   # 監査ログサービス (v1.1.0)
+│   │   └── alertService.ts      # アラートサービス (v1.1.0)
 │   └── index.ts                 # サーバーエントリーポイント
 ```
 
@@ -395,7 +421,260 @@ C:\Users\s_kus\開発\server\
 
 ## 16.4 データモデル
 
-### 16.4.1 EventSub統計情報
+### 16.4.1 データベーステーブル（Prisma Schema）
+
+#### AuditLog（監査ログテーブル）
+
+**目的:** 管理者の全操作を記録し、セキュリティコンプライアンスを実現
+
+**Prisma モデル定義:**
+```typescript
+model AuditLog {
+  id BigInt @id @default(autoincrement())
+
+  // 操作情報
+  action     String  @db.VarChar(100)  // 操作種別
+  actor      String  @db.VarChar(255)  // 操作者（管理者名、IPアドレス等）
+  actorIp    String  @map("actor_ip") @db.VarChar(45)
+  actorAgent String? @map("actor_agent") @db.Text  // User-Agent
+
+  // 対象情報
+  targetType String  @map("target_type") @db.VarChar(50)  // system, cache, database, maintenance等
+  targetId   String? @map("target_id") @db.VarChar(255)   // 対象のID（オプション）
+
+  // 詳細情報
+  details Json?  // 操作の詳細（JSONで保存）
+
+  // 結果
+  status       String  @db.VarChar(20)  // success, failure
+  errorMessage String? @map("error_message") @db.Text  // エラーメッセージ（失敗時）
+
+  // メタデータ
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([action, createdAt(sort: Desc)])
+  @@index([actor, createdAt(sort: Desc)])
+  @@index([actorIp, createdAt(sort: Desc)])
+  @@index([targetType, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+```
+
+**フィールド詳細:**
+
+| フィールド | 型 | 説明 | 例 |
+|-----------|-----|------|-----|
+| `id` | BigInt | 自動採番ID | 123456 |
+| `action` | String | 操作種別 | maintenance_enabled, cache_cleared, database_migration_alerts |
+| `actor` | String | 操作者 | admin, system |
+| `actorIp` | String | 操作者IPアドレス | 192.168.1.1 |
+| `actorAgent` | String? | User-Agent | Mozilla/5.0... |
+| `targetType` | String | 対象種別 | maintenance, cache, database, system |
+| `targetId` | String? | 対象ID | alerts (テーブル名等) |
+| `details` | Json? | 詳細情報（JSON） | {"message": "テーブル作成完了"} |
+| `status` | String | 結果 | success, failure |
+| `errorMessage` | String? | エラーメッセージ | テーブルが既に存在します |
+| `createdAt` | DateTime | 作成日時 | 2025-11-04T10:00:00.000Z |
+
+**インデックス:**
+- `action + createdAt`: アクション種別での検索を高速化
+- `actor + createdAt`: 操作者での検索を高速化
+- `actorIp + createdAt`: IPアドレスでの検索を高速化
+- `targetType + createdAt`: 対象種別での検索を高速化
+- `createdAt`: 時系列での検索を高速化
+- `status + createdAt`: ステータスでの検索を高速化
+
+**使用例:**
+```typescript
+// 監査ログの作成
+await auditLogService.log({
+  action: 'maintenance_enabled',
+  actor: 'admin',
+  actorIp: '192.168.1.1',
+  actorAgent: 'Mozilla/5.0...',
+  targetType: 'maintenance',
+  targetId: null,
+  details: {
+    message: 'システムメンテナンスを有効化',
+    duration: 60
+  },
+  status: 'success'
+});
+```
+
+---
+
+#### Alert（アラートテーブル）
+
+**目的:** システムアラートを管理し、問題の早期発見と対応を実現
+
+**Prisma モデル定義:**
+```typescript
+model Alert {
+  id BigInt @id @default(autoincrement())
+
+  // アラート情報
+  type        String  @db.VarChar(50)   // cpu_high, memory_high, rate_limit_low, quota_low, security, error_spike
+  severity    String  @db.VarChar(20)   // info, warning, error, critical
+  title       String  @db.VarChar(255)  // アラートタイトル
+  message     String  @db.Text          // アラートメッセージ
+  details     Json?                     // 詳細情報（JSON）
+
+  // ステータス
+  acknowledged Boolean  @default(false)                   // 確認済みフラグ
+  acknowledgedAt DateTime? @map("acknowledged_at") @db.Timestamptz(6)  // 確認日時
+  acknowledgedBy String?   @map("acknowledged_by") @db.VarChar(255)    // 確認者
+
+  resolved Boolean  @default(false)                   // 解決済みフラグ
+  resolvedAt DateTime? @map("resolved_at") @db.Timestamptz(6)  // 解決日時
+
+  // メタデータ
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([type, createdAt(sort: Desc)])
+  @@index([severity, createdAt(sort: Desc)])
+  @@index([acknowledged, createdAt(sort: Desc)])
+  @@index([resolved, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("alerts")
+}
+```
+
+**フィールド詳細:**
+
+| フィールド | 型 | 説明 | 例 |
+|-----------|-----|------|-----|
+| `id` | BigInt | 自動採番ID | 789 |
+| `type` | String | アラートタイプ | cpu_high, memory_high, rate_limit_low, quota_low, security, error_spike |
+| `severity` | String | 重要度 | info, warning, error, critical |
+| `title` | String | アラートタイトル | CPU使用率が高くなっています |
+| `message` | String | アラートメッセージ | CPU使用率が85%に達しました |
+| `details` | Json? | 詳細情報（JSON） | {"cpuUsage": 85.5, "timestamp": "..."} |
+| `acknowledged` | Boolean | 確認済みフラグ | false |
+| `acknowledgedAt` | DateTime? | 確認日時 | 2025-11-04T10:05:00.000Z |
+| `acknowledgedBy` | String? | 確認者 | admin |
+| `resolved` | Boolean | 解決済みフラグ | false |
+| `resolvedAt` | DateTime? | 解決日時 | 2025-11-04T10:30:00.000Z |
+| `createdAt` | DateTime | 作成日時 | 2025-11-04T10:00:00.000Z |
+| `updatedAt` | DateTime | 更新日時 | 2025-11-04T10:00:00.000Z |
+
+**アラートタイプ:**
+- `cpu_high`: CPU使用率が高い
+- `memory_high`: メモリ使用率が高い
+- `rate_limit_low`: Twitch APIレート制限の残りが少ない
+- `quota_low`: YouTube APIクォータの残りが少ない
+- `security`: セキュリティアラート
+- `error_spike`: エラー急増
+
+**重要度レベル:**
+- `info`: 情報（青）
+- `warning`: 警告（黄）
+- `error`: エラー（赤）
+- `critical`: 重大（濃赤）
+
+**インデックス:**
+- `type + createdAt`: アラートタイプでの検索を高速化
+- `severity + createdAt`: 重要度での検索を高速化
+- `acknowledged + createdAt`: 確認済み状態での検索を高速化
+- `resolved + createdAt`: 解決済み状態での検索を高速化
+- `createdAt`: 時系列での検索を高速化
+
+**使用例:**
+```typescript
+// アラートの作成
+await alertService.createAlert({
+  type: 'cpu_high',
+  severity: 'warning',
+  title: 'CPU使用率が高くなっています',
+  message: 'CPU使用率が85%に達しました',
+  details: {
+    cpuUsage: 85.5,
+    timestamp: new Date().toISOString()
+  }
+});
+
+// アラートの確認
+await alertService.acknowledgeAlert('789', 'admin');
+
+// アラートの解決
+await alertService.resolveAlert('789');
+```
+
+---
+
+#### AlertSetting（アラート設定テーブル）
+
+**目的:** アラートの閾値と通知設定を管理
+
+**Prisma モデル定義:**
+```typescript
+model AlertSetting {
+  id Int @id @default(autoincrement())
+
+  // 設定情報
+  type      String  @unique @db.VarChar(50)  // cpu_high, memory_high等
+  enabled   Boolean @default(true)           // 有効/無効
+  threshold Float?                           // 閾値（パーセント等）
+
+  // 通知設定
+  notifyEmail   Boolean @default(false) @map("notify_email")
+  notifySlack   Boolean @default(false) @map("notify_slack")
+  notifyWebhook Boolean @default(false) @map("notify_webhook")
+
+  // メタデータ
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("alert_settings")
+}
+```
+
+**フィールド詳細:**
+
+| フィールド | 型 | 説明 | 例 |
+|-----------|-----|------|-----|
+| `id` | Int | 自動採番ID | 1 |
+| `type` | String | アラートタイプ（一意） | cpu_high |
+| `enabled` | Boolean | 有効/無効 | true |
+| `threshold` | Float? | 閾値 | 80.0 (%) |
+| `notifyEmail` | Boolean | メール通知 | false |
+| `notifySlack` | Boolean | Slack通知 | false |
+| `notifyWebhook` | Boolean | Webhook通知 | false |
+| `createdAt` | DateTime | 作成日時 | 2025-11-04T00:00:00.000Z |
+| `updatedAt` | DateTime | 更新日時 | 2025-11-04T10:00:00.000Z |
+
+**デフォルト設定（マイグレーション時に挿入）:**
+
+| type | enabled | threshold | notifyEmail | notifySlack | notifyWebhook |
+|------|---------|-----------|-------------|-------------|---------------|
+| cpu_high | true | 80.0 | false | false | false |
+| memory_high | true | 85.0 | false | false | false |
+| rate_limit_low | true | 20.0 | false | false | false |
+| quota_low | true | 10.0 | false | false | false |
+| security | true | NULL | false | false | false |
+| error_spike | true | NULL | false | false | false |
+
+**使用例:**
+```typescript
+// 設定の取得
+const settings = await alertService.getSettings();
+
+// 設定の更新
+await alertService.updateSetting('cpu_high', {
+  enabled: true,
+  threshold: 85.0,
+  notifyEmail: true,
+  notifySlack: false,
+  notifyWebhook: false
+});
+```
+
+---
+
+### 16.4.2 EventSub統計情報
 
 **型定義（`admin-web/src/types/index.ts`）:**
 
