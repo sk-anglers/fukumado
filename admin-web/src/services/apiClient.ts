@@ -803,3 +803,12 @@ export const cleanupAuditLogs = async (days: number = 90): Promise<void> => {
     body: JSON.stringify({ days })
   });
 };
+
+/**
+ * audit_logs テーブルを作成
+ */
+export const migrateAuditLogsTable = async (): Promise<void> => {
+  await fetchAPI('/maintenance/migrate-audit-logs', {
+    method: 'POST'
+  });
+};

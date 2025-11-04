@@ -143,3 +143,43 @@ maintenanceRouter.post('/migrate-severity', async (req, res) => {
     res.status(500).json(apiResponse);
   }
 });
+
+/**
+ * POST /admin/api/maintenance/migrate-audit-logs
+ * audit_logs テーブルを作成
+ */
+maintenanceRouter.post('/migrate-audit-logs', async (req, res) => {
+  try {
+    console.log('[Admin] Proxying audit logs table creation request to main server...');
+
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/database/migrate-audit-logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
+
+    const data = await response.json() as any;
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Migration failed');
+    }
+
+    const apiResponse: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(apiResponse);
+  } catch (error) {
+    console.error('[API] Error running migration:', error);
+    const apiResponse: ApiResponse = {
+      success: false,
+      error: error instanceof Error ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(apiResponse);
+  }
+});

@@ -4,7 +4,8 @@ import {
   getMaintenanceStatus,
   enableMaintenance as apiEnableMaintenance,
   disableMaintenance as apiDisableMaintenance,
-  migrateSeverity
+  migrateSeverity,
+  migrateAuditLogsTable
 } from '../../services/apiClient';
 import { MaintenanceStatus as MaintenanceStatusType } from '../../types';
 import styles from './Maintenance.module.css';
@@ -87,6 +88,24 @@ export const Maintenance: React.FC = () => {
       setIsSubmitting(true);
       await migrateSeverity();
       alert('マイグレーションが正常に完了しました。\nseverity制約が修正され、\'warn\'値が許可されるようになりました。');
+    } catch (error) {
+      console.error('Failed to run migration:', error);
+      const message = error instanceof Error ? error.message : 'マイグレーションの実行に失敗しました';
+      alert(`エラー: ${message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMigrateAuditLogsTable = async () => {
+    if (!confirm('audit_logsテーブルを作成します。\n\nこの操作により、監査ログ機能が利用可能になります。\n実行しますか？')) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await migrateAuditLogsTable();
+      alert('マイグレーションが正常に完了しました。\naudit_logsテーブルが作成されました。');
     } catch (error) {
       console.error('Failed to run migration:', error);
       const message = error instanceof Error ? error.message : 'マイグレーションの実行に失敗しました';
@@ -288,6 +307,30 @@ export const Maintenance: React.FC = () => {
             disabled={isSubmitting}
           >
             {isSubmitting ? '実行中...' : 'マイグレーションを実行'}
+          </Button>
+        </Card>
+
+        <Card title="監査ログテーブルの作成">
+          <p className={styles.description}>
+            管理者操作を記録するためのaudit_logsテーブルを作成します。
+          </p>
+          <p className={styles.description}>
+            監査ログ機能を利用する前に、このマイグレーションを実行してください。
+          </p>
+          <div className={styles.info}>
+            <h4>実行内容</h4>
+            <ul className={styles.notesList}>
+              <li>audit_logsテーブルを作成</li>
+              <li>必要なインデックスを作成</li>
+              <li>管理者操作の記録と追跡が可能になります</li>
+            </ul>
+          </div>
+          <Button
+            variant="primary"
+            onClick={handleMigrateAuditLogsTable}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? '実行中...' : 'テーブルを作成'}
           </Button>
         </Card>
       </section>
