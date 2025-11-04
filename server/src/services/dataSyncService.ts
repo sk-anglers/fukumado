@@ -4,7 +4,13 @@
  */
 
 import prisma from './prismaService';
-import { fetchGlobalEmotes, fetchChannelEmotes, fetchChannelsByIds } from './twitchService';
+import {
+  fetchGlobalEmotes,
+  fetchChannelEmotes,
+  fetchChannelsByIds,
+  fetchGlobalBadges,
+  fetchChannelBadges
+} from './twitchService';
 
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24時間
 
@@ -147,8 +153,9 @@ export const syncStaleChannels = async (accessToken: string): Promise<void> => {
             },
           });
 
-          // チャンネルエモートも同期
+          // チャンネルエモートとバッジも同期
           await syncChannelEmotes(accessToken, freshData.id);
+          await syncChannelBadges(accessToken, freshData.id);
         }
       }
     }
@@ -156,6 +163,122 @@ export const syncStaleChannels = async (accessToken: string): Promise<void> => {
     console.log(`✅ Synced ${staleChannels.length} channels`);
   } catch (error) {
     console.error('❌ Failed to sync stale channels:', error);
+  }
+};
+
+/**
+ * グローバルバッジをDBに同期
+ */
+export const syncGlobalBadges = async (accessToken: string): Promise<void> => {
+  try {
+    console.log('🔄 Syncing global badges...');
+
+    const globalBadges = await fetchGlobalBadges(accessToken);
+
+    for (const badge of globalBadges) {
+      // 既存のバッジを検索（グローバルバッジ: channel_id IS NULL）
+      const existing = await prisma.badge.findFirst({
+        where: {
+          platform: 'twitch',
+          badgeSetId: badge.setId,
+          badgeVersion: badge.version,
+          channelId: null,
+        },
+      });
+
+      if (existing) {
+        // 更新
+        await prisma.badge.update({
+          where: { id: existing.id },
+          data: {
+            imageUrl1x: badge.imageUrl1x,
+            imageUrl2x: badge.imageUrl2x,
+            imageUrl4x: badge.imageUrl4x,
+            title: badge.title,
+            description: badge.description,
+            lastSyncedAt: new Date(),
+          },
+        });
+      } else {
+        // 新規作成
+        await prisma.badge.create({
+          data: {
+            platform: 'twitch',
+            badgeSetId: badge.setId,
+            badgeVersion: badge.version,
+            scope: 'global',
+            channelId: null,
+            imageUrl1x: badge.imageUrl1x,
+            imageUrl2x: badge.imageUrl2x,
+            imageUrl4x: badge.imageUrl4x,
+            title: badge.title,
+            description: badge.description,
+          },
+        });
+      }
+    }
+
+    console.log(`✅ Synced ${globalBadges.length} global badges`);
+  } catch (error) {
+    console.error('❌ Failed to sync global badges:', error);
+  }
+};
+
+/**
+ * チャンネル固有のバッジをDBに同期
+ */
+export const syncChannelBadges = async (accessToken: string, channelId: string): Promise<void> => {
+  try {
+    console.log(`🔄 Syncing badges for channel ${channelId}...`);
+
+    const channelBadges = await fetchChannelBadges(accessToken, channelId);
+
+    for (const badge of channelBadges) {
+      // 既存のバッジを検索（チャンネル固有バッジ: channel_id IS NOT NULL）
+      const existing = await prisma.badge.findFirst({
+        where: {
+          platform: 'twitch',
+          badgeSetId: badge.setId,
+          badgeVersion: badge.version,
+          channelId: channelId,
+        },
+      });
+
+      if (existing) {
+        // 更新
+        await prisma.badge.update({
+          where: { id: existing.id },
+          data: {
+            imageUrl1x: badge.imageUrl1x,
+            imageUrl2x: badge.imageUrl2x,
+            imageUrl4x: badge.imageUrl4x,
+            title: badge.title,
+            description: badge.description,
+            lastSyncedAt: new Date(),
+          },
+        });
+      } else {
+        // 新規作成
+        await prisma.badge.create({
+          data: {
+            platform: 'twitch',
+            badgeSetId: badge.setId,
+            badgeVersion: badge.version,
+            scope: 'channel',
+            channelId: channelId,
+            imageUrl1x: badge.imageUrl1x,
+            imageUrl2x: badge.imageUrl2x,
+            imageUrl4x: badge.imageUrl4x,
+            title: badge.title,
+            description: badge.description,
+          },
+        });
+      }
+    }
+
+    console.log(`✅ Synced ${channelBadges.length} badges for channel ${channelId}`);
+  } catch (error) {
+    console.error(`❌ Failed to sync badges for channel ${channelId}:`, error);
   }
 };
 
@@ -173,10 +296,22 @@ export const startDataSync = (accessToken: string): void => {
     console.error('Failed to sync global emotes:', err);
   });
 
+  // 起動時にグローバルバッジを同期
+  syncGlobalBadges(accessToken).catch(err => {
+    console.error('Failed to sync global badges:', err);
+  });
+
   // 24時間ごとにグローバルエモートを同期
   setInterval(() => {
     syncGlobalEmotes(accessToken).catch(err => {
       console.error('Failed to sync global emotes:', err);
+    });
+  }, SYNC_INTERVAL_MS);
+
+  // 24時間ごとにグローバルバッジを同期
+  setInterval(() => {
+    syncGlobalBadges(accessToken).catch(err => {
+      console.error('Failed to sync global badges:', err);
     });
   }, SYNC_INTERVAL_MS);
 
@@ -193,6 +328,8 @@ export const startDataSync = (accessToken: string): void => {
 export default {
   syncGlobalEmotes,
   syncChannelEmotes,
+  syncGlobalBadges,
+  syncChannelBadges,
   syncStaleChannels,
   startDataSync,
 };

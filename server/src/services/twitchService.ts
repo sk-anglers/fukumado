@@ -456,3 +456,120 @@ export const fetchChannelsByIds = async (
   console.log(`[Twitch Service] Total channels fetched: ${allChannels.length}`);
   return allChannels;
 };
+
+/**
+ * バッジ関連の型定義
+ */
+type TwitchBadgeVersion = {
+  id: string;
+  image_url_1x: string;
+  image_url_2x: string;
+  image_url_4x: string;
+  title?: string;
+  description?: string;
+  click_action?: string;
+  click_url?: string;
+};
+
+type TwitchBadgeSet = {
+  set_id: string;
+  versions: TwitchBadgeVersion[];
+};
+
+export interface TwitchBadgeInfo {
+  setId: string;
+  version: string;
+  imageUrl1x: string;
+  imageUrl2x: string;
+  imageUrl4x: string;
+  title?: string;
+  description?: string;
+}
+
+/**
+ * Twitchグローバルバッジを取得
+ */
+export const fetchGlobalBadges = async (accessToken: string): Promise<TwitchBadgeInfo[]> => {
+  const { clientId } = ensureTwitchOAuthConfig();
+  const headers = {
+    'Client-ID': clientId,
+    Authorization: `Bearer ${accessToken}`
+  };
+
+  console.log('[Twitch Service] Fetching global badges...');
+
+  const response = await trackedTwitchRequest(`${TWITCH_BASE}/chat/badges/global`, {
+    method: 'GET',
+    headers
+  }, 'GET /helix/chat/badges/global');
+
+  if (response.statusCode >= 400) {
+    const text = await response.body.text();
+    console.error('[Twitch Service] Failed to fetch global badges:', text);
+    throw new Error(`Failed to fetch global badges: ${response.statusCode}`);
+  }
+
+  const data = (await response.body.json()) as TwitchApiResponse<TwitchBadgeSet>;
+  const badges: TwitchBadgeInfo[] = [];
+
+  for (const badgeSet of data.data) {
+    for (const version of badgeSet.versions) {
+      badges.push({
+        setId: badgeSet.set_id,
+        version: version.id,
+        imageUrl1x: version.image_url_1x,
+        imageUrl2x: version.image_url_2x,
+        imageUrl4x: version.image_url_4x,
+        title: version.title,
+        description: version.description
+      });
+    }
+  }
+
+  console.log(`[Twitch Service] Fetched ${badges.length} global badge versions from ${data.data.length} sets`);
+  return badges;
+};
+
+/**
+ * Twitchチャンネル固有のバッジを取得
+ */
+export const fetchChannelBadges = async (accessToken: string, channelId: string): Promise<TwitchBadgeInfo[]> => {
+  const { clientId } = ensureTwitchOAuthConfig();
+  const headers = {
+    'Client-ID': clientId,
+    Authorization: `Bearer ${accessToken}`
+  };
+
+  console.log(`[Twitch Service] Fetching badges for channel ${channelId}...`);
+
+  const response = await trackedTwitchRequest(`${TWITCH_BASE}/chat/badges?broadcaster_id=${channelId}`, {
+    method: 'GET',
+    headers
+  }, 'GET /helix/chat/badges (channel)');
+
+  if (response.statusCode >= 400) {
+    const text = await response.body.text();
+    console.error(`[Twitch Service] Failed to fetch badges for channel ${channelId}:`, text);
+    throw new Error(`Failed to fetch channel badges: ${response.statusCode}`);
+  }
+
+  const data = (await response.body.json()) as TwitchApiResponse<TwitchBadgeSet>;
+  const badges: TwitchBadgeInfo[] = [];
+
+  for (const badgeSet of data.data) {
+    for (const version of badgeSet.versions) {
+      badges.push({
+        setId: badgeSet.set_id,
+        version: version.id,
+        imageUrl1x: version.image_url_1x,
+        imageUrl2x: version.image_url_2x,
+        imageUrl4x: version.image_url_4x,
+        title: version.title,
+        description: version.description
+      });
+    }
+  }
+
+  console.log(`[Twitch Service] Fetched ${badges.length} channel badge versions from ${data.data.length} sets`);
+  return badges;
+};
