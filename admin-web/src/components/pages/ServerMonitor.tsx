@@ -222,34 +222,29 @@ export const ServerMonitor: React.FC = () => {
           <h2 className={styles.sectionTitle}>システムメトリクス</h2>
           <div className={styles.metricsGrid}>
             <MetricCard
-              title="CPU使用率"
+              label="CPU使用率"
               value={`${systemMetrics.cpu.usage.toFixed(1)}%`}
-              subtitle={`${systemMetrics.cpu.count}コア`}
             />
             <MetricCard
-              title="メモリ使用率"
+              label="メモリ使用率"
               value={`${systemMetrics.memory.usagePercent.toFixed(1)}%`}
-              subtitle={`${systemMetrics.memory.usedMB} / ${systemMetrics.memory.totalMB} MB`}
             />
             <MetricCard
-              title="プロセスメモリ"
-              value={`${systemMetrics.memory.processUsedMB} MB`}
-              subtitle={`${systemMetrics.memory.processUsagePercent.toFixed(2)}% of total`}
+              label="プロセスメモリ"
+              value={`${systemMetrics.memory.processUsedMB}`}
+              unit="MB"
             />
             <MetricCard
-              title="ロードアベレージ"
+              label="ロードアベレージ (1分)"
               value={systemMetrics.cpu.loadAverage.oneMinute.toFixed(2)}
-              subtitle={`1分 / 5分: ${systemMetrics.cpu.loadAverage.fiveMinutes.toFixed(2)} / 15分: ${systemMetrics.cpu.loadAverage.fifteenMinutes.toFixed(2)}`}
             />
             <MetricCard
-              title="システム稼働時間"
+              label="システム稼働時間"
               value={formatUptime(systemMetrics.uptime.systemSeconds)}
-              subtitle="System Uptime"
             />
             <MetricCard
-              title="プロセス稼働時間"
+              label="プロセス稼働時間"
               value={formatUptime(systemMetrics.uptime.processSeconds)}
-              subtitle="Process Uptime"
             />
           </div>
         </section>
@@ -261,34 +256,29 @@ export const ServerMonitor: React.FC = () => {
           <h2 className={styles.sectionTitle}>データベース統計</h2>
           <div className={styles.metricsGrid}>
             <MetricCard
-              title="アクティブ接続"
+              label="アクティブ接続"
               value={dbStats.connections.active.toString()}
-              subtitle={`Total: ${dbStats.connections.total} / Max: ${dbStats.connections.maxConnections}`}
             />
             <MetricCard
-              title="アイドル接続"
+              label="アイドル接続"
               value={dbStats.connections.idle.toString()}
-              subtitle="Idle Connections"
             />
             <MetricCard
-              title="キャッシュヒット率"
+              label="キャッシュヒット率"
               value={`${dbStats.cache.hitRate.toFixed(2)}%`}
-              subtitle={`Hit: ${dbStats.cache.blocksHit.toLocaleString()} / Read: ${dbStats.cache.blocksRead.toLocaleString()}`}
             />
             <MetricCard
-              title="データベースサイズ"
-              value={`${dbStats.size.totalMB} MB`}
-              subtitle="Total Database Size"
+              label="データベースサイズ"
+              value={`${dbStats.size.totalMB}`}
+              unit="MB"
             />
             <MetricCard
-              title="コミットトランザクション"
+              label="コミット"
               value={dbStats.transactions.committed.toLocaleString()}
-              subtitle="Committed Transactions"
             />
             <MetricCard
-              title="ロールバック"
+              label="ロールバック"
               value={dbStats.transactions.rolledBack.toLocaleString()}
-              subtitle="Rolled Back Transactions"
             />
           </div>
 
