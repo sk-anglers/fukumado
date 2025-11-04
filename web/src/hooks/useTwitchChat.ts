@@ -105,13 +105,20 @@ export const useTwitchChat = (channels: TwitchChannel[]): void => {
           };
 
           // 重複チェック：最近送信したメッセージかどうか確認
+          console.log('[useTwitchChat] Checking for duplicate:');
+          console.log('[useTwitchChat]   - Message:', chatMessage.message);
+          console.log('[useTwitchChat]   - Author:', chatMessage.author);
+          console.log('[useTwitchChat]   - Recent sent messages:', useChatStore.getState().recentlySentMessages);
+
           const isDuplicate = useChatStore.getState().isDuplicateSentMessage(
             chatMessage.message,
             chatMessage.author
           );
 
+          console.log('[useTwitchChat]   - Is duplicate?', isDuplicate);
+
           if (isDuplicate) {
-            console.log('[useTwitchChat] Skipping duplicate sent message:', chatMessage.message);
+            console.log('[useTwitchChat] ✓ Skipping duplicate sent message');
             return;
           }
 

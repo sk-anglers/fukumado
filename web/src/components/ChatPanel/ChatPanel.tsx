@@ -189,6 +189,9 @@ export const ChatPanel = (): JSX.Element => {
         };
 
         // 送信したメッセージをキャッシュに追加（重複防止用）
+        console.log('[ChatPanel] Adding sent message to cache:');
+        console.log('[ChatPanel]   - Message:', messageInput.trim());
+        console.log('[ChatPanel]   - Author:', twitchUser.displayName);
         addSentMessage(messageInput.trim(), twitchUser.displayName);
 
         // メッセージを表示
