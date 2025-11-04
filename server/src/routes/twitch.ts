@@ -200,7 +200,14 @@ twitchRouter.post('/chat/send', async (req, res) => {
     // メッセージを送信
     await twitchChatService.sendMessage(channelLogin, message.trim());
 
-    res.json({ success: true, emotes });
+    // IRCからの応答を待つ（バッジ情報を取得するため）
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // キャッシュからバッジ情報を取得
+    const badges = twitchChatService.getCachedBadges(channelLogin, message.trim());
+    console.log('[Twitch Chat] Retrieved badges from cache:', badges);
+
+    res.json({ success: true, emotes, badges });
   } catch (error) {
     console.error('[Twitch Chat] Send message error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';

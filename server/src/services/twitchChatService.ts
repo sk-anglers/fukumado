@@ -33,6 +33,7 @@ type MessageHandler = (message: TwitchChatMessage) => void;
 interface SentMessageCache {
   message: string;
   emotes: TwitchEmote[];
+  badges: TwitchBadge[];
   timestamp: number;
 }
 
@@ -123,10 +124,32 @@ class TwitchChatService {
 
           const channelLogin = channel.replace('#', '');
 
-          // 自分が送信したメッセージは無視（フロント側で既に表示済み）
+          // 自分が送信したメッセージの場合、バッジ情報をキャッシュに保存してからスキップ
           if (self) {
-            console.log('[Twitch Chat Service] Skipping own message:', message);
-            return;
+            console.log('[Twitch Chat Service] Own message detected, caching badges:', message);
+
+            // バッジ情報をパース
+            const selfBadges: TwitchBadge[] = [];
+            const channelId = this.channelIdMap.get(channelLogin);
+            if (tags.badges) {
+              Object.entries(tags.badges).forEach(([setId, version]) => {
+                const imageUrl = badgeService.getBadgeUrl(setId, version || '1', channelId);
+                selfBadges.push({
+                  setId,
+                  version: version || '1',
+                  imageUrl: imageUrl || undefined
+                });
+              });
+            }
+
+            // キャッシュに保存（既存のキャッシュを上書き）
+            const cached = this.sentMessagesCache.get(channelLogin);
+            if (cached && cached.message === message) {
+              cached.badges = selfBadges;
+              console.log('[Twitch Chat Service] Updated cache with badges:', selfBadges);
+            }
+
+            return; // 自分のメッセージはフロントに送信しない
           }
 
           // エモート情報をパース
@@ -376,12 +399,13 @@ class TwitchChatService {
 
   /**
    * 送信したメッセージのエモート情報をキャッシュに保存
-   * （自分が送信したメッセージをIRCから受信したときにエモート情報を付加するため）
+   * （自分が送信したメッセージをIRCから受信したときにバッジ情報を取得するため）
    */
   public cacheEmotesForMessage(channelLogin: string, message: string, emotes: TwitchEmote[]): void {
     this.sentMessagesCache.set(channelLogin, {
       message,
       emotes,
+      badges: [], // 初期値は空配列（IRCから受信時に更新）
       timestamp: Date.now()
     });
 
@@ -395,9 +419,20 @@ class TwitchChatService {
       const cached = this.sentMessagesCache.get(channelLogin);
       if (cached && cached.message === message && Date.now() - cached.timestamp >= 10000) {
         this.sentMessagesCache.delete(channelLogin);
-        console.log(`[Twitch Chat Service] Cleared expired emote cache for ${channelLogin}`);
+        console.log(`[Twitch Chat Service] Cleared expired cache for ${channelLogin}`);
       }
     }, 10000);
+  }
+
+  /**
+   * キャッシュからバッジ情報を取得
+   */
+  public getCachedBadges(channelLogin: string, message: string): TwitchBadge[] {
+    const cached = this.sentMessagesCache.get(channelLogin);
+    if (cached && cached.message === message) {
+      return cached.badges;
+    }
+    return [];
   }
 
   public async sendMessage(channelLogin: string, message: string): Promise<void> {

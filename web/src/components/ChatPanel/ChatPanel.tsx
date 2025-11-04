@@ -166,9 +166,10 @@ export const ChatPanel = (): JSX.Element => {
         throw new Error(errorData.error || 'メッセージの送信に失敗しました');
       }
 
-      // レスポンスからエモート情報を取得
+      // レスポンスからエモート情報とバッジ情報を取得
       const responseData = await response.json();
       const emotes = responseData.emotes || [];
+      const badges = responseData.badges || [];
 
       // 送信したメッセージをチャットストアに追加
       if (selectedStream.platform === 'twitch' && twitchUser) {
@@ -185,7 +186,8 @@ export const ChatPanel = (): JSX.Element => {
           }),
           avatarColor: getRandomColor(),
           channelName: selectedStream.displayName || selectedStream.channelLogin,
-          emotes: emotes.length > 0 ? emotes : undefined
+          emotes: emotes.length > 0 ? emotes : undefined,
+          badges: badges.length > 0 ? badges : undefined
         };
 
         // 送信したメッセージをキャッシュに追加（重複防止用）
