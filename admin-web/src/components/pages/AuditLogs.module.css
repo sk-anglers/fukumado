@@ -1,0 +1,343 @@
+.auditLogs {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 12px;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #3498DB;
+}
+
+/* サマリー */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.summaryCard {
+  padding: 20px;
+  text-align: center;
+}
+
+.summaryLabel {
+  font-size: 14px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.summaryValue {
+  font-size: 32px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.successColor {
+  color: #10b981 !important;
+}
+
+.failureColor {
+  color: #ef4444 !important;
+}
+
+.topActionsCard {
+  padding: 20px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0 0 16px 0;
+}
+
+.topActionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.topActionItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #1e293b;
+  border-radius: 6px;
+}
+
+.topActionRank {
+  font-weight: 600;
+  color: #3498DB;
+  min-width: 32px;
+}
+
+.topActionName {
+  flex: 1;
+  color: #e2e8f0;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.topActionCount {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* フィルター */
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.filterItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filterItem label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.filterInput,
+.filterSelect {
+  padding: 8px 12px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.filterInput:focus,
+.filterSelect:focus {
+  outline: none;
+  border-color: #3498DB;
+}
+
+/* ログ一覧 */
+.logsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* スクロールバー */
+.logsList::-webkit-scrollbar {
+  width: 12px;
+}
+
+.logsList::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 6px;
+}
+
+.logsList::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 6px;
+  border: 2px solid #1e293b;
+}
+
+.logsList::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.logsList {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+}
+
+.logCard {
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #334155;
+}
+
+.logCard:hover {
+  border-color: #3498DB;
+  background: rgba(52, 152, 219, 0.05);
+}
+
+.logCard.selected {
+  border-color: #3498DB;
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.logHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.logAction {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e2e8f0;
+  font-family: 'Courier New', monospace;
+}
+
+.statusSuccess {
+  padding: 4px 12px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusFailure {
+  padding: 4px 12px;
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.logMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.metaItem {
+  font-size: 13px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.logDetails {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #334155;
+}
+
+.detailsSection {
+  margin-bottom: 16px;
+}
+
+.detailsSection:last-child {
+  margin-bottom: 0;
+}
+
+.detailsSection h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0 0 8px 0;
+}
+
+.detailsSection p {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+  word-wrap: break-word;
+}
+
+.jsonDisplay {
+  background: #1e293b;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #e2e8f0;
+  font-family: 'Courier New', monospace;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.errorMessage {
+  color: #ef4444 !important;
+}
+
+/* ページネーション */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.paginationInfo {
+  font-size: 14px;
+  color: #94a3b8;
+  min-width: 120px;
+  text-align: center;
+}
+
+.emptyMessage {
+  text-align: center;
+  color: #94a3b8;
+  padding: 40px 20px;
+  margin: 0;
+}
+
+/* レスポンシブ */
+@media (max-width: 900px) {
+  .auditLogs {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .pageTitle {
+    font-size: 24px;
+  }
+
+  .filterGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .logMeta {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

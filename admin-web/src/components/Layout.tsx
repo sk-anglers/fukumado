@@ -27,6 +27,7 @@ const navItems: NavItem[] = [
   { id: 'streams', label: '配信管理', path: '/streams', icon: '📺' },
   { id: 'users', label: 'ユーザー管理', path: '/users', icon: '👥' },
   { id: 'logs', label: 'ログ閲覧', path: '/logs', icon: '📋' },
+  { id: 'audit-logs', label: '監査ログ', path: '/audit-logs', icon: '📜' },
   { id: 'eventsub', label: 'EventSub管理', path: '/eventsub', icon: '🔔' },
   { id: 'cache', label: 'キャッシュ/DB', path: '/cache', icon: '💾' },
   { id: 'api-monitor', label: 'API監視', path: '/api-monitor', icon: '🌐' },

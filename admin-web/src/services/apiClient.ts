@@ -754,3 +754,52 @@ export const migrateSeverity = async (): Promise<void> => {
     method: 'POST'
   });
 };
+
+// ========================================
+// 監査ログAPI
+// ========================================
+
+/**
+ * 監査ログ一覧を取得
+ */
+export const getAuditLogs = async (options: {
+  limit?: number;
+  offset?: number;
+  action?: string;
+  actor?: string;
+  actorIp?: string;
+  targetType?: string;
+  status?: 'success' | 'failure';
+  startDate?: string;
+  endDate?: string;
+}): Promise<any> => {
+  const params = new URLSearchParams();
+  if (options.limit) params.set('limit', options.limit.toString());
+  if (options.offset) params.set('offset', options.offset.toString());
+  if (options.action) params.set('action', options.action);
+  if (options.actor) params.set('actor', options.actor);
+  if (options.actorIp) params.set('actorIp', options.actorIp);
+  if (options.targetType) params.set('targetType', options.targetType);
+  if (options.status) params.set('status', options.status);
+  if (options.startDate) params.set('startDate', options.startDate);
+  if (options.endDate) params.set('endDate', options.endDate);
+
+  return fetchAPI(`/audit-logs?${params.toString()}`);
+};
+
+/**
+ * 監査ログサマリーを取得
+ */
+export const getAuditLogSummary = async (days: number = 7): Promise<any> => {
+  return fetchAPI(`/audit-logs/summary?days=${days}`);
+};
+
+/**
+ * 古い監査ログをクリーンアップ
+ */
+export const cleanupAuditLogs = async (days: number = 90): Promise<void> => {
+  await fetchAPI('/audit-logs/cleanup', {
+    method: 'POST',
+    body: JSON.stringify({ days })
+  });
+};
