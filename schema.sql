@@ -250,13 +250,12 @@ CREATE TABLE page_views (
 
   device_type VARCHAR(20) CHECK (device_type IN ('desktop', 'mobile', 'tablet')),
 
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  view_date DATE GENERATED ALWAYS AS (DATE(created_at)) STORED
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_pv_date ON page_views(view_date DESC);
+CREATE INDEX idx_pv_date ON page_views(created_at DESC);
 CREATE INDEX idx_pv_user ON page_views(user_id, created_at DESC) WHERE user_id IS NOT NULL;
-CREATE INDEX idx_pv_ip ON page_views(ip_hash, view_date);
+CREATE INDEX idx_pv_ip ON page_views(ip_hash, created_at);
 
 COMMENT ON TABLE page_views IS 'ページビュー統計（1年間保持）';
 
@@ -278,12 +277,11 @@ CREATE TABLE analytics_events (
   screen_width INTEGER,
   screen_height INTEGER,
 
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  event_date DATE GENERATED ALWAYS AS (DATE(created_at)) STORED
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_analytics_event_type ON analytics_events(event_type, created_at DESC);
-CREATE INDEX idx_analytics_event_date ON analytics_events(event_date DESC);
+CREATE INDEX idx_analytics_event_date ON analytics_events(created_at DESC);
 CREATE INDEX idx_analytics_user ON analytics_events(user_id, created_at DESC) WHERE user_id IS NOT NULL;
 CREATE INDEX idx_analytics_session ON analytics_events(session_id, created_at DESC) WHERE session_id IS NOT NULL;
 CREATE INDEX idx_analytics_event_data ON analytics_events USING gin(event_data);
@@ -312,14 +310,13 @@ CREATE TABLE security_logs (
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   username VARCHAR(255),
 
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  log_date DATE GENERATED ALWAYS AS (DATE(created_at)) STORED
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_security_ip ON security_logs(ip_hash, created_at DESC);
 CREATE INDEX idx_security_type ON security_logs(log_type, created_at DESC);
 CREATE INDEX idx_security_severity ON security_logs(severity, created_at DESC);
-CREATE INDEX idx_security_date ON security_logs(log_date DESC);
+CREATE INDEX idx_security_date ON security_logs(created_at DESC);
 CREATE INDEX idx_security_user ON security_logs(user_id, created_at DESC) WHERE user_id IS NOT NULL;
 
 COMMENT ON TABLE security_logs IS 'セキュリティイベントログ（90日間保持）';
@@ -367,7 +364,7 @@ COMMENT ON TABLE sessions IS 'セッション管理（express-session互換）';
 -- 日次PV集計
 CREATE MATERIALIZED VIEW pv_daily_stats AS
 SELECT
-  view_date,
+  DATE(created_at) AS view_date,
   COUNT(*) AS total_pv,
   COUNT(DISTINCT ip_hash) AS unique_visitors,
   COUNT(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL) AS authenticated_users,
@@ -375,8 +372,8 @@ SELECT
   COUNT(*) FILTER (WHERE device_type = 'mobile') AS mobile_pv,
   COUNT(*) FILTER (WHERE device_type = 'tablet') AS tablet_pv
 FROM page_views
-GROUP BY view_date
-ORDER BY view_date DESC;
+GROUP BY DATE(created_at)
+ORDER BY DATE(created_at) DESC;
 
 CREATE UNIQUE INDEX ON pv_daily_stats(view_date);
 
