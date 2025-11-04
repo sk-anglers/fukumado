@@ -30,6 +30,12 @@ export interface TwitchChatMessage {
 
 type MessageHandler = (message: TwitchChatMessage) => void;
 
+interface SentMessageCache {
+  message: string;
+  emotes: TwitchEmote[];
+  timestamp: number;
+}
+
 class TwitchChatService {
   private client: tmi.Client | null = null;
   private messageHandlers: Set<MessageHandler> = new Set();
@@ -44,6 +50,7 @@ class TwitchChatService {
   private isManualDisconnect: boolean = false;
   private healthCheckInterval: NodeJS.Timeout | null = null;
   private lastMessageReceivedAt: Date | null = null;
+  private sentMessagesCache: Map<string, SentMessageCache> = new Map(); // channelLogin -> SentMessageCache
 
   constructor() {
     console.log('[Twitch Chat Service] Initializing');
@@ -117,7 +124,7 @@ class TwitchChatService {
           const channelLogin = channel.replace('#', '');
 
           // エモート情報をパース
-          const emotes: TwitchEmote[] = [];
+          let emotes: TwitchEmote[] = [];
           if (tags.emotes) {
             Object.entries(tags.emotes).forEach(([emoteId, positions]) => {
               const parsedPositions = positions.map((pos) => {
@@ -126,6 +133,15 @@ class TwitchChatService {
               });
               emotes.push({ id: emoteId, positions: parsedPositions });
             });
+          } else {
+            // エモート情報がない場合、キャッシュから取得（自分が送信したメッセージ）
+            const cached = this.sentMessagesCache.get(channelLogin);
+            if (cached && cached.message === message) {
+              emotes = cached.emotes;
+              console.log('[Twitch Chat Service] Retrieved emotes from cache for sent message');
+              // キャッシュから削除
+              this.sentMessagesCache.delete(channelLogin);
+            }
           }
 
           // バッジ情報をパース
@@ -339,6 +355,29 @@ class TwitchChatService {
       '#22d3ee', '#ec4899', '#10b981', '#f59e0b'
     ];
     return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  /**
+   * 送信したメッセージのエモート情報をキャッシュに保存
+   * （自分が送信したメッセージをIRCから受信したときにエモート情報を付加するため）
+   */
+  public cacheEmotesForMessage(channelLogin: string, message: string, emotes: TwitchEmote[]): void {
+    this.sentMessagesCache.set(channelLogin, {
+      message,
+      emotes,
+      timestamp: Date.now()
+    });
+
+    console.log(`[Twitch Chat Service] Cached emotes for message in ${channelLogin}:`, emotes);
+
+    // 10秒後にキャッシュをクリア
+    setTimeout(() => {
+      const cached = this.sentMessagesCache.get(channelLogin);
+      if (cached && cached.message === message && Date.now() - cached.timestamp >= 10000) {
+        this.sentMessagesCache.delete(channelLogin);
+        console.log(`[Twitch Chat Service] Cleared expired emote cache for ${channelLogin}`);
+      }
+    }, 10000);
   }
 
   public async sendMessage(channelLogin: string, message: string): Promise<void> {

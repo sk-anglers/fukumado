@@ -188,11 +188,14 @@ twitchRouter.post('/chat/send', async (req, res) => {
     // 認証情報を設定
     twitchChatService.setCredentials(accessToken, user.login);
 
+    // エモート情報をパース（送信前に）
+    const emotes = await parseEmotesFromMessage(accessToken, channelId, message.trim());
+
+    // エモート情報をキャッシュに保存（自分のメッセージ受信時に付加するため）
+    twitchChatService.cacheEmotesForMessage(channelLogin, message.trim(), emotes);
+
     // メッセージを送信
     await twitchChatService.sendMessage(channelLogin, message.trim());
-
-    // エモート情報をパース
-    const emotes = await parseEmotesFromMessage(accessToken, channelId, message.trim());
 
     res.json({ success: true, emotes });
   } catch (error) {
