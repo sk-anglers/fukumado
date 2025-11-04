@@ -4,18 +4,22 @@
  */
 
 import prisma from './prismaService';
-import { twitchService } from './twitchService';
+import { fetchGlobalEmotes, fetchChannelEmotes, fetchChannelsByIds } from './twitchService';
 
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24時間
+
+// TODO: アクセストークンの管理方法を実装する必要があります
+// 現時点では、DataSyncServiceは起動時に呼び出されていないため、
+// 実際のAPI呼び出しは行われません
 
 /**
  * グローバルエモートをDBに同期
  */
-export const syncGlobalEmotes = async (): Promise<void> => {
+export const syncGlobalEmotes = async (accessToken: string): Promise<void> => {
   try {
     console.log('🔄 Syncing global emotes...');
 
-    const globalEmotes = await twitchService.getGlobalEmotes();
+    const globalEmotes = await fetchGlobalEmotes(accessToken);
 
     for (const emote of globalEmotes) {
       await prisma.emote.upsert({
@@ -56,11 +60,11 @@ export const syncGlobalEmotes = async (): Promise<void> => {
 /**
  * チャンネルエモートをDBに同期
  */
-export const syncChannelEmotes = async (channelId: string): Promise<void> => {
+export const syncChannelEmotes = async (accessToken: string, channelId: string): Promise<void> => {
   try {
     console.log(`🔄 Syncing emotes for channel ${channelId}...`);
 
-    const channelEmotes = await twitchService.getChannelEmotes(channelId);
+    const channelEmotes = await fetchChannelEmotes(accessToken, channelId);
 
     for (const emote of channelEmotes) {
       await prisma.emote.upsert({
@@ -103,7 +107,7 @@ export const syncChannelEmotes = async (channelId: string): Promise<void> => {
 /**
  * 24時間以上前に同期されたチャンネル情報を更新
  */
-export const syncStaleChannels = async (): Promise<void> => {
+export const syncStaleChannels = async (accessToken: string): Promise<void> => {
   try {
     console.log('🔄 Syncing stale channels...');
 
@@ -120,27 +124,33 @@ export const syncStaleChannels = async (): Promise<void> => {
 
     console.log(`Found ${staleChannels.length} stale channels to sync`);
 
-    for (const channel of staleChannels) {
-      if (channel.platform === 'twitch') {
-        // Twitchチャンネル情報を更新
-        const freshData = await twitchService.getChannelInfo(channel.channelId);
+    // Twitchチャンネルのみをフィルタリング
+    const twitchChannelIds = staleChannels
+      .filter(ch => ch.platform === 'twitch')
+      .map(ch => ch.channelId);
 
-        if (freshData) {
+    if (twitchChannelIds.length > 0) {
+      // バッチでチャンネル情報を取得
+      const freshChannels = await fetchChannelsByIds(accessToken, twitchChannelIds);
+
+      for (const freshData of freshChannels) {
+        const existingChannel = staleChannels.find(ch => ch.channelId === freshData.id);
+        if (existingChannel) {
           await prisma.channel.update({
-            where: { id: channel.id },
+            where: { id: existingChannel.id },
             data: {
               displayName: freshData.display_name,
-              username: freshData.login,
-              description: freshData.description,
-              avatarUrl: freshData.profile_image_url,
-              bannerUrl: freshData.offline_image_url,
-              viewCount: BigInt(freshData.view_count || 0),
+              username: freshData.broadcaster_login,
+              description: freshData.description || null,
+              avatarUrl: freshData.profile_image_url || null,
+              bannerUrl: freshData.offline_image_url || null,
+              viewCount: freshData.view_count ? BigInt(freshData.view_count) : BigInt(0),
               lastSyncedAt: new Date(),
             },
           });
 
           // チャンネルエモートも同期
-          await syncChannelEmotes(channel.channelId);
+          await syncChannelEmotes(accessToken, freshData.id);
         }
       }
     }
@@ -153,21 +163,30 @@ export const syncStaleChannels = async (): Promise<void> => {
 
 /**
  * 定期同期タスクを開始
+ *
+ * TODO: Week 2で実装予定
+ * アクセストークンの管理とスケジューリングを実装する必要があります
  */
-export const startDataSync = (): void => {
+export const startDataSync = (accessToken: string): void => {
   console.log('🚀 Starting data sync service...');
 
   // 起動時にグローバルエモートを同期
-  syncGlobalEmotes();
+  syncGlobalEmotes(accessToken).catch(err => {
+    console.error('Failed to sync global emotes:', err);
+  });
 
   // 24時間ごとにグローバルエモートを同期
   setInterval(() => {
-    syncGlobalEmotes();
+    syncGlobalEmotes(accessToken).catch(err => {
+      console.error('Failed to sync global emotes:', err);
+    });
   }, SYNC_INTERVAL_MS);
 
   // 6時間ごとに古いチャンネルデータを同期
   setInterval(() => {
-    syncStaleChannels();
+    syncStaleChannels(accessToken).catch(err => {
+      console.error('Failed to sync stale channels:', err);
+    });
   }, 6 * 60 * 60 * 1000);
 
   console.log('✅ Data sync service started');

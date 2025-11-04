@@ -7,16 +7,16 @@ import prisma from './prismaService';
 
 interface GoogleUserInfo {
   sub: string;
-  email: string;
-  name: string;
-  picture: string;
+  email?: string;
+  name?: string;
+  picture?: string;
 }
 
 interface TwitchUserInfo {
   id: string;
   login: string;
   display_name: string;
-  profile_image_url: string;
+  profile_image_url?: string;
 }
 
 interface GoogleTokens {
@@ -44,9 +44,9 @@ export const upsertGoogleUser = async (
         youtubeUserId: userInfo.sub,
       },
       update: {
-        displayName: userInfo.name,
-        email: userInfo.email,
-        avatarUrl: userInfo.picture,
+        displayName: userInfo.name || userInfo.email || userInfo.sub,
+        email: userInfo.email || null,
+        avatarUrl: userInfo.picture || null,
         youtubeAccessToken: tokens.accessToken,
         youtubeRefreshToken: tokens.refreshToken || null,
         youtubeTokenExpiresAt: new Date(tokens.expiryDate),
@@ -54,9 +54,9 @@ export const upsertGoogleUser = async (
       },
       create: {
         youtubeUserId: userInfo.sub,
-        displayName: userInfo.name,
-        email: userInfo.email,
-        avatarUrl: userInfo.picture,
+        displayName: userInfo.name || userInfo.email || userInfo.sub,
+        email: userInfo.email || null,
+        avatarUrl: userInfo.picture || null,
         youtubeAccessToken: tokens.accessToken,
         youtubeRefreshToken: tokens.refreshToken || null,
         youtubeTokenExpiresAt: new Date(tokens.expiryDate),
@@ -85,7 +85,7 @@ export const upsertTwitchUser = async (
       },
       update: {
         displayName: userInfo.display_name,
-        avatarUrl: userInfo.profile_image_url,
+        avatarUrl: userInfo.profile_image_url || null,
         twitchAccessToken: tokens.accessToken,
         twitchRefreshToken: tokens.refreshToken || null,
         twitchTokenExpiresAt: new Date(tokens.expiryDate),
@@ -94,7 +94,7 @@ export const upsertTwitchUser = async (
       create: {
         twitchUserId: userInfo.id,
         displayName: userInfo.display_name,
-        avatarUrl: userInfo.profile_image_url,
+        avatarUrl: userInfo.profile_image_url || null,
         twitchAccessToken: tokens.accessToken,
         twitchRefreshToken: tokens.refreshToken || null,
         twitchTokenExpiresAt: new Date(tokens.expiryDate),
