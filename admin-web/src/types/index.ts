@@ -421,24 +421,6 @@ export interface UserStats {
   recentLogins: RecentLogin[];
 }
 
-/**
- * 日別ユーザー統計（グラフ用）
- */
-export interface DailyUserStat {
-  date: string;
-  totalUsers: number;
-  youtubeUsers: number;
-  twitchUsers: number;
-  newUsers: number;
-}
-
-/**
- * 日別ユーザー統計レスポンス
- */
-export interface DailyUserStatsResponse {
-  dailyStats: DailyUserStat[];
-}
-
 // ========================================
 // サービス監視型定義
 // ========================================

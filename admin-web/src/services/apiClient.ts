@@ -14,7 +14,6 @@ import {
   StreamDetails,
   SessionListResponse,
   UserStats,
-  DailyUserStatsResponse,
   ServicesStatusResponse,
   AccessLogEntry,
   ErrorLogEntry,
@@ -306,13 +305,6 @@ export const destroySession = async (sessionId: string): Promise<void> => {
  */
 export const getUserStats = async (): Promise<UserStats> => {
   return fetchAPI<UserStats>('/users/stats');
-};
-
-/**
- * 日別ユーザー統計取得
- */
-export const getDailyUserStats = async (days: number = 30): Promise<DailyUserStatsResponse> => {
-  return fetchAPI<DailyUserStatsResponse>(`/users/daily-stats?days=${days}`);
 };
 
 // ========================================
