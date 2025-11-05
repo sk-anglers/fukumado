@@ -395,40 +395,7 @@ function App(): JSX.Element {
   // エラーテストモードが有効な場合はエラーをスロー（Error Boundaryでキャッチ）
   if (shouldThrowError) {
     console.log('[App] Throwing test error now...');
-    // デバッグ用：画面に表示
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#0f172a',
-        color: '#e2e8f0',
-        padding: '24px',
-        fontFamily: 'sans-serif',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        <h1 style={{ fontSize: '32px' }}>デバッグ: エラーをスローします</h1>
-        <p>shouldThrowError = {String(shouldThrowError)}</p>
-        <button
-          onClick={() => {
-            throw new Error('エラー画面テスト: このエラーは管理者によって意図的に発生させられました。');
-          }}
-          style={{
-            padding: '12px 32px',
-            background: '#3498DB',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            cursor: 'pointer'
-          }}
-        >
-          エラーをスロー（クリック）
-        </button>
-      </div>
-    );
+    throw new Error('エラー画面テスト: このエラーは管理者によって意図的に発生させられました。');
   }
 
   // メンテナンス中の場合はメンテナンス画面を表示
