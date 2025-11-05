@@ -10,60 +10,77 @@ export const usersRouter = Router();
  */
 usersRouter.get('/sessions', async (req, res) => {
   try {
-    // Prismaで直接Sessionテーブルから有効なセッションを取得
-    const now = new Date();
-    const sessions = await prisma.session.findMany({
-      where: {
-        expire: {
-          gt: now // 有効期限が現在時刻より後のセッションのみ
-        }
-      },
-      orderBy: {
-        expire: 'desc' // createdAtの代わりにexpireでソート
-      }
-    });
+    let sessionList: any[] = [];
+    let stats = {
+      totalSessions: 0,
+      authenticatedSessions: 0,
+      youtubeAuthSessions: 0,
+      twitchAuthSessions: 0
+    };
 
-    // セッション情報を整形
-    const sessionList = sessions
-      .filter((session) => {
-        // sessデータがnullまたは不正な場合はスキップ
-        if (!session.sess || typeof session.sess !== 'object') {
-          console.warn(`[Users] Invalid session data for sid: ${session.sid}`);
-          return false;
+    // Prismaでセッションを取得（エラーハンドリング付き）
+    try {
+      const now = new Date();
+      const sessions = await prisma.session.findMany({
+        where: {
+          expire: {
+            gt: now
+          }
+        },
+        orderBy: {
+          expire: 'desc'
         }
-        return true;
-      })
-      .map((session) => {
-        const sessionData = session.sess as any;
-
-        return {
-          sessionId: session.sid,
-          authenticated: !!sessionData?.googleTokens,
-          twitchAuthenticated: !!sessionData?.twitchTokens,
-          googleUser: sessionData?.googleUser ? {
-            id: sessionData.googleUser.id,
-            email: sessionData.googleUser.email,
-            name: sessionData.googleUser.name
-          } : null,
-          twitchUser: sessionData?.twitchUser ? {
-            id: sessionData.twitchUser.id,
-            login: sessionData.twitchUser.login,
-            displayName: sessionData.twitchUser.displayName
-          } : null,
-          createdAt: sessionData?.createdAt || null,
-          lastActivity: sessionData?.lastActivity || null,
-          ipAddress: sessionData?.ipAddress || null,
-          userAgent: sessionData?.userAgent || null
-        };
       });
 
-    // 統計情報を計算
-    const stats = {
-      totalSessions: sessionList.length,
-      authenticatedSessions: sessionList.filter(s => s.authenticated).length,
-      youtubeAuthSessions: sessionList.filter(s => s.googleUser).length,
-      twitchAuthSessions: sessionList.filter(s => s.twitchUser).length
-    };
+      sessionList = sessions
+        .filter((session) => {
+          if (!session.sess || typeof session.sess !== 'object') {
+            console.warn(`[Users] Invalid session data for sid: ${session.sid}`);
+            return false;
+          }
+          return true;
+        })
+        .map((session) => {
+          const sessionData = session.sess as any;
+
+          return {
+            sessionId: session.sid,
+            authenticated: !!sessionData?.googleTokens,
+            twitchAuthenticated: !!sessionData?.twitchTokens,
+            googleUser: sessionData?.googleUser ? {
+              id: sessionData.googleUser.id,
+              email: sessionData.googleUser.email,
+              name: sessionData.googleUser.name
+            } : null,
+            twitchUser: sessionData?.twitchUser ? {
+              id: sessionData.twitchUser.id,
+              login: sessionData.twitchUser.login,
+              displayName: sessionData.twitchUser.displayName
+            } : null,
+            createdAt: sessionData?.createdAt || null,
+            lastActivity: sessionData?.lastActivity || null,
+            ipAddress: sessionData?.ipAddress || null,
+            userAgent: sessionData?.userAgent || null
+          };
+        });
+
+      stats = {
+        totalSessions: sessionList.length,
+        authenticatedSessions: sessionList.filter(s => s.authenticated).length,
+        youtubeAuthSessions: sessionList.filter(s => s.googleUser).length,
+        twitchAuthSessions: sessionList.filter(s => s.twitchUser).length
+      };
+    } catch (sessionError) {
+      console.error('[Users] Error fetching sessions from Prisma:', sessionError);
+      // セッションテーブルにアクセスできない場合は空の結果を返す
+      sessionList = [];
+      stats = {
+        totalSessions: 0,
+        authenticatedSessions: 0,
+        youtubeAuthSessions: 0,
+        twitchAuthSessions: 0
+      };
+    }
 
     res.json({
       success: true,
@@ -147,16 +164,21 @@ usersRouter.get('/stats', async (req, res) => {
       }
     });
 
-    // アクティブセッション数を取得（現在ログイン中のユーザー）
-    // Prismaで有効なセッション数をカウント
-    const now = new Date();
-    const activeUsers = await prisma.session.count({
-      where: {
-        expire: {
-          gt: now // 有効期限が現在時刻より後のセッション
+    // アクティブセッション数を取得（エラーハンドリング付き）
+    let activeUsers = 0;
+    try {
+      const now = new Date();
+      activeUsers = await prisma.session.count({
+        where: {
+          expire: {
+            gt: now
+          }
         }
-      }
-    });
+      });
+    } catch (sessionError) {
+      console.warn('[Users] Could not count sessions from Prisma:', sessionError);
+      activeUsers = 0;
+    }
 
     // 最近のログイン（過去24時間）をデータベースから取得
     const oneDayAgo = new Date(Date.now() - (24 * 60 * 60 * 1000));
