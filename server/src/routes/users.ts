@@ -24,29 +24,38 @@ usersRouter.get('/sessions', async (req, res) => {
     });
 
     // セッション情報を整形
-    const sessionList = sessions.map((session) => {
-      const sessionData = session.sess as any;
+    const sessionList = sessions
+      .filter((session) => {
+        // sessデータがnullまたは不正な場合はスキップ
+        if (!session.sess || typeof session.sess !== 'object') {
+          console.warn(`[Users] Invalid session data for sid: ${session.sid}`);
+          return false;
+        }
+        return true;
+      })
+      .map((session) => {
+        const sessionData = session.sess as any;
 
-      return {
-        sessionId: session.sid,
-        authenticated: !!sessionData.googleTokens,
-        twitchAuthenticated: !!sessionData.twitchTokens,
-        googleUser: sessionData.googleUser ? {
-          id: sessionData.googleUser.id,
-          email: sessionData.googleUser.email,
-          name: sessionData.googleUser.name
-        } : null,
-        twitchUser: sessionData.twitchUser ? {
-          id: sessionData.twitchUser.id,
-          login: sessionData.twitchUser.login,
-          displayName: sessionData.twitchUser.displayName
-        } : null,
-        createdAt: sessionData.createdAt || null,
-        lastActivity: sessionData.lastActivity || null,
-        ipAddress: sessionData.ipAddress || null,
-        userAgent: sessionData.userAgent || null
-      };
-    });
+        return {
+          sessionId: session.sid,
+          authenticated: !!sessionData?.googleTokens,
+          twitchAuthenticated: !!sessionData?.twitchTokens,
+          googleUser: sessionData?.googleUser ? {
+            id: sessionData.googleUser.id,
+            email: sessionData.googleUser.email,
+            name: sessionData.googleUser.name
+          } : null,
+          twitchUser: sessionData?.twitchUser ? {
+            id: sessionData.twitchUser.id,
+            login: sessionData.twitchUser.login,
+            displayName: sessionData.twitchUser.displayName
+          } : null,
+          createdAt: sessionData?.createdAt || null,
+          lastActivity: sessionData?.lastActivity || null,
+          ipAddress: sessionData?.ipAddress || null,
+          userAgent: sessionData?.userAgent || null
+        };
+      });
 
     // 統計情報を計算
     const stats = {
