@@ -4,6 +4,7 @@ import { ConsentManager } from "./components/ConsentManager";
 import { MaintenancePage } from "./components/MaintenancePage/MaintenancePage";
 import { MobileRestriction } from "./components/MobileRestriction/MobileRestriction";
 import { UnsupportedBrowser } from "./components/UnsupportedBrowser/UnsupportedBrowser";
+import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
 import { useStreamUpdates } from "./hooks/useStreamUpdates";
 import { useTwitchChat } from "./hooks/useTwitchChat";
 import { useLayoutStore } from "./stores/layoutStore";
@@ -375,10 +376,10 @@ function App(): JSX.Element {
   // }
 
   return (
-    <>
+    <ErrorBoundary>
       <ConsentManager />
       <AppShell />
-    </>
+    </ErrorBoundary>
   );
 }
 

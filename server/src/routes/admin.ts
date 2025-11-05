@@ -1430,3 +1430,37 @@ adminRouter.post('/database/migrate-alerts', async (req: Request, res: Response)
     });
   }
 });
+
+/**
+ * GET /api/admin/test/error
+ * エラー画面テスト用エンドポイント（意図的にエラーを返す）
+ */
+adminRouter.get('/test/error', async (req: Request, res: Response) => {
+  try {
+    // 監査ログに記録
+    await auditLogService.log({
+      action: 'test_error_screen',
+      actor: 'admin',
+      actorIp: req.ip || 'unknown',
+      actorAgent: req.headers['user-agent'],
+      targetType: 'system',
+      targetId: 'error_screen_test',
+      details: {
+        description: 'Triggered error screen test'
+      },
+      status: 'success'
+    });
+
+    // 意図的にエラーをスロー
+    throw new Error('This is a test error for error screen display. エラー画面のテストです。');
+  } catch (error) {
+    console.log('[Admin] Test error triggered:', error);
+    const message = error instanceof Error ? error.message : 'Test error';
+
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});

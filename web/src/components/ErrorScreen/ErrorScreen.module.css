@@ -1,0 +1,163 @@
+.errorScreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 24px;
+}
+
+.errorContent {
+  max-width: 600px;
+  text-align: center;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.icon {
+  font-size: 80px;
+  margin-bottom: 24px;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0 0 16px 0;
+}
+
+.message {
+  font-size: 18px;
+  color: #94a3b8;
+  margin: 0 0 32px 0;
+  line-height: 1.6;
+}
+
+.errorDetails {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 24px 0;
+  text-align: left;
+}
+
+.errorDetailsTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0 0 8px 0;
+}
+
+.errorDetailsContent {
+  font-size: 13px;
+  color: #94a3b8;
+  font-family: 'Consolas', 'Monaco', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.button {
+  padding: 12px 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.buttonPrimary {
+  background: #3498DB;
+  color: white;
+}
+
+.buttonPrimary:hover {
+  background: #0078C4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.buttonSecondary {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.buttonSecondary:hover {
+  background: #475569;
+  transform: translateY(-2px);
+}
+
+.footer {
+  margin-top: 32px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.footerLink {
+  color: #3498DB;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footerLink:hover {
+  color: #0078C4;
+  text-decoration: underline;
+}
+
+/* レスポンシブ */
+@media (max-width: 600px) {
+  .errorScreen {
+    padding: 16px;
+  }
+
+  .icon {
+    font-size: 60px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .message {
+    font-size: 16px;
+  }
+
+  .buttons {
+    flex-direction: column;
+  }
+
+  .button {
+    width: 100%;
+  }
+}

@@ -134,6 +134,13 @@ export const Maintenance: React.FC = () => {
     }
   };
 
+  const handleTestErrorScreen = () => {
+    const url = 'https://fukumado.jp';
+    if (confirm(`本サービス（${url}）を新しいタブで開きます。\n\nエラー画面をテストするには、開発者ツールのコンソールで以下を実行してください：\n\nthrow new Error("Test Error")\n\n続けますか？`)) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   if (isLoading) {
     return <Loader text="メンテナンス状態を読み込んでいます..." />;
   }
@@ -376,6 +383,35 @@ export const Maintenance: React.FC = () => {
             disabled={isSubmitting}
           >
             {isSubmitting ? '実行中...' : 'テーブルを作成'}
+          </Button>
+        </Card>
+      </section>
+
+      {/* エラー画面テスト */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>エラー画面テスト</h2>
+        <Card title="本サービスのエラー画面をテスト">
+          <p className={styles.description}>
+            本サービス（fukumado.jp）のエラー画面が正しく表示されるかテストします。
+          </p>
+          <p className={styles.description}>
+            テストするには、本サービスを開いた後、開発者ツールのコンソールで意図的にエラーをスローしてください。
+          </p>
+          <div className={styles.info}>
+            <h4>テスト手順</h4>
+            <ol className={styles.notesList}>
+              <li>「本サービスを開く」ボタンをクリック</li>
+              <li>開発者ツール（F12）を開く</li>
+              <li>コンソールタブを選択</li>
+              <li>以下のコマンドを入力して実行: <code>throw new Error("Test Error")</code></li>
+              <li>エラー画面が表示されることを確認</li>
+            </ol>
+          </div>
+          <Button
+            variant="primary"
+            onClick={handleTestErrorScreen}
+          >
+            本サービスを開く
           </Button>
         </Card>
       </section>
