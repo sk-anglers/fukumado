@@ -150,6 +150,100 @@ usersRouter.delete('/sessions/:sessionId', async (req, res) => {
 });
 
 /**
+ * GET /api/admin/users/daily-stats
+ * 日別ユーザー統計を取得（グラフ用）
+ */
+usersRouter.get('/daily-stats', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30;
+
+    // 過去N日分の日付範囲を計算
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    // 日別のユーザー数を集計
+    const dailyStats: Array<{
+      date: string;
+      totalUsers: number;
+      youtubeUsers: number;
+      twitchUsers: number;
+      newUsers: number;
+    }> = [];
+
+    // 各日付ごとにユーザー数を集計
+    for (let i = 0; i < days; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(currentDate.getDate() + i);
+      const nextDate = new Date(currentDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      // その日までに作成された総ユーザー数
+      const totalUsers = await prisma.user.count({
+        where: {
+          createdAt: {
+            lt: nextDate
+          }
+        }
+      });
+
+      // その日までに作成されたYouTubeユーザー数
+      const youtubeUsers = await prisma.user.count({
+        where: {
+          youtubeUserId: { not: null },
+          createdAt: {
+            lt: nextDate
+          }
+        }
+      });
+
+      // その日までに作成されたTwitchユーザー数
+      const twitchUsers = await prisma.user.count({
+        where: {
+          twitchUserId: { not: null },
+          createdAt: {
+            lt: nextDate
+          }
+        }
+      });
+
+      // その日に新規登録されたユーザー数
+      const newUsers = await prisma.user.count({
+        where: {
+          createdAt: {
+            gte: currentDate,
+            lt: nextDate
+          }
+        }
+      });
+
+      dailyStats.push({
+        date: currentDate.toISOString().split('T')[0],
+        totalUsers,
+        youtubeUsers,
+        twitchUsers,
+        newUsers
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        dailyStats
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Users] Error in daily-stats endpoint:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
  * GET /api/admin/users/stats
  * ユーザー統計を取得（データベースベース）
  */

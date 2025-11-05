@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { getUserSessions, getUserStats, destroySession } from '../../services/apiClient';
-import { SessionInfo, UserStats as UserStatsType } from '../../types';
+import { getUserSessions, getUserStats, destroySession, getDailyUserStats } from '../../services/apiClient';
+import { SessionInfo, UserStats as UserStatsType, DailyUserStat } from '../../types';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import styles from './Users.module.css';
 
 export const Users: React.FC = () => {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [stats, setStats] = useState<UserStatsType | null>(null);
+  const [dailyStats, setDailyStats] = useState<DailyUserStat[]>([]);
   const [sessionStats, setSessionStats] = useState({
     totalSessions: 0,
     authenticatedSessions: 0,
@@ -18,14 +20,16 @@ export const Users: React.FC = () => {
   const loadData = async () => {
     try {
       setError(null);
-      const [sessionsData, userStats] = await Promise.all([
+      const [sessionsData, userStats, dailyStatsData] = await Promise.all([
         getUserSessions(),
-        getUserStats()
+        getUserStats(),
+        getDailyUserStats(30)
       ]);
 
       setSessions(sessionsData.sessions);
       setSessionStats(sessionsData.stats);
       setStats(userStats);
+      setDailyStats(dailyStatsData.dailyStats);
     } catch (err) {
       console.error('Failed to load users data:', err);
       setError(err instanceof Error ? err.message : 'データの読み込みに失敗しました');
@@ -104,6 +108,7 @@ export const Users: React.FC = () => {
           <div className={styles.statSubtext}>
             認証済: {sessionStats.authenticatedSessions}
           </div>
+          <div className={styles.statHint}>現在ログイン中のユーザー数</div>
         </div>
 
         <div className={styles.statCard}>
@@ -122,6 +127,73 @@ export const Users: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* UU数推移グラフ */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>ユニークユーザー数推移 (過去30日)</h2>
+        {dailyStats.length > 0 ? (
+          <div className={styles.chartContainer}>
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={dailyStats} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis
+                  dataKey="date"
+                  stroke="#94a3b8"
+                  tick={{ fill: '#94a3b8', fontSize: 12 }}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                  }}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  tick={{ fill: '#94a3b8', fontSize: 12 }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: '#e2e8f0'
+                  }}
+                  labelFormatter={(value) => `日付: ${value}`}
+                />
+                <Legend
+                  wrapperStyle={{ color: '#e2e8f0' }}
+                  iconType="line"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="totalUsers"
+                  stroke="#3498DB"
+                  strokeWidth={2}
+                  name="総ユーザー数"
+                  dot={{ fill: '#3498DB', r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="youtubeUsers"
+                  stroke="#FF0000"
+                  strokeWidth={2}
+                  name="YouTubeユーザー"
+                  dot={{ fill: '#FF0000', r: 3 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="twitchUsers"
+                  stroke="#9146FF"
+                  strokeWidth={2}
+                  name="Twitchユーザー"
+                  dot={{ fill: '#9146FF', r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className={styles.noData}>データがありません</div>
+        )}
+      </section>
 
       {/* セッション一覧 */}
       <section className={styles.section}>
