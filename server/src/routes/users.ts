@@ -127,6 +127,7 @@ usersRouter.delete('/sessions/:sessionId', async (req, res) => {
 /**
  * GET /api/admin/users/daily-stats
  * 日別ユーザー統計を取得（グラフ用）
+ * メモリ効率化: SQLで集計してメモリ使用量を最小化
  */
 usersRouter.get('/daily-stats', async (req, res) => {
   try {
@@ -137,16 +138,67 @@ usersRouter.get('/daily-stats', async (req, res) => {
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
-    // 全ユーザーデータを一度だけ取得（効率化）
-    const allUsers = await prisma.user.findMany({
-      select: {
-        createdAt: true,
-        youtubeUserId: true,
-        twitchUserId: true
+    // SQLで日別の新規登録ユーザー数を集計（メモリ効率的）
+    const dailyNewUsers = await prisma.$queryRaw<Array<{
+      date: Date;
+      total_new: bigint;
+      youtube_new: bigint;
+      twitch_new: bigint;
+    }>>`
+      SELECT
+        DATE("createdAt") as date,
+        COUNT(*)::bigint as total_new,
+        COUNT(CASE WHEN "youtubeUserId" IS NOT NULL THEN 1 END)::bigint as youtube_new,
+        COUNT(CASE WHEN "twitchUserId" IS NOT NULL THEN 1 END)::bigint as twitch_new
+      FROM "User"
+      WHERE "createdAt" >= ${startDate}
+      GROUP BY DATE("createdAt")
+      ORDER BY date ASC
+    `;
+
+    // 開始日以前の累計ユーザー数を取得（初期値）
+    const initialCounts = await prisma.user.aggregate({
+      where: {
+        createdAt: {
+          lt: startDate
+        }
+      },
+      _count: {
+        id: true
       }
     });
 
-    // 日別のユーザー数を集計
+    const initialYoutubeCount = await prisma.user.count({
+      where: {
+        createdAt: { lt: startDate },
+        youtubeUserId: { not: null }
+      }
+    });
+
+    const initialTwitchCount = await prisma.user.count({
+      where: {
+        createdAt: { lt: startDate },
+        twitchUserId: { not: null }
+      }
+    });
+
+    // 日別データをマップに変換（効率的なルックアップ）
+    const dailyNewUsersMap = new Map<string, {
+      total: number;
+      youtube: number;
+      twitch: number;
+    }>();
+
+    dailyNewUsers.forEach(row => {
+      const dateStr = new Date(row.date).toISOString().split('T')[0];
+      dailyNewUsersMap.set(dateStr, {
+        total: Number(row.total_new),
+        youtube: Number(row.youtube_new),
+        twitch: Number(row.twitch_new)
+      });
+    });
+
+    // 日別統計を生成（累計値を計算）
     const dailyStats: Array<{
       date: string;
       totalUsers: number;
@@ -155,37 +207,29 @@ usersRouter.get('/daily-stats', async (req, res) => {
       newUsers: number;
     }> = [];
 
-    // JavaScriptで日別に集計（データベースアクセスなし）
+    let cumulativeTotal = initialCounts._count.id;
+    let cumulativeYoutube = initialYoutubeCount;
+    let cumulativeTwitch = initialTwitchCount;
+
     for (let i = 0; i < days; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(currentDate.getDate() + i);
-      const nextDate = new Date(currentDate);
-      nextDate.setDate(nextDate.getDate() + 1);
+      const dateStr = currentDate.toISOString().split('T')[0];
 
-      // その日までに作成された総ユーザー数
-      const totalUsers = allUsers.filter(u => u.createdAt < nextDate).length;
+      // その日の新規ユーザー数を取得
+      const newData = dailyNewUsersMap.get(dateStr) || { total: 0, youtube: 0, twitch: 0 };
 
-      // その日までに作成されたYouTubeユーザー数
-      const youtubeUsers = allUsers.filter(u =>
-        u.youtubeUserId && u.createdAt < nextDate
-      ).length;
-
-      // その日までに作成されたTwitchユーザー数
-      const twitchUsers = allUsers.filter(u =>
-        u.twitchUserId && u.createdAt < nextDate
-      ).length;
-
-      // その日に新規登録されたユーザー数
-      const newUsers = allUsers.filter(u =>
-        u.createdAt >= currentDate && u.createdAt < nextDate
-      ).length;
+      // 累計値を更新
+      cumulativeTotal += newData.total;
+      cumulativeYoutube += newData.youtube;
+      cumulativeTwitch += newData.twitch;
 
       dailyStats.push({
-        date: currentDate.toISOString().split('T')[0],
-        totalUsers,
-        youtubeUsers,
-        twitchUsers,
-        newUsers
+        date: dateStr,
+        totalUsers: cumulativeTotal,
+        youtubeUsers: cumulativeYoutube,
+        twitchUsers: cumulativeTwitch,
+        newUsers: newData.total
       });
     }
 
