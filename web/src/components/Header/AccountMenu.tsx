@@ -69,7 +69,7 @@ interface ChannelResult {
 }
 
 export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
-  const { trackAuth, trackFeature } = useAnalytics();
+  const { trackAuth } = useAnalytics();
 
   const authenticated = useAuthStore((state) => state.authenticated);
   const authUser = useAuthStore((state) => state.user);
@@ -209,18 +209,6 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
     } finally {
       setAuthLoading(false);
     }
-  };
-
-  const handleManualSync = (): void => {
-    // 手動同期をトラッキング（エラーがあっても継続）
-    try {
-      trackFeature('sync');
-    } catch (err) {
-      console.error('[AccountMenu] Analytics tracking error:', err);
-    }
-
-    // 手動同期を実行
-    triggerManualSync();
   };
 
   const handleLogin = (): void => {
@@ -726,7 +714,7 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
           <button
             type="button"
             className={styles.syncManualButton}
-            onClick={handleManualSync}
+            onClick={triggerManualSync}
             disabled={syncing || !canManualSync()}
           >
             <ArrowPathIcon />

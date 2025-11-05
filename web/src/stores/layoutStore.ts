@@ -249,9 +249,6 @@ export const useLayoutStore = create<LayoutState>()(
             return state;
           }
 
-          // TODO: 画質変更UIが実装されたら、呼び出し元でtrackFeature('quality_change', platform)を追加する
-          // 例: const { trackFeature } = useAnalytics(); trackFeature('quality_change', stream.platform);
-
           // 最適化: 変更されたスロットのみ新しいオブジェクト参照を持つ
           const nextSlots = state.slots.slice();
           nextSlots[index] = {
