@@ -51,7 +51,11 @@ async function checkServiceHealth(name: string, url: string): Promise<ServiceSta
       };
     }
 
-    const data = await response.json();
+    const data = await response.json() as {
+      uptime?: number;
+      cpu?: number;
+      memory?: number;
+    };
 
     return {
       name,
