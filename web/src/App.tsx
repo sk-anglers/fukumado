@@ -5,6 +5,7 @@ import { MaintenancePage } from "./components/MaintenancePage/MaintenancePage";
 import { MobileRestriction } from "./components/MobileRestriction/MobileRestriction";
 import { UnsupportedBrowser } from "./components/UnsupportedBrowser/UnsupportedBrowser";
 import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
+import { ErrorScreen } from "./components/ErrorScreen/ErrorScreen";
 import { useStreamUpdates } from "./hooks/useStreamUpdates";
 import { useTwitchChat } from "./hooks/useTwitchChat";
 import { useLayoutStore } from "./stores/layoutStore";
@@ -392,10 +393,10 @@ function App(): JSX.Element {
     saveToServer
   ]);
 
-  // エラーテストモードが有効な場合はエラーをスロー（Error Boundaryでキャッチ）
+  // エラーテストモードが有効な場合はエラー画面を表示
   if (shouldThrowError) {
-    console.log('[App] Throwing test error now...');
-    throw new Error('エラー画面テスト: このエラーは管理者によって意図的に発生させられました。');
+    console.log('[App] Error test mode is enabled, displaying ErrorScreen');
+    return <ErrorScreen />;
   }
 
   // メンテナンス中の場合はメンテナンス画面を表示
