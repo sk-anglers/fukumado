@@ -127,7 +127,7 @@ usersRouter.delete('/sessions/:sessionId', async (req, res) => {
 /**
  * GET /api/admin/users/daily-stats
  * 日別ユーザー統計を取得（グラフ用）
- * メモリ効率化: SQLで集計してメモリ使用量を最小化
+ * メモリ効率化: 最小限のデータのみ取得してJavaScriptで集計
  */
 usersRouter.get('/daily-stats', async (req, res) => {
   try {
@@ -138,64 +138,60 @@ usersRouter.get('/daily-stats', async (req, res) => {
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
-    // SQLで日別の新規登録ユーザー数を集計（メモリ効率的）
-    const dailyNewUsers = await prisma.$queryRaw<Array<{
-      date: Date;
-      total_new: bigint;
-      youtube_new: bigint;
-      twitch_new: bigint;
-    }>>`
-      SELECT
-        DATE("createdAt") as date,
-        COUNT(*)::bigint as total_new,
-        COUNT(CASE WHEN "youtubeUserId" IS NOT NULL THEN 1 END)::bigint as youtube_new,
-        COUNT(CASE WHEN "twitchUserId" IS NOT NULL THEN 1 END)::bigint as twitch_new
-      FROM "User"
-      WHERE "createdAt" >= ${startDate}
-      GROUP BY DATE("createdAt")
-      ORDER BY date ASC
-    `;
-
     // 開始日以前の累計ユーザー数を取得（初期値）
-    const initialCounts = await prisma.user.aggregate({
+    const [initialTotal, initialYoutube, initialTwitch] = await Promise.all([
+      prisma.user.count({
+        where: { createdAt: { lt: startDate } }
+      }),
+      prisma.user.count({
+        where: {
+          createdAt: { lt: startDate },
+          youtubeUserId: { not: null }
+        }
+      }),
+      prisma.user.count({
+        where: {
+          createdAt: { lt: startDate },
+          twitchUserId: { not: null }
+        }
+      })
+    ]);
+
+    // 過去N日分の新規ユーザーのみ取得（createdAtとプラットフォーム情報のみ）
+    const newUsers = await prisma.user.findMany({
       where: {
         createdAt: {
-          lt: startDate
+          gte: startDate
         }
       },
-      _count: {
-        id: true
+      select: {
+        createdAt: true,
+        youtubeUserId: true,
+        twitchUserId: true
+      },
+      orderBy: {
+        createdAt: 'asc'
       }
     });
 
-    const initialYoutubeCount = await prisma.user.count({
-      where: {
-        createdAt: { lt: startDate },
-        youtubeUserId: { not: null }
-      }
-    });
-
-    const initialTwitchCount = await prisma.user.count({
-      where: {
-        createdAt: { lt: startDate },
-        twitchUserId: { not: null }
-      }
-    });
-
-    // 日別データをマップに変換（効率的なルックアップ）
+    // 日別に集計
     const dailyNewUsersMap = new Map<string, {
       total: number;
       youtube: number;
       twitch: number;
     }>();
 
-    dailyNewUsers.forEach(row => {
-      const dateStr = new Date(row.date).toISOString().split('T')[0];
-      dailyNewUsersMap.set(dateStr, {
-        total: Number(row.total_new),
-        youtube: Number(row.youtube_new),
-        twitch: Number(row.twitch_new)
-      });
+    newUsers.forEach(user => {
+      const dateStr = user.createdAt.toISOString().split('T')[0];
+
+      if (!dailyNewUsersMap.has(dateStr)) {
+        dailyNewUsersMap.set(dateStr, { total: 0, youtube: 0, twitch: 0 });
+      }
+
+      const dayData = dailyNewUsersMap.get(dateStr)!;
+      dayData.total += 1;
+      if (user.youtubeUserId) dayData.youtube += 1;
+      if (user.twitchUserId) dayData.twitch += 1;
     });
 
     // 日別統計を生成（累計値を計算）
@@ -207,9 +203,9 @@ usersRouter.get('/daily-stats', async (req, res) => {
       newUsers: number;
     }> = [];
 
-    let cumulativeTotal = initialCounts._count.id;
-    let cumulativeYoutube = initialYoutubeCount;
-    let cumulativeTwitch = initialTwitchCount;
+    let cumulativeTotal = initialTotal;
+    let cumulativeYoutube = initialYoutube;
+    let cumulativeTwitch = initialTwitch;
 
     for (let i = 0; i < days; i++) {
       const currentDate = new Date(startDate);
