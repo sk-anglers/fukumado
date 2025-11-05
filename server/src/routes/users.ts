@@ -150,12 +150,8 @@ usersRouter.get('/stats', async (req, res) => {
     // データベースから総ユーザー数を取得
     const totalUsers = await prisma.user.count();
 
-    // YouTubeユーザー数を取得
-    const youtubeUsers = await prisma.user.count({
-      where: {
-        youtubeUserId: { not: null }
-      }
-    });
+    // YouTubeユーザー数（YouTubeは未実装なので0固定）
+    const youtubeUsers = 0;
 
     // Twitchユーザー数を取得
     const twitchUsers = await prisma.user.count({
@@ -181,18 +177,20 @@ usersRouter.get('/stats', async (req, res) => {
     }
 
     // 最近のログイン（過去24時間）をデータベースから取得
+    // YouTubeは未実装なので、Twitchユーザーのみ取得
     const oneDayAgo = new Date(Date.now() - (24 * 60 * 60 * 1000));
     const recentLoginUsers = await prisma.user.findMany({
       where: {
         lastLoginAt: {
           gte: oneDayAgo
+        },
+        twitchUserId: {
+          not: null
         }
       },
       select: {
-        youtubeUserId: true,
         twitchUserId: true,
         displayName: true,
-        email: true,
         lastLoginAt: true
       },
       orderBy: {
@@ -203,11 +201,7 @@ usersRouter.get('/stats', async (req, res) => {
 
     // レスポンス形式を既存のフロントエンドに合わせる
     const recentLogins = recentLoginUsers.map(user => ({
-      googleUser: user.youtubeUserId ? {
-        id: user.youtubeUserId,
-        email: user.email,
-        name: user.displayName
-      } : null,
+      googleUser: null, // YouTubeは未実装
       twitchUser: user.twitchUserId ? {
         id: user.twitchUserId,
         login: user.displayName,
