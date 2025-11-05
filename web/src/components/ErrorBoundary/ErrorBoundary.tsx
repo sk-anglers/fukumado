@@ -34,6 +34,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      console.log('[ErrorBoundary] Rendering ErrorScreen', {
+        hasError: this.state.hasError,
+        error: this.state.error?.message
+      });
       return <ErrorScreen error={this.state.error} resetError={this.resetError} />;
     }
 

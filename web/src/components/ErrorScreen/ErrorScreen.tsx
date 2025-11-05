@@ -9,6 +9,12 @@ interface ErrorScreenProps {
 export const ErrorScreen: React.FC<ErrorScreenProps> = ({ error, resetError }) => {
   const isDevelopment = import.meta.env.DEV;
 
+  console.log('[ErrorScreen] Rendering ErrorScreen component', {
+    hasError: !!error,
+    errorMessage: error?.message,
+    isDevelopment
+  });
+
   const handleReload = () => {
     window.location.reload();
   };
