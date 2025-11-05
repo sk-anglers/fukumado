@@ -6,7 +6,10 @@ import {
   disableMaintenance as apiDisableMaintenance,
   migrateSeverity,
   migrateAuditLogsTable,
-  migrateAlertsTable
+  migrateAlertsTable,
+  getErrorTestStatus,
+  enableErrorTest,
+  disableErrorTest
 } from '../../services/apiClient';
 import { MaintenanceStatus as MaintenanceStatusType } from '../../types';
 import styles from './Maintenance.module.css';
@@ -18,9 +21,12 @@ export const Maintenance: React.FC = () => {
   const [duration, setDuration] = useState<number>(0); // 0=無期限
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorTestStatus, setErrorTestStatus] = useState<{ enabled: boolean } | null>(null);
+  const [isLoadingErrorTest, setIsLoadingErrorTest] = useState(true);
 
   useEffect(() => {
     loadStatus();
+    loadErrorTestStatus();
   }, []);
 
   const loadStatus = async () => {
@@ -33,6 +39,20 @@ export const Maintenance: React.FC = () => {
       alert('メンテナンス状態の取得に失敗しました');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadErrorTestStatus = async () => {
+    try {
+      setIsLoadingErrorTest(true);
+      const data = await getErrorTestStatus();
+      setErrorTestStatus(data);
+    } catch (error) {
+      console.error('Failed to load error test status:', error);
+      // エラーが発生してもエラーテスト機能は無効と判断して続行
+      setErrorTestStatus({ enabled: false });
+    } finally {
+      setIsLoadingErrorTest(false);
     }
   };
 
@@ -134,10 +154,39 @@ export const Maintenance: React.FC = () => {
     }
   };
 
-  const handleTestErrorScreen = () => {
-    const url = 'https://fukumado.jp';
-    if (confirm(`本サービス（${url}）を新しいタブで開きます。\n\nエラー画面をテストするには、開発者ツールのコンソールで以下を実行してください：\n\nthrow new Error("Test Error")\n\n続けますか？`)) {
-      window.open(url, '_blank', 'noopener,noreferrer');
+  const handleEnableErrorTest = async () => {
+    if (!confirm('エラーテストモードを有効にしますか？\n\n本サービス（fukumado.jp）にアクセスすると、エラー画面が表示されるようになります。')) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const data = await enableErrorTest();
+      setErrorTestStatus(data);
+      alert('エラーテストモードを有効にしました。\n\n本サービスにアクセスするとエラー画面が表示されます。');
+    } catch (error) {
+      console.error('Failed to enable error test mode:', error);
+      alert('エラーテストモードの有効化に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDisableErrorTest = async () => {
+    if (!confirm('エラーテストモードを無効にしますか？')) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const data = await disableErrorTest();
+      setErrorTestStatus(data);
+      alert('エラーテストモードを無効にしました');
+    } catch (error) {
+      console.error('Failed to disable error test mode:', error);
+      alert('エラーテストモードの無効化に失敗しました');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -390,30 +439,78 @@ export const Maintenance: React.FC = () => {
       {/* エラー画面テスト */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>エラー画面テスト</h2>
-        <Card title="本サービスのエラー画面をテスト">
-          <p className={styles.description}>
-            本サービス（fukumado.jp）のエラー画面が正しく表示されるかテストします。
-          </p>
-          <p className={styles.description}>
-            テストするには、本サービスを開いた後、開発者ツールのコンソールで意図的にエラーをスローしてください。
-          </p>
-          <div className={styles.info}>
-            <h4>テスト手順</h4>
-            <ol className={styles.notesList}>
-              <li>「本サービスを開く」ボタンをクリック</li>
-              <li>開発者ツール（F12）を開く</li>
-              <li>コンソールタブを選択</li>
-              <li>以下のコマンドを入力して実行: <code>throw new Error("Test Error")</code></li>
-              <li>エラー画面が表示されることを確認</li>
-            </ol>
-          </div>
-          <Button
-            variant="primary"
-            onClick={handleTestErrorScreen}
-          >
-            本サービスを開く
-          </Button>
-        </Card>
+
+        {isLoadingErrorTest ? (
+          <Card>
+            <p>エラーテストモード状態を読み込んでいます...</p>
+          </Card>
+        ) : (
+          <>
+            {/* 現在の状態 */}
+            <Card title="エラーテストモード状態">
+              <div className={styles.statusContainer}>
+                <div className={styles.statusBadge}>
+                  <span
+                    className={`${styles.indicator} ${
+                      errorTestStatus?.enabled ? styles.enabled : styles.disabled
+                    }`}
+                  ></span>
+                  <span className={styles.statusText}>
+                    {errorTestStatus?.enabled ? 'テストモード有効' : 'テストモード無効'}
+                  </span>
+                </div>
+
+                {errorTestStatus?.enabled && (
+                  <div className={styles.currentMessage}>
+                    <p>⚠️ 本サービスにアクセスすると、エラー画面が表示されます。</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* 操作 */}
+            {errorTestStatus?.enabled ? (
+              <Card title="エラーテストモード無効化">
+                <p className={styles.description}>
+                  エラーテストモードを無効にすると、本サービスは通常通り動作します。
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={handleDisableErrorTest}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '無効化中...' : 'エラーテストモードを無効にする'}
+                </Button>
+              </Card>
+            ) : (
+              <Card title="エラーテストモード有効化">
+                <p className={styles.description}>
+                  本サービス（fukumado.jp）のエラー画面が正しく表示されるかテストします。
+                </p>
+                <p className={styles.description}>
+                  有効にすると、本サービスにアクセスした際にエラー画面が表示されます。
+                </p>
+                <div className={styles.info}>
+                  <h4>テスト手順</h4>
+                  <ol className={styles.notesList}>
+                    <li>「エラーテストモードを有効にする」ボタンをクリック</li>
+                    <li>本サービス（https://fukumado.jp）にアクセス</li>
+                    <li>エラー画面が表示されることを確認</li>
+                    <li>「ページをリロード」「トップページへ」ボタンの動作を確認</li>
+                    <li>テスト完了後、管理ダッシュボードに戻り無効化する</li>
+                  </ol>
+                </div>
+                <Button
+                  variant="danger"
+                  onClick={handleEnableErrorTest}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '有効化中...' : 'エラーテストモードを有効にする'}
+                </Button>
+              </Card>
+            )}
+          </>
+        )}
       </section>
 
       {/* 説明 */}

@@ -910,3 +910,32 @@ export const migrateAlertsTable = async (): Promise<void> => {
     method: 'POST'
   });
 };
+
+// ========================================
+// エラーテストモードAPI
+// ========================================
+
+/**
+ * エラーテストモード状態を取得
+ */
+export const getErrorTestStatus = async (): Promise<{ enabled: boolean }> => {
+  return fetchAPI<{ enabled: boolean }>('/maintenance/test-error/status');
+};
+
+/**
+ * エラーテストモードを有効化
+ */
+export const enableErrorTest = async (): Promise<{ enabled: boolean; message: string }> => {
+  return fetchAPI<{ enabled: boolean; message: string }>('/maintenance/test-error/enable', {
+    method: 'POST'
+  });
+};
+
+/**
+ * エラーテストモードを無効化
+ */
+export const disableErrorTest = async (): Promise<{ enabled: boolean }> => {
+  return fetchAPI<{ enabled: boolean }>('/maintenance/test-error/disable', {
+    method: 'POST'
+  });
+};

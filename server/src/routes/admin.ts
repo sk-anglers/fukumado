@@ -1432,30 +1432,103 @@ adminRouter.post('/database/migrate-alerts', async (req: Request, res: Response)
 });
 
 /**
- * GET /api/admin/test/error
- * エラー画面テスト用エンドポイント（意図的にエラーを返す）
+ * エラーテストモードの状態管理（メモリ）
  */
-adminRouter.get('/test/error', async (req: Request, res: Response) => {
+let errorTestModeEnabled = false;
+
+/**
+ * GET /api/admin/test/error/status
+ * エラーテストモードの状態を取得
+ */
+adminRouter.get('/test/error/status', (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: {
+      enabled: errorTestModeEnabled
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * POST /api/admin/test/error/enable
+ * エラーテストモードを有効化
+ */
+adminRouter.post('/test/error/enable', async (req: Request, res: Response) => {
   try {
+    errorTestModeEnabled = true;
+
     // 監査ログに記録
     await auditLogService.log({
-      action: 'test_error_screen',
+      action: 'enable_error_test_mode',
       actor: 'admin',
       actorIp: req.ip || 'unknown',
       actorAgent: req.headers['user-agent'],
       targetType: 'system',
-      targetId: 'error_screen_test',
+      targetId: 'error_test_mode',
       details: {
-        description: 'Triggered error screen test'
+        description: 'Enabled error test mode'
       },
       status: 'success'
     });
 
-    // 意図的にエラーをスロー
-    throw new Error('This is a test error for error screen display. エラー画面のテストです。');
+    console.log('[Admin] Error test mode enabled');
+
+    res.json({
+      success: true,
+      data: {
+        enabled: true,
+        message: 'Error test mode enabled. Main service will throw an error on next page load.'
+      },
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.log('[Admin] Test error triggered:', error);
-    const message = error instanceof Error ? error.message : 'Test error';
+    console.error('[Admin] Error enabling error test mode:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /api/admin/test/error/disable
+ * エラーテストモードを無効化
+ */
+adminRouter.post('/test/error/disable', async (req: Request, res: Response) => {
+  try {
+    errorTestModeEnabled = false;
+
+    // 監査ログに記録
+    await auditLogService.log({
+      action: 'disable_error_test_mode',
+      actor: 'admin',
+      actorIp: req.ip || 'unknown',
+      actorAgent: req.headers['user-agent'],
+      targetType: 'system',
+      targetId: 'error_test_mode',
+      details: {
+        description: 'Disabled error test mode'
+      },
+      status: 'success'
+    });
+
+    console.log('[Admin] Error test mode disabled');
+
+    res.json({
+      success: true,
+      data: {
+        enabled: false,
+        message: 'Error test mode disabled'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Admin] Error disabling error test mode:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
 
     res.status(500).json({
       success: false,

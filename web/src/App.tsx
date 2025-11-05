@@ -105,6 +105,27 @@ function App(): JSX.Element {
     fetchMaintenanceStatus();
   }, []);
 
+  // エラーテストモードをチェック
+  useEffect(() => {
+    const checkErrorTestMode = async () => {
+      try {
+        const response = await apiFetch('/api/admin/test/error/status');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data?.enabled) {
+            console.log('[App] Error test mode is enabled, throwing test error');
+            throw new Error('エラー画面テスト: このエラーは管理者によって意図的に発生させられました。');
+          }
+        }
+      } catch (error) {
+        // エラーを再スロー（Error Boundaryでキャッチさせる）
+        throw error;
+      }
+    };
+
+    checkErrorTestMode();
+  }, []);
+
   // グローバルエラーハンドラー（デバッグ用）
   useEffect(() => {
     const handleError = (event: ErrorEvent): void => {

@@ -223,3 +223,113 @@ maintenanceRouter.post('/migrate-alerts', async (req, res) => {
     res.status(500).json(apiResponse);
   }
 });
+
+/**
+ * GET /admin/api/maintenance/test-error/status
+ * エラーテストモードの状態を取得
+ */
+maintenanceRouter.get('/test-error/status', async (req, res) => {
+  try {
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/test/error/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
+
+    const data = await response.json() as any;
+
+    const apiResponse: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(apiResponse);
+  } catch (error) {
+    console.error('[API] Error getting error test status:', error);
+    const apiResponse: ApiResponse = {
+      success: false,
+      error: error instanceof Error ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(apiResponse);
+  }
+});
+
+/**
+ * POST /admin/api/maintenance/test-error/enable
+ * エラーテストモードを有効化
+ */
+maintenanceRouter.post('/test-error/enable', async (req, res) => {
+  try {
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/test/error/enable`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
+
+    const data = await response.json() as any;
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to enable error test mode');
+    }
+
+    const apiResponse: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(apiResponse);
+  } catch (error) {
+    console.error('[API] Error enabling error test mode:', error);
+    const apiResponse: ApiResponse = {
+      success: false,
+      error: error instanceof Error ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(apiResponse);
+  }
+});
+
+/**
+ * POST /admin/api/maintenance/test-error/disable
+ * エラーテストモードを無効化
+ */
+maintenanceRouter.post('/test-error/disable', async (req, res) => {
+  try {
+    const response = await fetch(`${env.mainBackendUrl}/api/admin/test/error/disable`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': env.mainApiKey
+      }
+    });
+
+    const data = await response.json() as any;
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to disable error test mode');
+    }
+
+    const apiResponse: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(apiResponse);
+  } catch (error) {
+    console.error('[API] Error disabling error test mode:', error);
+    const apiResponse: ApiResponse = {
+      success: false,
+      error: error instanceof Error ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(apiResponse);
+  }
+});
