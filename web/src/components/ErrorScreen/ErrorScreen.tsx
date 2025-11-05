@@ -77,7 +77,7 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({ error, resetError }) =
           <div className={styles.footer}>
             問題が解決しない場合は、
             <a
-              href="https://twitter.com/anglers_jp"
+              href="https://x.com/fukumado_staff"
               target="_blank"
               rel="noopener noreferrer"
               className={styles.footerLink}
