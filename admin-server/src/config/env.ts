@@ -60,6 +60,9 @@ export const env = {
   // メインバックエンドAPIキー（管理API認証用）
   mainApiKey: process.env.MAIN_API_KEY || 'dev-admin-key-change-in-production',
 
+  // 管理バックエンドURL（本番環境でのみ設定、サービス監視用）
+  adminBackendUrl: process.env.ADMIN_BACKEND_URL || '',
+
   // 管理フロントエンドURL
   adminFrontendUrl: process.env.ADMIN_FRONTEND_URL || 'http://localhost:5174',
 

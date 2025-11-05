@@ -22,7 +22,7 @@ interface ServiceStatus {
 /**
  * サービスのヘルスチェックを実行
  */
-async function checkServiceHealth(name: string, url: string): Promise<ServiceStatus> {
+async function checkServiceHealth(name: string, url: string, isFrontend: boolean = false): Promise<ServiceStatus> {
   const startTime = Date.now();
 
   try {
@@ -51,6 +51,18 @@ async function checkServiceHealth(name: string, url: string): Promise<ServiceSta
       };
     }
 
+    // フロントエンドの場合はJSONパースをスキップ（HTMLが返ってくるため）
+    if (isFrontend) {
+      return {
+        name,
+        url,
+        status: 'healthy',
+        responseTime,
+        lastChecked: new Date().toISOString()
+      };
+    }
+
+    // バックエンドの場合はJSONレスポンスからメトリクスを取得
     const data = await response.json() as {
       uptime?: number;
       cpu?: number;
@@ -91,25 +103,33 @@ servicesRouter.get('/status', async (req, res) => {
     const services = [
       {
         name: 'Main Server',
-        url: `${env.mainBackendUrl}/health`
-      },
-      {
-        name: 'Admin Server',
-        url: 'http://localhost:3001/admin/api/health' // 自分自身
+        url: `${env.mainBackendUrl}/health`,
+        isFrontend: false
       },
       {
         name: 'Web (Frontend)',
-        url: 'https://fukumado.jp'
+        url: 'https://fukumado.jp',
+        isFrontend: true
       },
       {
         name: 'Admin Web (Frontend)',
-        url: 'https://admin.fukumado.jp'
+        url: 'https://admin.fukumado.jp',
+        isFrontend: true
       }
     ];
 
+    // 本番環境でのみAdmin Serverを監視対象に追加
+    if (env.adminBackendUrl) {
+      services.push({
+        name: 'Admin Server',
+        url: `${env.adminBackendUrl}/admin/api/health`,
+        isFrontend: false
+      });
+    }
+
     // 全サービスのヘルスチェックを並列実行
     const statusChecks = await Promise.all(
-      services.map(service => checkServiceHealth(service.name, service.url))
+      services.map(service => checkServiceHealth(service.name, service.url, service.isFrontend))
     );
 
     // 全体のサマリー
