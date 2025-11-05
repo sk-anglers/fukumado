@@ -160,12 +160,16 @@ usersRouter.get('/stats', async (req, res) => {
     const sessionStore = req.sessionStore;
 
     await new Promise<void>((resolve) => {
-      sessionStore.all?.((err, sessions) => {
-        if (!err && sessions) {
-          activeUsers = Object.keys(sessions).length;
-        }
+      if (sessionStore.all) {
+        sessionStore.all((err, sessions) => {
+          if (!err && sessions) {
+            activeUsers = Object.keys(sessions).length;
+          }
+          resolve();
+        });
+      } else {
         resolve();
-      });
+      }
     });
 
     // 最近のログイン（過去24時間）をデータベースから取得
