@@ -387,6 +387,20 @@ export interface UserStats {
   recentLogins: RecentLogin[];
 }
 
+/**
+ * ユーザー検索結果
+ */
+export interface UserSearchResult {
+  id: string;
+  youtubeUserId: string | null;
+  twitchUserId: string | null;
+  displayName: string;
+  email: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
 // ========================================
 // サービス監視型定義
 // ========================================

@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { getUserStats } from '../../services/apiClient';
-import { UserStats as UserStatsType } from '../../types';
+import { getUserStats, searchUsers, deleteUser } from '../../services/apiClient';
+import { UserStats as UserStatsType, UserSearchResult } from '../../types';
 import styles from './Users.module.css';
 
 export const Users: React.FC = () => {
   const [stats, setStats] = useState<UserStatsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ユーザー検索関連
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const loadData = async () => {
     try {
@@ -18,6 +23,49 @@ export const Users: React.FC = () => {
       setError(err instanceof Error ? err.message : 'データの読み込みに失敗しました');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setSearching(true);
+      setError(null);
+      const results = await searchUsers(searchQuery);
+      setSearchResults(results);
+    } catch (err) {
+      console.error('Failed to search users:', err);
+      setError(err instanceof Error ? err.message : '検索に失敗しました');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleDeleteUser = async (user: UserSearchResult) => {
+    const confirmMessage = `本当にこのユーザーを削除しますか？\n\nユーザー名: ${user.displayName}\nメール: ${user.email || 'なし'}\nYouTube ID: ${user.youtubeUserId || 'なし'}\nTwitch ID: ${user.twitchUserId || 'なし'}\n\nこの操作は取り消せません。`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      await deleteUser(user.id);
+      alert(`ユーザー「${user.displayName}」を削除しました`);
+
+      // 検索結果から削除
+      setSearchResults(searchResults.filter(u => u.id !== user.id));
+
+      // 統計を再読み込み
+      await loadData();
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      alert('ユーザーの削除に失敗しました');
     }
   };
 
@@ -81,6 +129,76 @@ export const Users: React.FC = () => {
           <div className={styles.statValue}>{stats?.twitchUsers || 0}</div>
         </div>
       </div>
+
+      {/* ユーザー検索 */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>ユーザー検索・削除</h2>
+
+        <form onSubmit={handleSearch} className={styles.searchForm}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="メールアドレス、ユーザー名、YouTube ID、Twitch IDで検索..."
+            className={styles.searchInput}
+          />
+          <button type="submit" className={styles.searchButton} disabled={searching}>
+            {searching ? '検索中...' : '🔍 検索'}
+          </button>
+        </form>
+
+        {searchResults.length > 0 && (
+          <div className={styles.searchResults}>
+            <div className={styles.resultsHeader}>
+              検索結果: {searchResults.length}件
+            </div>
+
+            <div className={styles.tableContainer}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>ユーザー名</th>
+                    <th>メールアドレス</th>
+                    <th>YouTube ID</th>
+                    <th>Twitch ID</th>
+                    <th>作成日時</th>
+                    <th>最終ログイン</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {searchResults.map((user) => (
+                    <tr key={user.id}>
+                      <td>
+                        <div className={styles.userInfo}>
+                          <div className={styles.userName}>{user.displayName}</div>
+                        </div>
+                      </td>
+                      <td>{user.email || '-'}</td>
+                      <td className={styles.userId}>{user.youtubeUserId || '-'}</td>
+                      <td className={styles.userId}>{user.twitchUserId || '-'}</td>
+                      <td>{formatDate(user.createdAt)}</td>
+                      <td>{formatDate(user.lastLoginAt)}</td>
+                      <td>
+                        <button
+                          className={styles.deleteButton}
+                          onClick={() => handleDeleteUser(user)}
+                        >
+                          🗑️ 削除
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {searchQuery && searchResults.length === 0 && !searching && (
+          <div className={styles.noData}>検索結果が見つかりませんでした</div>
+        )}
+      </section>
 
       {/* 最近のログイン */}
       <section className={styles.section}>

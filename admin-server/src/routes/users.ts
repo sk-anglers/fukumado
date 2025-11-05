@@ -75,3 +75,88 @@ usersRouter.get('/stats', async (req, res) => {
     res.status(500).json(response);
   }
 });
+
+/**
+ * GET /admin/api/users/search
+ * ユーザー検索
+ */
+usersRouter.get('/search', async (req, res) => {
+  try {
+    const query = req.query.q as string || '';
+
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
+      data: any[];
+      timestamp: string;
+    }>(`/api/admin/users/search?q=${encodeURIComponent(query)}`);
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to search users from main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('[API] Error searching users:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
+ * DELETE /admin/api/users/:userId
+ * ユーザー削除
+ */
+usersRouter.delete('/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const data = await fetchMainServiceAPI<{
+      success: boolean;
+      data: {
+        userId: string;
+        displayName: string;
+      };
+      timestamp: string;
+    }>(`/api/admin/users/${userId}`, { method: 'DELETE' });
+
+    if (!data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to delete user from main service',
+        timestamp: new Date().toISOString()
+      };
+      return res.status(500).json(response);
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('[API] Error deleting user:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    };
+    res.status(500).json(response);
+  }
+});

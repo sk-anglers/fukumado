@@ -14,6 +14,7 @@ import {
   StreamDetails,
   SessionListResponse,
   UserStats,
+  UserSearchResult,
   ServicesStatusResponse,
   AccessLogEntry,
   ErrorLogEntry,
@@ -289,6 +290,22 @@ export const triggerStreamSync = async (): Promise<void> => {
  */
 export const getUserStats = async (): Promise<UserStats> => {
   return fetchAPI<UserStats>('/users/stats');
+};
+
+/**
+ * ユーザー検索
+ */
+export const searchUsers = async (query: string): Promise<UserSearchResult[]> => {
+  return fetchAPI<UserSearchResult[]>(`/users/search?q=${encodeURIComponent(query)}`);
+};
+
+/**
+ * ユーザー削除
+ */
+export const deleteUser = async (userId: string): Promise<void> => {
+  await fetchAPI(`/users/${userId}`, {
+    method: 'DELETE'
+  });
 };
 
 // ========================================
