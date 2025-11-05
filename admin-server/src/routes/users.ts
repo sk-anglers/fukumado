@@ -124,54 +124,6 @@ usersRouter.delete('/sessions/:sessionId', async (req, res) => {
 });
 
 /**
- * GET /admin/api/users/daily-stats
- * 日別ユーザー統計を取得
- */
-usersRouter.get('/daily-stats', async (req, res) => {
-  try {
-    const days = req.query.days || '30';
-    const data = await fetchMainServiceAPI<{
-      success: boolean;
-      data: {
-        dailyStats: Array<{
-          date: string;
-          totalUsers: number;
-          youtubeUsers: number;
-          twitchUsers: number;
-          newUsers: number;
-        }>;
-      };
-      timestamp: string;
-    }>(`/api/admin/users/daily-stats?days=${days}`);
-
-    if (!data) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Failed to fetch daily stats from main service',
-        timestamp: new Date().toISOString()
-      };
-      return res.status(500).json(response);
-    }
-
-    const response: ApiResponse = {
-      success: true,
-      data: data.data,
-      timestamp: new Date().toISOString()
-    };
-
-    res.json(response);
-  } catch (error) {
-    console.error('[API] Error getting daily stats:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Internal server error',
-      timestamp: new Date().toISOString()
-    };
-    res.status(500).json(response);
-  }
-});
-
-/**
  * GET /admin/api/users/stats
  * ユーザー統計を取得
  */
