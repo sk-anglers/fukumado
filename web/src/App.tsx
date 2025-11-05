@@ -112,13 +112,22 @@ function App(): JSX.Element {
   useEffect(() => {
     const checkErrorTestMode = async () => {
       try {
+        console.log('[App] Checking error test mode...');
         const response = await apiFetch('/api/error-test/status');
+        console.log('[App] Error test mode response:', response.status, response.ok);
+
         if (response.ok) {
           const data = await response.json();
+          console.log('[App] Error test mode data:', data);
+
           if (data.data?.enabled) {
             console.log('[App] Error test mode is enabled, will throw error on next render');
             setShouldThrowError(true);
+          } else {
+            console.log('[App] Error test mode is disabled');
           }
+        } else {
+          console.warn('[App] Error test mode endpoint returned non-OK status:', response.status);
         }
       } catch (error) {
         console.error('[App] Failed to check error test mode:', error);
@@ -385,6 +394,7 @@ function App(): JSX.Element {
 
   // エラーテストモードが有効な場合はエラーをスロー（Error Boundaryでキャッチ）
   if (shouldThrowError) {
+    console.log('[App] Throwing test error now...');
     throw new Error('エラー画面テスト: このエラーは管理者によって意図的に発生させられました。');
   }
 
