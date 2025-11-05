@@ -19,7 +19,7 @@ usersRouter.get('/sessions', async (req, res) => {
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        expire: 'desc' // createdAtの代わりにexpireでソート
       }
     });
 
