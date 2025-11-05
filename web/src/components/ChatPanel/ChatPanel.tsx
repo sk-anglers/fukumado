@@ -6,6 +6,7 @@ import { useLayoutStore } from '../../stores/layoutStore';
 import { useMobileMenuStore } from '../../stores/mobileMenuStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import { useAnalytics } from '../../hooks/useAnalytics';
 import { config } from '../../config';
 import { apiFetch } from '../../utils/api';
 import type { Platform, ChatMessage, TwitchEmote } from '../../types';
@@ -89,6 +90,7 @@ export const ChatPanel = (): JSX.Element => {
   const slots = useLayoutStore((state) => state.slots);
   const isMobile = useIsMobile();
   const setChatOpen = useMobileMenuStore((state) => state.setChatOpen);
+  const { trackFeature } = useAnalytics();
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -170,6 +172,13 @@ export const ChatPanel = (): JSX.Element => {
       const responseData = await response.json();
       const emotes = responseData.emotes || [];
       const badges = responseData.badges || [];
+
+      // チャット送信成功をトラッキング（エラーがあっても継続）
+      try {
+        trackFeature('chat', selectedStream.platform);
+      } catch (err) {
+        console.error('[ChatPanel] Analytics tracking error:', err);
+      }
 
       // 送信したメッセージをチャットストアに追加
       if (selectedStream.platform === 'twitch' && twitchUser) {
