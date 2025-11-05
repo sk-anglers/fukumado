@@ -137,6 +137,15 @@ usersRouter.get('/daily-stats', async (req, res) => {
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
+    // 全ユーザーデータを一度だけ取得（効率化）
+    const allUsers = await prisma.user.findMany({
+      select: {
+        createdAt: true,
+        youtubeUserId: true,
+        twitchUserId: true
+      }
+    });
+
     // 日別のユーザー数を集計
     const dailyStats: Array<{
       date: string;
@@ -146,7 +155,7 @@ usersRouter.get('/daily-stats', async (req, res) => {
       newUsers: number;
     }> = [];
 
-    // 各日付ごとにユーザー数を集計
+    // JavaScriptで日別に集計（データベースアクセスなし）
     for (let i = 0; i < days; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(currentDate.getDate() + i);
@@ -154,43 +163,22 @@ usersRouter.get('/daily-stats', async (req, res) => {
       nextDate.setDate(nextDate.getDate() + 1);
 
       // その日までに作成された総ユーザー数
-      const totalUsers = await prisma.user.count({
-        where: {
-          createdAt: {
-            lt: nextDate
-          }
-        }
-      });
+      const totalUsers = allUsers.filter(u => u.createdAt < nextDate).length;
 
       // その日までに作成されたYouTubeユーザー数
-      const youtubeUsers = await prisma.user.count({
-        where: {
-          youtubeUserId: { not: null },
-          createdAt: {
-            lt: nextDate
-          }
-        }
-      });
+      const youtubeUsers = allUsers.filter(u =>
+        u.youtubeUserId && u.createdAt < nextDate
+      ).length;
 
       // その日までに作成されたTwitchユーザー数
-      const twitchUsers = await prisma.user.count({
-        where: {
-          twitchUserId: { not: null },
-          createdAt: {
-            lt: nextDate
-          }
-        }
-      });
+      const twitchUsers = allUsers.filter(u =>
+        u.twitchUserId && u.createdAt < nextDate
+      ).length;
 
       // その日に新規登録されたユーザー数
-      const newUsers = await prisma.user.count({
-        where: {
-          createdAt: {
-            gte: currentDate,
-            lt: nextDate
-          }
-        }
-      });
+      const newUsers = allUsers.filter(u =>
+        u.createdAt >= currentDate && u.createdAt < nextDate
+      ).length;
 
       dailyStats.push({
         date: currentDate.toISOString().split('T')[0],
