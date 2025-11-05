@@ -168,13 +168,17 @@ export const ChatPanel = (): JSX.Element => {
         throw new Error(errorData.error || 'メッセージの送信に失敗しました');
       }
 
-      // チャット送信成功をトラッキング
-      trackFeature('chat', selectedStream.platform as Platform);
-
       // レスポンスからエモート情報とバッジ情報を取得
       const responseData = await response.json();
       const emotes = responseData.emotes || [];
       const badges = responseData.badges || [];
+
+      // チャット送信成功をトラッキング（エラーがあっても継続）
+      try {
+        trackFeature('chat', selectedStream.platform);
+      } catch (err) {
+        console.error('[ChatPanel] Analytics tracking error:', err);
+      }
 
       // 送信したメッセージをチャットストアに追加
       if (selectedStream.platform === 'twitch' && twitchUser) {

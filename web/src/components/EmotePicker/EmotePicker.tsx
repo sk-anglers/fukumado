@@ -135,8 +135,12 @@ export const EmotePicker = ({ onSelectEmote }: EmotePickerProps): JSX.Element =>
   }, [category, globalEmotes, channelEmotes, searchQuery]);
 
   const handleEmoteClick = (emoteName: string) => {
-    // エモート選択をトラッキング
-    trackFeature('emote', 'twitch');
+    // エモート選択をトラッキング（エラーがあっても継続）
+    try {
+      trackFeature('emote', 'twitch');
+    } catch (err) {
+      console.error('[EmotePicker] Analytics tracking error:', err);
+    }
 
     onSelectEmote(emoteName);
     setIsOpen(false);
