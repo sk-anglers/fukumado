@@ -15,6 +15,7 @@ import {
   SessionListResponse,
   UserStats,
   DailyUserStatsResponse,
+  ServicesStatusResponse,
   AccessLogEntry,
   ErrorLogEntry,
   SecurityLogEntry,
@@ -312,6 +313,17 @@ export const getUserStats = async (): Promise<UserStats> => {
  */
 export const getDailyUserStats = async (days: number = 30): Promise<DailyUserStatsResponse> => {
   return fetchAPI<DailyUserStatsResponse>(`/users/daily-stats?days=${days}`);
+};
+
+// ========================================
+// サービス監視API
+// ========================================
+
+/**
+ * サービス状態取得
+ */
+export const getServicesStatus = async (): Promise<ServicesStatusResponse> => {
+  return fetchAPI<ServicesStatusResponse>('/services/status');
 };
 
 // ========================================

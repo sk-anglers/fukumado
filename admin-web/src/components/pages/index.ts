@@ -13,3 +13,4 @@ export { PVStats } from './PVStats';
 export { Analytics } from './Analytics';
 export { AuditLogs } from './AuditLogs';
 export { Alerts } from './Alerts';
+export { Services } from './Services';

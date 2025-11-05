@@ -32,6 +32,7 @@ const navItems: NavItem[] = [
   { id: 'eventsub', label: 'EventSub管理', path: '/eventsub', icon: '📡' },
   { id: 'cache', label: 'キャッシュ/DB', path: '/cache', icon: '💾' },
   { id: 'api-monitor', label: 'API監視', path: '/api-monitor', icon: '🌐' },
+  { id: 'services', label: 'サービス監視', path: '/services', icon: '🚀' },
   { id: 'maintenance', label: 'メンテナンス', path: '/maintenance', icon: '🔧' }
 ];
 

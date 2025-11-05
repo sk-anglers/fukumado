@@ -440,6 +440,43 @@ export interface DailyUserStatsResponse {
 }
 
 // ========================================
+// サービス監視型定義
+// ========================================
+
+/**
+ * サービスステータス
+ */
+export interface ServiceStatus {
+  name: string;
+  url: string;
+  status: 'healthy' | 'unhealthy' | 'unknown';
+  responseTime?: number;
+  uptime?: number;
+  cpu?: number;
+  memory?: number;
+  lastChecked: string;
+  error?: string;
+}
+
+/**
+ * サービス監視サマリー
+ */
+export interface ServiceSummary {
+  total: number;
+  healthy: number;
+  unhealthy: number;
+  unknown: number;
+}
+
+/**
+ * サービス監視レスポンス
+ */
+export interface ServicesStatusResponse {
+  services: ServiceStatus[];
+  summary: ServiceSummary;
+}
+
+// ========================================
 // ログ閲覧型定義
 // ========================================
 
