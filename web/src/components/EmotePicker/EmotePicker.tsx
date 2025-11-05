@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import { useAnalytics } from '../../hooks/useAnalytics';
 import { apiFetch } from '../../utils/api';
 import styles from './EmotePicker.module.css';
 
@@ -33,6 +34,7 @@ export const EmotePicker = ({ onSelectEmote }: EmotePickerProps): JSX.Element =>
   const pickerRef = useRef<HTMLDivElement>(null);
   const slots = useLayoutStore((state) => state.slots);
   const isMobile = useIsMobile();
+  const { trackFeature } = useAnalytics();
 
   // 視聴中の配信を取得
   const watchingStreams = useMemo(() => {
@@ -133,6 +135,9 @@ export const EmotePicker = ({ onSelectEmote }: EmotePickerProps): JSX.Element =>
   }, [category, globalEmotes, channelEmotes, searchQuery]);
 
   const handleEmoteClick = (emoteName: string) => {
+    // エモート選択をトラッキング
+    trackFeature('emote', 'twitch');
+
     onSelectEmote(emoteName);
     setIsOpen(false);
     setSearchQuery('');

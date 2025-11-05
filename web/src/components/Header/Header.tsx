@@ -187,6 +187,10 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
 
       promises.push(apiFetch(`/api/twitch/channels?q=${encodeURIComponent(trimmed)}`));
 
+      // 検索実行をトラッキング（検索ボタン + 検索機能）
+      trackButton('stream_search', 'header');
+      trackFeature('search');
+
       const responses = await Promise.allSettled(promises);
 
       // レスポンスの割り当て（YouTube無効時はTwitchのみ）

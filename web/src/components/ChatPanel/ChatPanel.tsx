@@ -6,6 +6,7 @@ import { useLayoutStore } from '../../stores/layoutStore';
 import { useMobileMenuStore } from '../../stores/mobileMenuStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import { useAnalytics } from '../../hooks/useAnalytics';
 import { config } from '../../config';
 import { apiFetch } from '../../utils/api';
 import type { Platform, ChatMessage, TwitchEmote } from '../../types';
@@ -89,6 +90,7 @@ export const ChatPanel = (): JSX.Element => {
   const slots = useLayoutStore((state) => state.slots);
   const isMobile = useIsMobile();
   const setChatOpen = useMobileMenuStore((state) => state.setChatOpen);
+  const { trackFeature } = useAnalytics();
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -165,6 +167,9 @@ export const ChatPanel = (): JSX.Element => {
         const errorData = await response.json();
         throw new Error(errorData.error || 'メッセージの送信に失敗しました');
       }
+
+      // チャット送信成功をトラッキング
+      trackFeature('chat', selectedStream.platform as Platform);
 
       // レスポンスからエモート情報とバッジ情報を取得
       const responseData = await response.json();
