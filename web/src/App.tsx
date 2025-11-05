@@ -112,7 +112,7 @@ function App(): JSX.Element {
   useEffect(() => {
     const checkErrorTestMode = async () => {
       try {
-        const response = await apiFetch('/api/admin/test/error/status');
+        const response = await apiFetch('/api/error-test/status');
         if (response.ok) {
           const data = await response.json();
           if (data.data?.enabled) {

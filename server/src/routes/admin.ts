@@ -1437,6 +1437,20 @@ adminRouter.post('/database/migrate-alerts', async (req: Request, res: Response)
 let errorTestModeEnabled = false;
 
 /**
+ * エラーテストモードの状態を取得
+ */
+export const getErrorTestModeStatus = (): boolean => {
+  return errorTestModeEnabled;
+};
+
+/**
+ * エラーテストモードの状態を設定
+ */
+export const setErrorTestModeStatus = (enabled: boolean): void => {
+  errorTestModeEnabled = enabled;
+};
+
+/**
  * GET /api/admin/test/error/status
  * エラーテストモードの状態を取得
  */
@@ -1444,7 +1458,7 @@ adminRouter.get('/test/error/status', (req: Request, res: Response) => {
   res.json({
     success: true,
     data: {
-      enabled: errorTestModeEnabled
+      enabled: getErrorTestModeStatus()
     },
     timestamp: new Date().toISOString()
   });
@@ -1456,7 +1470,7 @@ adminRouter.get('/test/error/status', (req: Request, res: Response) => {
  */
 adminRouter.post('/test/error/enable', async (req: Request, res: Response) => {
   try {
-    errorTestModeEnabled = true;
+    setErrorTestModeStatus(true);
 
     // 監査ログに記録
     await auditLogService.log({
@@ -1500,7 +1514,7 @@ adminRouter.post('/test/error/enable', async (req: Request, res: Response) => {
  */
 adminRouter.post('/test/error/disable', async (req: Request, res: Response) => {
   try {
-    errorTestModeEnabled = false;
+    setErrorTestModeStatus(false);
 
     // 監査ログに記録
     await auditLogService.log({

@@ -21,7 +21,7 @@ import { logsRouter } from './routes/logs';
 import { eventsubRouter } from './routes/eventsub';
 import { cacheRouter } from './routes/cache';
 import { adminStreamsRouter } from './routes/adminStreams';
-import { adminRouter } from './routes/admin';
+import { adminRouter, getErrorTestModeStatus } from './routes/admin';
 import { userPreferencesRouter } from './routes/userPreferences';
 import { twitchChatService } from './services/twitchChatService';
 import { streamSyncService, tokenStorage } from './services/streamSyncService';
@@ -196,6 +196,17 @@ app.use('/api/security', apiRateLimiter, securityRouter);
 app.use('/api/consent', apiRateLimiter, consentRouter);
 app.use('/api/legal', apiRateLimiter, legalRouter);
 app.use('/api/user/preferences', apiRateLimiter, userPreferencesRouter);
+
+// エラーテストモード状態取得（認証不要、本サービスからアクセス）
+app.get('/api/error-test/status', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      enabled: getErrorTestModeStatus()
+    },
+    timestamp: new Date().toISOString()
+  });
+});
 
 // 管理APIルーター（APIキー認証必須）
 app.use('/api/admin/maintenance', adminApiAuth, maintenanceRouter);
