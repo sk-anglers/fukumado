@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useMemo } from "react";
+﻿import { useEffect, useRef, useMemo, useState } from "react";
 import { AppShell } from "./components/AppShell/AppShell";
 import { ConsentManager } from "./components/ConsentManager";
 import { MaintenancePage } from "./components/MaintenancePage/MaintenancePage";
@@ -41,6 +41,9 @@ function App(): JSX.Element {
   const autoQualityEnabled = useLayoutStore((state) => state.autoQualityEnabled);
   const mutedAll = useLayoutStore((state) => state.mutedAll);
   const masterVolume = useLayoutStore((state) => state.masterVolume);
+
+  // エラーテストモード用のステート
+  const [shouldThrowError, setShouldThrowError] = useState(false);
 
   // メモ化してuseEffectの不要な再実行を防ぐ
   const followedChannelIds = useMemo(
@@ -113,13 +116,12 @@ function App(): JSX.Element {
         if (response.ok) {
           const data = await response.json();
           if (data.data?.enabled) {
-            console.log('[App] Error test mode is enabled, throwing test error');
-            throw new Error('エラー画面テスト: このエラーは管理者によって意図的に発生させられました。');
+            console.log('[App] Error test mode is enabled, will throw error on next render');
+            setShouldThrowError(true);
           }
         }
       } catch (error) {
-        // エラーを再スロー（Error Boundaryでキャッチさせる）
-        throw error;
+        console.error('[App] Failed to check error test mode:', error);
       }
     };
 
@@ -380,6 +382,11 @@ function App(): JSX.Element {
     masterVolume,
     saveToServer
   ]);
+
+  // エラーテストモードが有効な場合はエラーをスロー（Error Boundaryでキャッチ）
+  if (shouldThrowError) {
+    throw new Error('エラー画面テスト: このエラーは管理者によって意図的に発生させられました。');
+  }
 
   // メンテナンス中の場合はメンテナンス画面を表示
   if (maintenanceEnabled) {
