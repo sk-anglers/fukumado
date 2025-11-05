@@ -1433,9 +1433,8 @@ adminRouter.post('/database/migrate-alerts', async (req: Request, res: Response)
 
 /**
  * エラーテストモードの状態管理（メモリ）
- * 注意: 一時的にtrueに設定（テスト用）
  */
-let errorTestModeEnabled = true;
+let errorTestModeEnabled = false;
 
 /**
  * エラーテストモードの状態を取得
