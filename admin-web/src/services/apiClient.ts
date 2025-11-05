@@ -285,22 +285,6 @@ export const triggerStreamSync = async (): Promise<void> => {
 // ========================================
 
 /**
- * セッション一覧取得
- */
-export const getUserSessions = async (): Promise<SessionListResponse> => {
-  return fetchAPI<SessionListResponse>('/users/sessions');
-};
-
-/**
- * セッション強制終了
- */
-export const destroySession = async (sessionId: string): Promise<void> => {
-  await fetchAPI(`/users/sessions/${sessionId}`, {
-    method: 'DELETE'
-  });
-};
-
-/**
  * ユーザー統計取得
  */
 export const getUserStats = async (): Promise<UserStats> => {

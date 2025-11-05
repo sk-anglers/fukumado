@@ -369,39 +369,6 @@ export interface TwitchUser {
 }
 
 /**
- * セッション情報
- */
-export interface SessionInfo {
-  sessionId: string;
-  authenticated: boolean;
-  twitchAuthenticated: boolean;
-  googleUser: GoogleUser | null;
-  twitchUser: TwitchUser | null;
-  createdAt: string | null;
-  lastActivity: string | null;
-  ipAddress: string | null;
-  userAgent: string | null;
-}
-
-/**
- * セッション統計情報
- */
-export interface SessionStatsInfo {
-  totalSessions: number;
-  authenticatedSessions: number;
-  youtubeAuthSessions: number;
-  twitchAuthSessions: number;
-}
-
-/**
- * セッション一覧レスポンス
- */
-export interface SessionListResponse {
-  sessions: SessionInfo[];
-  stats: SessionStatsInfo;
-}
-
-/**
  * 最近のログイン情報
  */
 export interface RecentLogin {
@@ -415,7 +382,6 @@ export interface RecentLogin {
  */
 export interface UserStats {
   totalUsers: number;
-  activeUsers: number;
   youtubeUsers: number;
   twitchUsers: number;
   recentLogins: RecentLogin[];
