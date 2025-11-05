@@ -177,7 +177,11 @@ usersRouter.get('/stats', async (req, res) => {
     const sessionStore = req.sessionStore;
 
     await new Promise<void>((resolve) => {
-      sessionStore.all?.((err, sessions) => {
+      if (!sessionStore.all) {
+        resolve();
+        return;
+      }
+      sessionStore.all((err, sessions) => {
         if (!err && sessions) {
           activeUsers = Object.keys(sessions).length;
         }
