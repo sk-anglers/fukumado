@@ -171,7 +171,7 @@ export const TTL = {
   METRICS_SHORT: 60,        // 1分（システムメトリクス）
   METRICS_MEDIUM: 300,      // 5分（APIレート制限）
   METRICS_LONG: 3600,       // 1時間（エンドポイント統計）
-  SECURITY_LOG: 86400,      // 24時間（アクセスログ）
+  SECURITY_LOG: 3600,       // 1時間（アクセスログ）※24時間から短縮してメモリ削減
   SECURITY_TEMP_BLOCK: 3600, // 1時間（一時ブロック）
   MAINTENANCE_BYPASS: 3600,  // 1時間（Bypass URL）
 } as const;
