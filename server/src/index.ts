@@ -273,16 +273,23 @@ setInterval(() => {
 twitchEventSubManager.onStreamEvent((event) => {
   console.log('[EventSub Manager] Stream event received:', event);
 
-  // 全クライアントに通知
-  const payload = JSON.stringify({
-    type: 'eventsub_stream_event',
-    event
-  });
+  // 各クライアントに対して、フォローしているチャンネルの通知のみ送信
+  clients.forEach((clientData, ws) => {
+    if (ws.readyState !== WebSocket.OPEN) return;
 
-  clients.forEach((_, ws) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(payload);
+    // このユーザーがフォローしているTwitchチャンネルをチェック
+    const userTwitchChannels = clientData.twitchChannels || [];
+    if (!userTwitchChannels.includes(event.broadcasterId)) {
+      return; // フォローしていないチャンネルはスキップ
     }
+
+    // フォローしているチャンネルの通知のみ送信
+    const payload = JSON.stringify({
+      type: 'eventsub_stream_event',
+      event
+    });
+    ws.send(payload);
+    console.log(`[EventSub Manager] Sent event to client for channel: ${event.broadcasterName}`);
   });
 });
 
@@ -341,20 +348,27 @@ priorityManager.onChange((event) => {
   });
 });
 
-// Webhookサービスのイベントハンドラー（Webhook経由のイベントも全クライアントに通知）
+// Webhookサービスのイベントハンドラー（Webhook経由のイベントも各クライアントにフィルタリングして通知）
 twitchEventSubWebhookService.onStreamEvent((event) => {
   console.log('[EventSub Webhook] Stream event received:', event);
 
-  // 全クライアントに通知（EventSubManagerと同じ形式）
-  const payload = JSON.stringify({
-    type: 'eventsub_stream_event',
-    event
-  });
+  // 各クライアントに対して、フォローしているチャンネルの通知のみ送信
+  clients.forEach((clientData, ws) => {
+    if (ws.readyState !== WebSocket.OPEN) return;
 
-  clients.forEach((_, ws) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(payload);
+    // このユーザーがフォローしているTwitchチャンネルをチェック
+    const userTwitchChannels = clientData.twitchChannels || [];
+    if (!userTwitchChannels.includes(event.broadcasterId)) {
+      return; // フォローしていないチャンネルはスキップ
     }
+
+    // フォローしているチャンネルの通知のみ送信（EventSubManagerと同じ形式）
+    const payload = JSON.stringify({
+      type: 'eventsub_stream_event',
+      event
+    });
+    ws.send(payload);
+    console.log(`[EventSub Webhook] Sent event to client for channel: ${event.broadcasterName}`);
   });
 });
 
@@ -383,16 +397,23 @@ twitchConduitManager.onStreamEvent((event) => {
     console.log(`[Conduit Manager] Removed stream from cache: ${event.broadcasterName}`);
   }
 
-  // 全クライアントに通知（EventSubManagerと同じ形式）
-  const payload = JSON.stringify({
-    type: 'eventsub_stream_event',
-    event
-  });
+  // 各クライアントに対して、フォローしているチャンネルの通知のみ送信（EventSubManagerと同じ形式）
+  clients.forEach((clientData, ws) => {
+    if (ws.readyState !== WebSocket.OPEN) return;
 
-  clients.forEach((_, ws) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(payload);
+    // このユーザーがフォローしているTwitchチャンネルをチェック
+    const userTwitchChannels = clientData.twitchChannels || [];
+    if (!userTwitchChannels.includes(event.broadcasterId)) {
+      return; // フォローしていないチャンネルはスキップ
     }
+
+    // フォローしているチャンネルの通知のみ送信
+    const payload = JSON.stringify({
+      type: 'eventsub_stream_event',
+      event
+    });
+    ws.send(payload);
+    console.log(`[Conduit Manager] Sent event to client for channel: ${event.broadcasterName}`);
   });
 });
 
