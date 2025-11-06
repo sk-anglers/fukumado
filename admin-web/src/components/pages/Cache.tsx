@@ -14,6 +14,12 @@ import {
 } from '../../types';
 import styles from './Cache.module.css';
 
+interface PatternStats {
+  pattern: string;
+  count: number;
+  loading: boolean;
+}
+
 export const Cache: React.FC = () => {
   const [cacheInfo, setCacheInfo] = useState<CacheInfoResponse | null>(null);
   const [keysData, setKeysData] = useState<CacheKeysResponse | null>(null);
@@ -23,6 +29,9 @@ export const Cache: React.FC = () => {
   // フィルター状態
   const [pattern, setPattern] = useState('*');
   const [searchPattern, setSearchPattern] = useState('*');
+
+  // パターン別統計
+  const [patternStats, setPatternStats] = useState<PatternStats[]>([]);
 
   // キー詳細表示用
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -52,6 +61,37 @@ export const Cache: React.FC = () => {
         setLoading(false);
       }
     }
+  };
+
+  const loadPatternStats = async () => {
+    const patterns = ['sess:*', 'streams:*', 'youtube:*', 'twitch:*', 'admin:*', 'kv:*'];
+
+    // 初期化: すべてのパターンをローディング状態にする
+    setPatternStats(patterns.map(p => ({ pattern: p, count: 0, loading: true })));
+
+    // 各パターンの件数を並行して取得
+    const results = await Promise.allSettled(
+      patterns.map(async (p) => {
+        try {
+          const keys = await getCacheKeys(p, 1);
+          return { pattern: p, count: keys.total, loading: false };
+        } catch (err) {
+          console.error(`Failed to load pattern ${p}:`, err);
+          return { pattern: p, count: 0, loading: false };
+        }
+      })
+    );
+
+    // 結果を更新
+    const stats = results.map((result, index) => {
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        return { pattern: patterns[index], count: 0, loading: false };
+      }
+    });
+
+    setPatternStats(stats);
   };
 
   const handleSearch = () => {
@@ -129,9 +169,16 @@ export const Cache: React.FC = () => {
 
   useEffect(() => {
     loadData(true); // 初回読み込み
+    loadPatternStats(); // パターン別統計を読み込み
     const interval = setInterval(() => loadData(false), 30000); // 30秒ごとにバックグラウンド更新
     return () => clearInterval(interval);
   }, [searchPattern]);
+
+  // パターンクリックでクイック検索
+  const handlePatternClick = (pattern: string) => {
+    setPattern(pattern);
+    setSearchPattern(pattern);
+  };
 
   if (loading) {
     return (
@@ -194,42 +241,92 @@ export const Cache: React.FC = () => {
               </div>
 
               {cacheInfo.info && (
-                <div className={styles.statsGrid}>
-                  <div className={styles.statCard}>
-                    <div className={styles.statLabel}>キー数</div>
-                    <div className={styles.statValue}>{cacheInfo.info.dbSize}</div>
-                    <div className={styles.statSubtext}>登録されているキー</div>
-                  </div>
+                <>
+                  {/* メモリ使用率警告 */}
+                  {cacheInfo.info.memory.maxMemory > 0 &&
+                   (cacheInfo.info.memory.usedMemory / cacheInfo.info.memory.maxMemory) > 0.5 && (
+                    <div className={styles.warning}>
+                      ⚠️ メモリ使用率が高くなっています（
+                      {((cacheInfo.info.memory.usedMemory / cacheInfo.info.memory.maxMemory) * 100).toFixed(1)}%）。
+                      不要なキーを削除することを推奨します。
+                    </div>
+                  )}
 
-                  <div className={styles.statCard}>
-                    <div className={styles.statLabel}>メモリ使用量</div>
-                    <div className={styles.statValue}>{cacheInfo.info.memory.usedHuman}</div>
-                    <div className={styles.statSubtext}>
-                      最大: {cacheInfo.info.memory.maxHuman || '無制限'}
+                  {/* キー数警告 */}
+                  {cacheInfo.info.dbSize > 10000 && (
+                    <div className={styles.warning}>
+                      ⚠️ キー数が非常に多くなっています（{cacheInfo.info.dbSize.toLocaleString()}件）。
+                      パターン別統計を確認し、不要なキーを削除してください。
                     </div>
-                  </div>
+                  )}
 
-                  <div className={styles.statCard}>
-                    <div className={styles.statLabel}>稼働時間</div>
-                    <div className={styles.statValue}>
-                      {formatUptime(cacheInfo.info.stats.uptimeSeconds)}
+                  <div className={styles.statsGrid}>
+                    <div className={styles.statCard}>
+                      <div className={styles.statLabel}>キー数</div>
+                      <div className={styles.statValue}>{cacheInfo.info.dbSize.toLocaleString()}</div>
+                      <div className={styles.statSubtext}>登録されているキー</div>
                     </div>
-                    <div className={styles.statSubtext}>Redis起動時間</div>
-                  </div>
 
-                  <div className={styles.statCard}>
-                    <div className={styles.statLabel}>処理済みコマンド</div>
-                    <div className={styles.statValue}>
-                      {cacheInfo.info.stats.totalCommandsProcessed.toLocaleString()}
+                    <div className={styles.statCard}>
+                      <div className={styles.statLabel}>メモリ使用量</div>
+                      <div className={styles.statValue}>{cacheInfo.info.memory.usedHuman}</div>
+                      <div className={styles.statSubtext}>
+                        最大: {cacheInfo.info.memory.maxHuman || '無制限'}
+                        {cacheInfo.info.memory.maxMemory > 0 && (
+                          <> ({((cacheInfo.info.memory.usedMemory / cacheInfo.info.memory.maxMemory) * 100).toFixed(1)}%)</>
+                        )}
+                      </div>
                     </div>
-                    <div className={styles.statSubtext}>
-                      接続数: {cacheInfo.info.stats.totalConnectionsReceived}
+
+                    <div className={styles.statCard}>
+                      <div className={styles.statLabel}>稼働時間</div>
+                      <div className={styles.statValue}>
+                        {formatUptime(cacheInfo.info.stats.uptimeSeconds)}
+                      </div>
+                      <div className={styles.statSubtext}>Redis起動時間</div>
+                    </div>
+
+                    <div className={styles.statCard}>
+                      <div className={styles.statLabel}>処理済みコマンド</div>
+                      <div className={styles.statValue}>
+                        {cacheInfo.info.stats.totalCommandsProcessed.toLocaleString()}
+                      </div>
+                      <div className={styles.statSubtext}>
+                        接続数: {cacheInfo.info.stats.totalConnectionsReceived}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </>
               )}
             </>
           )}
+        </section>
+      )}
+
+      {/* パターン別統計 */}
+      {cacheInfo?.connected && patternStats.length > 0 && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>キーパターン別統計</h2>
+          <div className={styles.patternStatsGrid}>
+            {patternStats.map((stat) => (
+              <div
+                key={stat.pattern}
+                className={styles.patternStatCard}
+                onClick={() => handlePatternClick(stat.pattern)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className={styles.patternName}>{stat.pattern}</div>
+                {stat.loading ? (
+                  <div className={styles.patternCount}>読み込み中...</div>
+                ) : (
+                  <div className={styles.patternCount}>{stat.count.toLocaleString()}件</div>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className={styles.patternStatsNote}>
+            ※ パターンをクリックすると、そのパターンでキーを検索します
+          </div>
         </section>
       )}
 

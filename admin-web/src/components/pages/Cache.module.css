@@ -134,6 +134,18 @@
   color: #10b981;
 }
 
+/* 警告 */
+.warning {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 6px;
+  color: #fbbf24;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 /* 統計カード */
 .statsGrid {
   display: grid;
@@ -345,6 +357,53 @@
   margin: 0;
 }
 
+/* パターン別統計 */
+.patternStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.patternStatCard {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.patternStatCard:hover {
+  border-color: #3498DB;
+  background: #1e293b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.patternName {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.patternCount {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.patternStatsNote {
+  font-size: 12px;
+  color: #8a8886;
+  font-style: italic;
+  padding: 8px 12px;
+  background: #0f172a;
+  border-radius: 4px;
+  text-align: center;
+}
+
 /* レスポンシブ */
 @media (max-width: 768px) {
   .container {
@@ -367,5 +426,9 @@
 
   .searchBar {
     flex-direction: column;
+  }
+
+  .patternStatsGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
