@@ -157,6 +157,16 @@ app.use('/api/security', security_2.apiRateLimiter, security_1.securityRouter);
 app.use('/api/consent', security_2.apiRateLimiter, consent_1.consentRouter);
 app.use('/api/legal', security_2.apiRateLimiter, legal_1.legalRouter);
 app.use('/api/user/preferences', security_2.apiRateLimiter, userPreferences_1.userPreferencesRouter);
+// エラーテストモード状態取得（認証不要、本サービスからアクセス）
+app.get('/api/error-test/status', (req, res) => {
+    res.json({
+        success: true,
+        data: {
+            enabled: (0, admin_1.getErrorTestModeStatus)()
+        },
+        timestamp: new Date().toISOString()
+    });
+});
 // 管理APIルーター（APIキー認証必須）
 app.use('/api/admin/maintenance', adminAuth_1.adminApiAuth, maintenance_1.maintenanceRouter);
 app.use('/api/admin/users', adminAuth_1.adminApiAuth, users_1.usersRouter);
@@ -212,7 +222,7 @@ twitchEventSubManager_1.twitchEventSubManager.onStreamEvent((event) => {
         }
     });
 });
-// StreamSyncServiceのイベントハンドラー（配信リスト更新を全クライアントに通知）
+// StreamSyncServiceのイベントハンドラー（配信リスト更新を各クライアントのフォローチャンネルでフィルタリングして通知）
 streamSyncService_1.streamSyncService.onStreamUpdate((event) => {
     console.log('[StreamSync] Stream update event:', {
         platform: event.platform,
@@ -220,18 +230,33 @@ streamSyncService_1.streamSyncService.onStreamUpdate((event) => {
         added: event.changes.added.length,
         removed: event.changes.removed.length
     });
-    // 全クライアントに配信リスト更新を通知
-    const payload = JSON.stringify({
-        type: 'stream_list_updated',
-        platform: event.platform,
-        streams: event.streams,
-        changes: event.changes
-    });
-    clients.forEach((_, ws) => {
-        if (ws.readyState === ws_1.WebSocket.OPEN) {
-            ws.send(payload);
-            console.log(`[StreamSync] Sent update to client (${event.platform})`);
+    // 各クライアントに対して、フォローしているチャンネルの配信のみフィルタリングして送信
+    clients.forEach((clientData, ws) => {
+        if (ws.readyState !== ws_1.WebSocket.OPEN)
+            return;
+        // このユーザーがフォローしているチャンネルIDリストを取得
+        const userChannels = event.platform === 'youtube'
+            ? clientData.youtubeChannels
+            : clientData.twitchChannels;
+        // ユーザーがこのプラットフォームのチャンネルをフォローしていない場合はスキップ
+        if (!userChannels || userChannels.length === 0) {
+            return;
         }
+        // このユーザーがフォローしているチャンネルの配信のみフィルタリング
+        const filteredStreams = event.streams.filter((stream) => userChannels.includes(stream.channelId || stream.userId));
+        // フィルタリング後の配信がない場合は送信しない
+        if (filteredStreams.length === 0 && event.changes.added.length === 0 && event.changes.removed.length === 0) {
+            return;
+        }
+        // フィルタリングされた配信リストのみ送信
+        const payload = JSON.stringify({
+            type: 'stream_list_updated',
+            platform: event.platform,
+            streams: filteredStreams,
+            changes: event.changes
+        });
+        ws.send(payload);
+        console.log(`[StreamSync] Sent ${filteredStreams.length} filtered streams to client (${event.platform})`);
     });
 });
 // PriorityManagerのイベントハンドラー（優先度変更を全クライアントに通知）
@@ -378,6 +403,7 @@ wss.on('connection', (ws, request) => {
                 // channelLoginをdisplayNameに変換
                 const displayName = clientData.channelMapping[message.channelLogin] || message.channelLogin;
                 const payload = JSON.stringify({
+                    type: 'chat',
                     ...message,
                     channelName: displayName
                 });
@@ -534,6 +560,9 @@ wss.on('connection', (ws, request) => {
             // StreamSyncServiceからユーザーを削除
             streamSyncService_1.streamSyncService.unregisterUser(clientData.userId);
             console.log(`[WebSocket] Unregistered user ${clientData.userId} from StreamSyncService`);
+            // TokenStorageからセッション情報を削除（メモリリーク防止）
+            streamSyncService_1.tokenStorage.deleteSession(clientData.userId);
+            console.log(`[WebSocket] Deleted tokens for session ${clientData.userId} from TokenStorage`);
             clients.delete(ws);
             console.log(`[WebSocket] Total clients: ${clients.size}`);
         });

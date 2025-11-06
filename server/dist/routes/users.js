@@ -1,200 +1,187 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.usersRouter = void 0;
 const express_1 = require("express");
+const prismaService_1 = __importDefault(require("../services/prismaService"));
 exports.usersRouter = (0, express_1.Router)();
 /**
- * GET /api/admin/users/sessions
- * 全セッション一覧を取得（管理画面用）
- */
-exports.usersRouter.get('/sessions', async (req, res) => {
-    try {
-        const sessionStore = req.sessionStore;
-        // セッションストアから全セッションを取得
-        sessionStore.all?.((err, sessions) => {
-            if (err) {
-                console.error('[Users] Error fetching sessions:', err);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to fetch sessions',
-                    timestamp: new Date().toISOString()
-                });
-            }
-            if (!sessions) {
-                return res.json({
-                    success: true,
-                    data: {
-                        sessions: [],
-                        stats: {
-                            totalSessions: 0,
-                            authenticatedSessions: 0,
-                            youtubeAuthSessions: 0,
-                            twitchAuthSessions: 0
-                        }
-                    },
-                    timestamp: new Date().toISOString()
-                });
-            }
-            // セッション情報を整形
-            const sessionList = Object.entries(sessions).map(([sessionId, sessionData]) => {
-                const session = sessionData;
-                return {
-                    sessionId,
-                    authenticated: !!session.googleTokens,
-                    twitchAuthenticated: !!session.twitchTokens,
-                    googleUser: session.googleUser ? {
-                        id: session.googleUser.id,
-                        email: session.googleUser.email,
-                        name: session.googleUser.name
-                    } : null,
-                    twitchUser: session.twitchUser ? {
-                        id: session.twitchUser.id,
-                        login: session.twitchUser.login,
-                        displayName: session.twitchUser.displayName
-                    } : null,
-                    createdAt: session.createdAt || null,
-                    lastActivity: session.lastActivity || null,
-                    ipAddress: session.ipAddress || null,
-                    userAgent: session.userAgent || null
-                };
-            });
-            // 統計情報を計算
-            const stats = {
-                totalSessions: sessionList.length,
-                authenticatedSessions: sessionList.filter(s => s.authenticated).length,
-                youtubeAuthSessions: sessionList.filter(s => s.googleUser).length,
-                twitchAuthSessions: sessionList.filter(s => s.twitchUser).length
-            };
-            res.json({
-                success: true,
-                data: {
-                    sessions: sessionList,
-                    stats
-                },
-                timestamp: new Date().toISOString()
-            });
-        });
-    }
-    catch (error) {
-        console.error('[Users] Error in sessions endpoint:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error',
-            timestamp: new Date().toISOString()
-        });
-    }
-});
-/**
- * DELETE /api/admin/users/sessions/:sessionId
- * 特定セッションを強制終了
- */
-exports.usersRouter.delete('/sessions/:sessionId', async (req, res) => {
-    try {
-        const { sessionId } = req.params;
-        const sessionStore = req.sessionStore;
-        // セッションを削除
-        sessionStore.destroy(sessionId, (err) => {
-            if (err) {
-                console.error(`[Users] Error destroying session ${sessionId}:`, err);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to destroy session',
-                    timestamp: new Date().toISOString()
-                });
-            }
-            console.log(`[Users] Session ${sessionId} destroyed by admin`);
-            res.json({
-                success: true,
-                data: {
-                    sessionId,
-                    destroyed: true
-                },
-                timestamp: new Date().toISOString()
-            });
-        });
-    }
-    catch (error) {
-        console.error('[Users] Error in session delete endpoint:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error',
-            timestamp: new Date().toISOString()
-        });
-    }
-});
-/**
  * GET /api/admin/users/stats
- * ユーザー統計を取得
+ * ユーザー統計を取得（データベースベース）
  */
 exports.usersRouter.get('/stats', async (req, res) => {
     try {
-        const sessionStore = req.sessionStore;
-        sessionStore.all?.((err, sessions) => {
-            if (err || !sessions) {
-                return res.json({
-                    success: true,
-                    data: {
-                        totalUsers: 0,
-                        activeUsers: 0,
-                        youtubeUsers: 0,
-                        twitchUsers: 0,
-                        recentLogins: []
-                    },
-                    timestamp: new Date().toISOString()
-                });
+        // データベースから総ユーザー数を取得
+        const totalUsers = await prismaService_1.default.user.count();
+        // YouTubeユーザー数を取得
+        const youtubeUsers = await prismaService_1.default.user.count({
+            where: {
+                youtubeUserId: { not: null }
             }
-            const sessionList = Object.entries(sessions).map(([sessionId, sessionData]) => {
-                const session = sessionData;
-                return {
-                    sessionId,
-                    googleUser: session.googleUser,
-                    twitchUser: session.twitchUser,
-                    lastActivity: session.lastActivity,
-                    createdAt: session.createdAt
-                };
-            });
-            // ユニークユーザーをカウント
-            const googleUserIds = new Set();
-            const twitchUserIds = new Set();
-            sessionList.forEach(s => {
-                if (s.googleUser?.id)
-                    googleUserIds.add(s.googleUser.id);
-                if (s.twitchUser?.id)
-                    twitchUserIds.add(s.twitchUser.id);
-            });
-            // 最近のログイン（過去24時間）
-            const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-            const recentLogins = sessionList
-                .filter(s => {
-                const createdAt = s.createdAt ? new Date(s.createdAt).getTime() : 0;
-                return createdAt > oneDayAgo;
-            })
-                .sort((a, b) => {
-                const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return bTime - aTime;
-            })
-                .slice(0, 10)
-                .map(s => ({
-                googleUser: s.googleUser,
-                twitchUser: s.twitchUser,
-                createdAt: s.createdAt
-            }));
-            res.json({
-                success: true,
-                data: {
-                    totalUsers: googleUserIds.size + twitchUserIds.size,
-                    activeUsers: sessionList.length,
-                    youtubeUsers: googleUserIds.size,
-                    twitchUsers: twitchUserIds.size,
-                    recentLogins
-                },
-                timestamp: new Date().toISOString()
-            });
+        });
+        // Twitchユーザー数を取得
+        const twitchUsers = await prismaService_1.default.user.count({
+            where: {
+                twitchUserId: { not: null }
+            }
+        });
+        // 最近のログイン（過去24時間）をデータベースから取得
+        const oneDayAgo = new Date(Date.now() - (24 * 60 * 60 * 1000));
+        const recentLoginUsers = await prismaService_1.default.user.findMany({
+            where: {
+                lastLoginAt: {
+                    gte: oneDayAgo
+                }
+            },
+            select: {
+                youtubeUserId: true,
+                twitchUserId: true,
+                displayName: true,
+                email: true,
+                lastLoginAt: true
+            },
+            orderBy: {
+                lastLoginAt: 'desc'
+            },
+            take: 10
+        });
+        // レスポンス形式を既存のフロントエンドに合わせる
+        const recentLogins = recentLoginUsers.map(user => ({
+            googleUser: user.youtubeUserId ? {
+                id: user.youtubeUserId,
+                email: user.email,
+                name: user.displayName
+            } : null,
+            twitchUser: user.twitchUserId ? {
+                id: user.twitchUserId,
+                login: user.displayName,
+                displayName: user.displayName
+            } : null,
+            createdAt: user.lastLoginAt?.toISOString()
+        }));
+        res.json({
+            success: true,
+            data: {
+                totalUsers,
+                youtubeUsers,
+                twitchUsers,
+                recentLogins
+            },
+            timestamp: new Date().toISOString()
         });
     }
     catch (error) {
         console.error('[Users] Error in stats endpoint:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error',
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+/**
+ * GET /api/admin/users/search
+ * ユーザー検索
+ */
+exports.usersRouter.get('/search', async (req, res) => {
+    try {
+        const query = req.query.q;
+        if (!query || query.trim().length === 0) {
+            return res.json({
+                success: true,
+                data: [],
+                timestamp: new Date().toISOString()
+            });
+        }
+        // メールアドレス、displayName、YouTubeユーザーID、TwitchユーザーIDで検索
+        const users = await prismaService_1.default.user.findMany({
+            where: {
+                OR: [
+                    { email: { contains: query, mode: 'insensitive' } },
+                    { displayName: { contains: query, mode: 'insensitive' } },
+                    { youtubeUserId: { contains: query, mode: 'insensitive' } },
+                    { twitchUserId: { contains: query, mode: 'insensitive' } }
+                ]
+            },
+            select: {
+                id: true,
+                youtubeUserId: true,
+                twitchUserId: true,
+                displayName: true,
+                email: true,
+                avatarUrl: true,
+                createdAt: true,
+                lastLoginAt: true
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+            take: 50 // 最大50件
+        });
+        res.json({
+            success: true,
+            data: users,
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('[Users] Error in search endpoint:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error',
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+/**
+ * DELETE /api/admin/users/:userId
+ * ユーザー削除
+ */
+exports.usersRouter.delete('/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        // ユーザーの存在確認
+        const user = await prismaService_1.default.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                displayName: true,
+                email: true,
+                youtubeUserId: true,
+                twitchUserId: true
+            }
+        });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found',
+                timestamp: new Date().toISOString()
+            });
+        }
+        // ユーザーを削除（関連データはCascadeで自動削除される）
+        await prismaService_1.default.user.delete({
+            where: { id: userId }
+        });
+        console.log(`[Users] User deleted by admin:`, {
+            userId: user.id,
+            displayName: user.displayName,
+            email: user.email,
+            youtubeUserId: user.youtubeUserId,
+            twitchUserId: user.twitchUserId
+        });
+        res.json({
+            success: true,
+            data: {
+                userId: user.id,
+                displayName: user.displayName
+            },
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('[Users] Error in delete endpoint:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',

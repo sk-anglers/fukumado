@@ -286,7 +286,7 @@ twitchEventSubManager.onStreamEvent((event) => {
   });
 });
 
-// StreamSyncServiceのイベントハンドラー（配信リスト更新を各クライアントのフォローチャンネルでフィルタリングして通知）
+// StreamSyncServiceのイベントハンドラー（配信リスト更新を全クライアントに通知）
 streamSyncService.onStreamUpdate((event) => {
   console.log('[StreamSync] Stream update event:', {
     platform: event.platform,
@@ -295,40 +295,19 @@ streamSyncService.onStreamUpdate((event) => {
     removed: event.changes.removed.length
   });
 
-  // 各クライアントに対して、フォローしているチャンネルの配信のみフィルタリングして送信
-  clients.forEach((clientData, ws) => {
-    if (ws.readyState !== WebSocket.OPEN) return;
+  // 全クライアントに配信リスト更新を通知
+  const payload = JSON.stringify({
+    type: 'stream_list_updated',
+    platform: event.platform,
+    streams: event.streams,
+    changes: event.changes
+  });
 
-    // このユーザーがフォローしているチャンネルIDリストを取得
-    const userChannels = event.platform === 'youtube'
-      ? clientData.youtubeChannels
-      : clientData.twitchChannels;
-
-    // ユーザーがこのプラットフォームのチャンネルをフォローしていない場合はスキップ
-    if (!userChannels || userChannels.length === 0) {
-      return;
+  clients.forEach((_, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+      console.log(`[StreamSync] Sent update to client (${event.platform})`);
     }
-
-    // このユーザーがフォローしているチャンネルの配信のみフィルタリング
-    const filteredStreams = event.streams.filter((stream: any) =>
-      userChannels.includes(stream.channelId || stream.userId)
-    );
-
-    // フィルタリング後の配信がない場合は送信しない
-    if (filteredStreams.length === 0 && event.changes.added.length === 0 && event.changes.removed.length === 0) {
-      return;
-    }
-
-    // フィルタリングされた配信リストのみ送信
-    const payload = JSON.stringify({
-      type: 'stream_list_updated',
-      platform: event.platform,
-      streams: filteredStreams,
-      changes: event.changes
-    });
-
-    ws.send(payload);
-    console.log(`[StreamSync] Sent ${filteredStreams.length} filtered streams to client (${event.platform})`);
   });
 });
 
@@ -683,10 +662,6 @@ wss.on('connection', (ws, request) => {
     // StreamSyncServiceからユーザーを削除
     streamSyncService.unregisterUser(clientData.userId);
     console.log(`[WebSocket] Unregistered user ${clientData.userId} from StreamSyncService`);
-
-    // TokenStorageからセッション情報を削除（メモリリーク防止）
-    tokenStorage.deleteSession(clientData.userId);
-    console.log(`[WebSocket] Deleted tokens for session ${clientData.userId} from TokenStorage`);
 
     clients.delete(ws);
     console.log(`[WebSocket] Total clients: ${clients.size}`);

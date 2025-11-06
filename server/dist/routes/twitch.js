@@ -153,11 +153,21 @@ exports.twitchRouter.post('/chat/send', async (req, res) => {
         }
         // 認証情報を設定
         twitchChatService_1.twitchChatService.setCredentials(accessToken, user.login);
+        // エモート情報をパース（送信前に）
+        const emotes = await parseEmotesFromMessage(accessToken, channelId, message.trim());
+        console.log('[Twitch Chat] Parsed emotes:', JSON.stringify(emotes, null, 2));
+        console.log('[Twitch Chat] Message:', message.trim());
+        console.log('[Twitch Chat] Channel:', channelLogin);
+        // エモート情報をキャッシュに保存（自分のメッセージ受信時に付加するため）
+        twitchChatService_1.twitchChatService.cacheEmotesForMessage(channelLogin, message.trim(), emotes);
         // メッセージを送信
         await twitchChatService_1.twitchChatService.sendMessage(channelLogin, message.trim());
-        // エモート情報をパース
-        const emotes = await parseEmotesFromMessage(accessToken, channelId, message.trim());
-        res.json({ success: true, emotes });
+        // IRCからの応答を待つ（バッジ情報を取得するため）
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // キャッシュからバッジ情報を取得
+        const badges = twitchChatService_1.twitchChatService.getCachedBadges(channelLogin, message.trim());
+        console.log('[Twitch Chat] Retrieved badges from cache:', badges);
+        res.json({ success: true, emotes, badges });
     }
     catch (error) {
         console.error('[Twitch Chat] Send message error:', error);

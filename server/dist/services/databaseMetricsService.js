@@ -94,17 +94,17 @@ class DatabaseMetricsService {
         const tables = await prismaService_1.default.$queryRaw `
       SELECT
         schemaname as schema_name,
-        tablename as table_name,
+        relname as table_name,
         n_tup_ins as tup_inserted,
         n_tup_upd as tup_updated,
         n_tup_del as tup_deleted,
         seq_scan,
         idx_scan,
-        pg_total_relation_size(schemaname||'.'||tablename) as total_size,
-        pg_relation_size(schemaname||'.'||tablename) as table_size,
-        pg_indexes_size(schemaname||'.'||tablename) as index_size
+        pg_total_relation_size(relid) as total_size,
+        pg_relation_size(relid) as table_size,
+        pg_indexes_size(relid) as index_size
       FROM pg_stat_user_tables
-      ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+      ORDER BY pg_total_relation_size(relid) DESC
     `;
         return tables.map((table) => ({
             schemaName: table.schema_name,
