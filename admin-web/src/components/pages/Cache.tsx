@@ -129,21 +129,23 @@ export const Cache: React.FC = () => {
   };
 
   const handleDeletePattern = async () => {
-    const patternInput = prompt(`削除するパターンを入力してください（例: youtube:*）`, 'youtube:*');
+    const patternInput = prompt(`削除するパターンを入力してください（例: sess:*, youtube:*）`, 'sess:*');
     if (!patternInput) {
       return;
     }
 
-    if (!confirm(`パターン "${patternInput}" に一致するすべてのキーを削除しますか?`)) {
+    if (!confirm(`パターン "${patternInput}" に一致するすべてのキーを削除しますか?\n\n※ 大量のキーがある場合、削除に時間がかかる場合があります。`)) {
       return;
     }
 
     try {
       await deleteCachePattern(patternInput);
+      alert(`パターン "${patternInput}" に一致するキーを削除しました`);
       await loadData(true); // パターン削除後は初回読み込みとして扱う
+      await loadPatternStats(); // パターン別統計も再読み込み
     } catch (err) {
       console.error('Failed to delete pattern:', err);
-      alert('パターン削除に失敗しました');
+      alert('パターン削除に失敗しました: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
@@ -160,7 +162,9 @@ export const Cache: React.FC = () => {
       await flushCache();
       setSelectedKey(null);
       setKeyValue(null);
+      alert('すべてのキャッシュをフラッシュしました');
       await loadData(true); // フラッシュ後は初回読み込みとして扱う
+      await loadPatternStats(); // パターン別統計も再読み込み
     } catch (err) {
       console.error('Failed to flush cache:', err);
       alert('キャッシュフラッシュに失敗しました');

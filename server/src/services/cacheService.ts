@@ -145,12 +145,28 @@ class CacheService {
 
     try {
       const keys = await this.client.keys(pattern);
-      if (keys.length > 0) {
-        await this.client.del(...keys);
-        console.log(`[Redis] Deleted ${keys.length} keys matching pattern: ${pattern}`);
+      if (keys.length === 0) {
+        console.log(`[Redis] No keys found matching pattern: ${pattern}`);
+        return;
       }
+
+      console.log(`[Redis] Found ${keys.length} keys matching pattern: ${pattern}`);
+
+      // 大量のキーを削除する場合はバッチ処理（1000件ずつ）
+      const BATCH_SIZE = 1000;
+      let deletedCount = 0;
+
+      for (let i = 0; i < keys.length; i += BATCH_SIZE) {
+        const batch = keys.slice(i, i + BATCH_SIZE);
+        await this.client.del(...batch);
+        deletedCount += batch.length;
+        console.log(`[Redis] Deleted ${deletedCount}/${keys.length} keys...`);
+      }
+
+      console.log(`[Redis] Successfully deleted ${deletedCount} keys matching pattern: ${pattern}`);
     } catch (error) {
       console.error(`[Redis] Failed to delete pattern: ${pattern}`, error);
+      throw error; // エラーを上位に伝播させる
     }
   }
 
