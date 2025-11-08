@@ -88,10 +88,35 @@ export const ConsentManager: React.FC = () => {
     }
   };
 
-  const handleLoginSuccess = () => {
-    console.log('[ConsentManager] Login successful, showing terms modal');
+  const handleLoginSuccess = async () => {
+    console.log('[ConsentManager] Login successful, auto-accepting terms');
     setShowWelcome(false);
-    setShowTermsModal(true);
+
+    // ログイン時点で利用規約・プライバシーポリシーに自動同意
+    try {
+      const response = await apiFetch('/api/consent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          consents: [
+            { type: 'terms', granted: true },
+            { type: 'privacy', granted: true }
+          ]
+        })
+      });
+
+      if (response.ok) {
+        console.log('[ConsentManager] Terms auto-accepted on login');
+        // 同意状態を再チェック（Cookieバナーが必要か確認）
+        await checkConsentStatus();
+      } else {
+        console.error('[ConsentManager] Failed to auto-accept terms');
+      }
+    } catch (error) {
+      console.error('[ConsentManager] Error auto-accepting terms:', error);
+    }
   };
 
   const handleTermsAccept = async () => {
