@@ -83,10 +83,19 @@ export const ConsentManager: React.FC = () => {
 
   const handleLoginSuccess = async () => {
     console.log('[ConsentManager] Login successful, starting auto-consent process');
+
+    // ===== 楽観的更新（Optimistic Update）: 即座に同意済み状態にする =====
+    // Zustand (twitchAuthenticated) と React useState の更新タイミングのズレによる
+    // 規約モーダルの一瞬表示を防ぐため、API呼び出し前に状態を更新
+    setConsentNeeds(prev => prev ? {
+      ...prev,
+      needsTermsAndPrivacy: false
+    } : null);
+
     setIsAutoAccepting(true);
 
     try {
-      // 利用規約・プライバシーポリシーに自動同意
+      // サーバーに同意を記録
       console.log('[ConsentManager] Sending auto-consent request...');
       const response = await apiFetch('/api/consent', {
         method: 'POST',
@@ -105,7 +114,7 @@ export const ConsentManager: React.FC = () => {
         const result = await response.json();
         console.log('[ConsentManager] Terms auto-accepted successfully:', result);
 
-        // 同意状態を再取得（派生状態が自動的に更新される）
+        // Cookie同意状態も含めてサーバーの最新状態で上書き
         console.log('[ConsentManager] Fetching updated consent status...');
         const statusResponse = await apiFetch('/api/consent/status');
         if (statusResponse.ok) {
@@ -114,11 +123,15 @@ export const ConsentManager: React.FC = () => {
           setConsentNeeds(data.needs);
         }
       } else {
+        // エラー時はロールバック: サーバーの正しい状態を再取得
         const errorText = await response.text();
         console.error('[ConsentManager] Failed to auto-accept terms:', response.status, errorText);
+        await fetchConsentStatus();
       }
     } catch (error) {
       console.error('[ConsentManager] Error during auto-consent:', error);
+      // エラー時はロールバック: サーバーの正しい状態を再取得
+      await fetchConsentStatus();
     } finally {
       setIsAutoAccepting(false);
       console.log('[ConsentManager] Auto-accept process completed');
