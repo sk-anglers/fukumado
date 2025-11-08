@@ -26,92 +26,67 @@ export const ConsentManager: React.FC = () => {
   const [consentStatus, setConsentStatus] = useState<ConsentStatus | null>(null);
   const [consentNeeds, setConsentNeeds] = useState<ConsentNeeds | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showCookieBanner, setShowCookieBanner] = useState(false);
   const [isAutoAccepting, setIsAutoAccepting] = useState(false);
 
   const twitchAuthenticated = useAuthStore((state) => state.twitchAuthenticated);
   const twitchLoading = useAuthStore((state) => state.twitchLoading);
 
+  // ===== 派生状態（Derived State）: 表示制御を計算プロパティにする =====
+  const shouldShowWelcome =
+    !loading &&
+    !twitchLoading &&
+    !twitchAuthenticated &&
+    consentNeeds?.needsTermsAndPrivacy === true &&
+    !isAutoAccepting;
+
+  const shouldShowTermsModal =
+    !loading &&
+    !twitchLoading &&
+    twitchAuthenticated &&
+    consentNeeds?.needsTermsAndPrivacy === true &&
+    !isAutoAccepting;
+
+  const shouldShowCookieBanner =
+    !loading &&
+    consentNeeds?.needsCookieConsent === true;
+
+  // ===== 初回マウント時のみ同意状態を取得 =====
   useEffect(() => {
-    checkConsentStatus();
+    fetchConsentStatus();
   }, []);
 
-  // Twitch認証状態の変化を検知（リロード時に認証済みの場合に対応）
-  useEffect(() => {
-    // 初回ロード中、Twitch認証状態取得中、または自動同意処理中はスキップ
-    if (loading || twitchLoading || isAutoAccepting) {
-      console.log('[ConsentManager] Skipping auth change check:', {
-        loading,
-        twitchLoading,
-        isAutoAccepting
-      });
-      return;
-    }
-
-    console.log('[ConsentManager] Twitch auth state changed:', {
-      twitchAuthenticated,
-      showWelcome,
-      showTermsModal
-    });
-
-    // 認証状態が変わったら同意状態を再チェック
-    checkConsentStatus();
-  }, [twitchAuthenticated]);
-
-  const checkConsentStatus = async () => {
+  const fetchConsentStatus = async () => {
     try {
       setLoading(true);
       const response = await apiFetch('/api/consent/status');
       const data = await response.json();
 
+      console.log('[ConsentManager] Consent status fetched:', {
+        needs: data.needs,
+        twitchAuthenticated
+      });
+
       setConsentStatus(data.status);
       setConsentNeeds(data.needs);
-
-      // フロー判定
-      if (data.needs.needsTermsAndPrivacy) {
-        // 利用規約同意が必要
-        if (!twitchAuthenticated) {
-          // 未ログイン → Welcome画面
-          setShowWelcome(true);
-          setShowTermsModal(false);
-        } else {
-          // ログイン済みだが規約未同意 → 規約モーダル
-          setShowWelcome(false);
-          setShowTermsModal(true);
-        }
-      } else {
-        // 利用規約同意済み
-        setShowWelcome(false);
-        setShowTermsModal(false);
-      }
-
-      // Cookieバナーは独立して制御（メイン画面と同時表示可能）
-      if (data.needs.needsCookieConsent) {
-        setShowCookieBanner(true);
-      } else {
-        setShowCookieBanner(false);
-      }
     } catch (error) {
-      console.error('Failed to check consent status:', error);
-      // エラー時は未ログインならWelcome表示
-      if (!twitchAuthenticated) {
-        setShowWelcome(true);
-      }
+      console.error('[ConsentManager] Failed to fetch consent status:', error);
+      // エラー時はデフォルトで同意が必要と判断
+      setConsentNeeds({
+        needsTermsAndPrivacy: true,
+        needsCookieConsent: true,
+        reason: 'Error fetching consent status'
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleLoginSuccess = async () => {
-    console.log('[ConsentManager] Login successful, auto-accepting terms');
-    setIsAutoAccepting(true); // 自動同意処理中フラグを立てる
-    setShowWelcome(false);
-    setShowTermsModal(false); // 規約モーダルは確実に非表示
+    console.log('[ConsentManager] Login successful, starting auto-consent process');
+    setIsAutoAccepting(true);
 
-    // ログイン時点で利用規約・プライバシーポリシーに自動同意
     try {
+      // 利用規約・プライバシーポリシーに自動同意
       console.log('[ConsentManager] Sending auto-consent request...');
       const response = await apiFetch('/api/consent', {
         method: 'POST',
@@ -130,28 +105,22 @@ export const ConsentManager: React.FC = () => {
         const result = await response.json();
         console.log('[ConsentManager] Terms auto-accepted successfully:', result);
 
-        // 同意完了後、Cookieバナーの表示判定のみ実行
-        console.log('[ConsentManager] Checking if cookie consent is needed...');
+        // 同意状態を再取得（派生状態が自動的に更新される）
+        console.log('[ConsentManager] Fetching updated consent status...');
         const statusResponse = await apiFetch('/api/consent/status');
         if (statusResponse.ok) {
           const data = await statusResponse.json();
-          console.log('[ConsentManager] Consent status after auto-accept:', data);
-
-          // Cookieバナーのみ制御（規約関連は確実に非表示）
-          if (data.needs.needsCookieConsent) {
-            setShowCookieBanner(true);
-          } else {
-            setShowCookieBanner(false);
-          }
+          console.log('[ConsentManager] Updated consent status:', data);
+          setConsentNeeds(data.needs);
         }
       } else {
         const errorText = await response.text();
         console.error('[ConsentManager] Failed to auto-accept terms:', response.status, errorText);
       }
     } catch (error) {
-      console.error('[ConsentManager] Error auto-accepting terms:', error);
+      console.error('[ConsentManager] Error during auto-consent:', error);
     } finally {
-      setIsAutoAccepting(false); // 処理完了後、フラグを下ろす
+      setIsAutoAccepting(false);
       console.log('[ConsentManager] Auto-accept process completed');
     }
   };
@@ -173,16 +142,14 @@ export const ConsentManager: React.FC = () => {
       });
 
       if (response.ok) {
-        console.log('[Consent Manager] Terms and privacy accepted');
-        setShowTermsModal(false);
-
-        // 同意状態を再チェック（クッキー同意が必要かどうか確認）
-        await checkConsentStatus();
+        console.log('[ConsentManager] Terms and privacy accepted');
+        // 同意状態を再取得（派生状態が自動的に更新される）
+        await fetchConsentStatus();
       } else {
-        console.error('[Consent Manager] Failed to record terms consent');
+        console.error('[ConsentManager] Failed to record terms consent');
       }
     } catch (error) {
-      console.error('[Consent Manager] Error recording terms consent:', error);
+      console.error('[ConsentManager] Error recording terms consent:', error);
     }
   };
 
@@ -208,11 +175,10 @@ export const ConsentManager: React.FC = () => {
       });
 
       if (response.ok) {
-        console.log('[Consent Manager] Cookie consent recorded:', cookieConsents);
-        setShowCookieBanner(false);
+        console.log('[ConsentManager] Cookie consent recorded:', cookieConsents);
 
-        // 同意状態を更新
-        await checkConsentStatus();
+        // 同意状態を再取得（派生状態が自動的に更新される）
+        await fetchConsentStatus();
 
         // Analytics初期化（承諾された場合）
         if (cookieConsents.analytics_cookies) {
@@ -224,10 +190,10 @@ export const ConsentManager: React.FC = () => {
           initializeMarketing();
         }
       } else {
-        console.error('[Consent Manager] Failed to record cookie consent');
+        console.error('[ConsentManager] Failed to record cookie consent');
       }
     } catch (error) {
-      console.error('[Consent Manager] Error recording cookie consent:', error);
+      console.error('[ConsentManager] Error recording cookie consent:', error);
     }
   };
 
@@ -243,21 +209,32 @@ export const ConsentManager: React.FC = () => {
     // 例: window.gtag('consent', 'update', { ad_storage: 'granted' });
   };
 
-  if (loading) {
-    return null; // ローディング中は何も表示しない
+  // ローディング中は何も表示しない
+  if (loading || twitchLoading) {
+    return null;
   }
+
+  console.log('[ConsentManager] Render state:', {
+    shouldShowWelcome,
+    shouldShowTermsModal,
+    shouldShowCookieBanner,
+    twitchAuthenticated,
+    needsTermsAndPrivacy: consentNeeds?.needsTermsAndPrivacy,
+    needsCookieConsent: consentNeeds?.needsCookieConsent,
+    isAutoAccepting
+  });
 
   return (
     <>
-      {showWelcome && (
+      {shouldShowWelcome && (
         <WelcomeScreen onLoginSuccess={handleLoginSuccess} />
       )}
       <TermsAndPrivacyModal
-        isOpen={showTermsModal}
+        isOpen={shouldShowTermsModal}
         onAccept={handleTermsAccept}
       />
       <CookieConsentBanner
-        isOpen={showCookieBanner}
+        isOpen={shouldShowCookieBanner}
         onAccept={handleCookieAccept}
       />
     </>
