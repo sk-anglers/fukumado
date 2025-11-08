@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { apiUrl, apiFetch } from '../../utils/api';
 import { useAuthStore } from '../../stores/authStore';
 import styles from './WelcomeScreen.module.css';
@@ -12,22 +12,13 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
   const [loginCompleted, setLoginCompleted] = useState(false);
   const setTwitchStatus = useAuthStore((state) => state.setTwitchStatus);
 
-  // loginCompletedステートの変化を監視
-  useEffect(() => {
-    console.log('[WelcomeScreen] loginCompleted state changed to:', loginCompleted);
-  }, [loginCompleted]);
-
   const refreshTwitchAuthStatus = async (): Promise<boolean> => {
     try {
       const response = await apiFetch('/auth/twitch/status');
-      console.log('[WelcomeScreen] Auth status response:', response.status, response.ok);
       if (!response.ok) {
-        console.log('[WelcomeScreen] Auth status not OK, returning false');
         return false;
       }
       const data = await response.json();
-      console.log('[WelcomeScreen] Auth status data:', data);
-      console.log('[WelcomeScreen] Authenticated:', Boolean(data.authenticated));
       setTwitchStatus({
         authenticated: Boolean(data.authenticated),
         user: data.user,
@@ -61,7 +52,7 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
     const timer = window.setInterval(async () => {
       // ウィンドウが閉じられた場合（実際にはTwitchドメインへのリダイレクトで誤検知される）
       if (authWindow.closed) {
-        console.log('[WelcomeScreen] Popup closed detected, starting infinite retry until authentication succeeds');
+        console.log('[WelcomeScreen] Popup closed detected, waiting for authentication...');
         window.clearInterval(timer);
 
         // 認証成功するまで無限リトライ（500ms間隔）
@@ -69,19 +60,15 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
         let retryCount = 0;
         while (!authenticated) {
           retryCount++;
-          console.log(`[WelcomeScreen] Retry attempt ${retryCount}...`);
           authenticated = await refreshTwitchAuthStatus();
 
           if (!authenticated) {
-            console.log(`[WelcomeScreen] Not authenticated yet, waiting 500ms before retry ${retryCount + 1}...`);
             await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
 
         console.log(`[WelcomeScreen] Authentication confirmed after ${retryCount} attempts`);
-        console.log('[WelcomeScreen] Setting loginCompleted to true');
-        setLoginCompleted(true); // ボタンを「利用開始する」に変更
-        console.log('[WelcomeScreen] setLoginCompleted(true) called');
+        setLoginCompleted(true);
         setIsLoggingIn(false);
         return;
       }
@@ -95,9 +82,7 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
         window.clearInterval(timer);
         authWindow.close();
         setIsLoggingIn(false);
-        console.log('[WelcomeScreen] (Path1) Setting loginCompleted to true');
-        setLoginCompleted(true); // ボタンを「利用開始する」に変更
-        console.log('[WelcomeScreen] (Path1) setLoginCompleted(true) called');
+        setLoginCompleted(true);
       }
     }, 500);
   };
@@ -112,8 +97,6 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
       handleTwitchLogin();
     }
   };
-
-  console.log('[WelcomeScreen] Rendering with loginCompleted:', loginCompleted, 'isLoggingIn:', isLoggingIn);
 
   return (
     <div className={styles.overlay}>
