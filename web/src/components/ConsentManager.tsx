@@ -59,22 +59,21 @@ export const ConsentManager: React.FC = () => {
           // 未ログイン → Welcome画面
           setShowWelcome(true);
           setShowTermsModal(false);
-          setShowCookieBanner(false);
         } else {
           // ログイン済みだが規約未同意 → 規約モーダル
           setShowWelcome(false);
           setShowTermsModal(true);
-          setShowCookieBanner(false);
         }
-      } else if (data.needs.needsCookieConsent) {
-        // Cookie同意が必要
+      } else {
+        // 利用規約同意済み
         setShowWelcome(false);
         setShowTermsModal(false);
+      }
+
+      // Cookieバナーは独立して制御（メイン画面と同時表示可能）
+      if (data.needs.needsCookieConsent) {
         setShowCookieBanner(true);
       } else {
-        // すべて同意済み
-        setShowWelcome(false);
-        setShowTermsModal(false);
         setShowCookieBanner(false);
       }
     } catch (error) {
