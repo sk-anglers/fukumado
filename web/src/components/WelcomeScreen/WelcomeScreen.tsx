@@ -55,14 +55,23 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
         console.log('[WelcomeScreen] Popup closed, checking authentication');
         window.clearInterval(timer);
 
-        // 即座に認証状態をチェック（1回のみ）
-        const authenticated = await refreshTwitchAuthStatus();
+        // 即座に1回チェック
+        let authenticated = await refreshTwitchAuthStatus();
+
+        // 認証が確認できなかった場合、1秒待ってから再試行
+        if (!authenticated) {
+          console.log('[WelcomeScreen] Not authenticated yet, retrying after 1s');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          authenticated = await refreshTwitchAuthStatus();
+        }
+
         if (authenticated) {
           console.log('[WelcomeScreen] Authentication confirmed');
           setLoginCompleted(true); // ボタンを「利用開始する」に変更
         } else {
           console.log('[WelcomeScreen] Authentication not completed');
         }
+
         setIsLoggingIn(false);
         return;
       }
