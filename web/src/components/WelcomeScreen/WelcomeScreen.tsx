@@ -59,35 +59,29 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
 
     // ポーリング: 500msごとに認証状態を確認
     const timer = window.setInterval(async () => {
-      // ウィンドウが閉じられた場合
+      // ウィンドウが閉じられた場合（実際にはTwitchドメインへのリダイレクトで誤検知される）
       if (authWindow.closed) {
-        console.log('[WelcomeScreen] Popup closed, checking authentication');
+        console.log('[WelcomeScreen] Popup closed detected, starting infinite retry until authentication succeeds');
         window.clearInterval(timer);
 
-        // 最大10回、500msごとにリトライ（合計5秒）
+        // 認証成功するまで無限リトライ（500ms間隔）
         let authenticated = false;
-        for (let i = 0; i < 10; i++) {
+        let retryCount = 0;
+        while (!authenticated) {
+          retryCount++;
+          console.log(`[WelcomeScreen] Retry attempt ${retryCount}...`);
           authenticated = await refreshTwitchAuthStatus();
-          if (authenticated) {
-            console.log(`[WelcomeScreen] Authentication confirmed on retry ${i + 1}`);
-            break;
-          }
 
-          if (i < 9) { // 最後の試行ではwaitしない
-            console.log(`[WelcomeScreen] Retry ${i + 1}/10, waiting 500ms...`);
+          if (!authenticated) {
+            console.log(`[WelcomeScreen] Not authenticated yet, waiting 500ms before retry ${retryCount + 1}...`);
             await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
 
-        if (authenticated) {
-          console.log('[WelcomeScreen] Authentication confirmed, setting loginCompleted to true');
-          console.log('[WelcomeScreen] Current loginCompleted state:', loginCompleted);
-          setLoginCompleted(true); // ボタンを「利用開始する」に変更
-          console.log('[WelcomeScreen] setLoginCompleted(true) called');
-        } else {
-          console.log('[WelcomeScreen] Authentication not completed after 10 retries');
-        }
-
+        console.log(`[WelcomeScreen] Authentication confirmed after ${retryCount} attempts`);
+        console.log('[WelcomeScreen] Setting loginCompleted to true');
+        setLoginCompleted(true); // ボタンを「利用開始する」に変更
+        console.log('[WelcomeScreen] setLoginCompleted(true) called');
         setIsLoggingIn(false);
         return;
       }
