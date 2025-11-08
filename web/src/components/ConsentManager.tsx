@@ -36,13 +36,6 @@ export const ConsentManager: React.FC = () => {
     checkConsentStatus();
   }, []);
 
-  // ログイン状態が変わったら同意状態を再チェック
-  useEffect(() => {
-    if (twitchAuthenticated && !loading) {
-      checkConsentStatus();
-    }
-  }, [twitchAuthenticated]);
-
   const checkConsentStatus = async () => {
     try {
       setLoading(true);
@@ -90,9 +83,11 @@ export const ConsentManager: React.FC = () => {
   const handleLoginSuccess = async () => {
     console.log('[ConsentManager] Login successful, auto-accepting terms');
     setShowWelcome(false);
+    setShowTermsModal(false); // 規約モーダルは確実に非表示
 
     // ログイン時点で利用規約・プライバシーポリシーに自動同意
     try {
+      console.log('[ConsentManager] Sending auto-consent request...');
       const response = await apiFetch('/api/consent', {
         method: 'POST',
         headers: {
@@ -107,11 +102,26 @@ export const ConsentManager: React.FC = () => {
       });
 
       if (response.ok) {
-        console.log('[ConsentManager] Terms auto-accepted on login');
-        // 同意状態を再チェック（Cookieバナーが必要か確認）
-        await checkConsentStatus();
+        const result = await response.json();
+        console.log('[ConsentManager] Terms auto-accepted successfully:', result);
+
+        // 同意完了後、Cookieバナーの表示判定のみ実行
+        console.log('[ConsentManager] Checking if cookie consent is needed...');
+        const statusResponse = await apiFetch('/api/consent/status');
+        if (statusResponse.ok) {
+          const data = await statusResponse.json();
+          console.log('[ConsentManager] Consent status after auto-accept:', data);
+
+          // Cookieバナーのみ制御（規約関連は確実に非表示）
+          if (data.needs.needsCookieConsent) {
+            setShowCookieBanner(true);
+          } else {
+            setShowCookieBanner(false);
+          }
+        }
       } else {
-        console.error('[ConsentManager] Failed to auto-accept terms');
+        const errorText = await response.text();
+        console.error('[ConsentManager] Failed to auto-accept terms:', response.status, errorText);
       }
     } catch (error) {
       console.error('[ConsentManager] Error auto-accepting terms:', error);
