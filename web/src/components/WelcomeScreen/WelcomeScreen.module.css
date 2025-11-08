@@ -125,6 +125,15 @@
   cursor: not-allowed;
 }
 
+.startButton {
+  background: #10B981 !important;
+}
+
+.startButton:hover:not(:disabled) {
+  background: #059669 !important;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+}
+
 .twitchIcon {
   width: 24px;
   height: 24px;

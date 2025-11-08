@@ -9,6 +9,7 @@ interface WelcomeScreenProps {
 
 export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Element => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginCompleted, setLoginCompleted] = useState(false);
   const setTwitchStatus = useAuthStore((state) => state.setTwitchStatus);
 
   const refreshTwitchAuthStatus = async (): Promise<boolean> => {
@@ -69,7 +70,7 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
             console.log('[WelcomeScreen] Authentication successful after retry');
             window.clearInterval(retryTimer);
             setIsLoggingIn(false);
-            onLoginSuccess();
+            setLoginCompleted(true); // ボタンを「利用開始する」に変更
           } else if (retryCount >= maxRetries) {
             console.log('[WelcomeScreen] Max retries reached, authentication may have failed');
             window.clearInterval(retryTimer);
@@ -89,9 +90,20 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
         window.clearInterval(timer);
         authWindow.close();
         setIsLoggingIn(false);
-        onLoginSuccess();
+        setLoginCompleted(true); // ボタンを「利用開始する」に変更
       }
     }, 500);
+  };
+
+  // ボタンクリック処理
+  const handleButtonClick = (): void => {
+    if (loginCompleted) {
+      // ログイン完了後 → 利用開始
+      onLoginSuccess();
+    } else {
+      // 未ログイン → ログイン処理
+      handleTwitchLogin();
+    }
   };
 
   return (
@@ -127,14 +139,18 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
         </div>
 
         <button
-          className={styles.loginButton}
-          onClick={handleTwitchLogin}
+          className={`${styles.loginButton} ${loginCompleted ? styles.startButton : ''}`}
+          onClick={handleButtonClick}
           disabled={isLoggingIn}
         >
           {isLoggingIn ? (
             <>
               <span className={styles.spinner}></span>
               ログイン中...
+            </>
+          ) : loginCompleted ? (
+            <>
+              ✓ 利用開始する
             </>
           ) : (
             <>
