@@ -29,12 +29,36 @@ export const ConsentManager: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showCookieBanner, setShowCookieBanner] = useState(false);
+  const [isAutoAccepting, setIsAutoAccepting] = useState(false);
 
   const twitchAuthenticated = useAuthStore((state) => state.twitchAuthenticated);
+  const twitchLoading = useAuthStore((state) => state.twitchLoading);
 
   useEffect(() => {
     checkConsentStatus();
   }, []);
+
+  // Twitch認証状態の変化を検知（リロード時に認証済みの場合に対応）
+  useEffect(() => {
+    // 初回ロード中、Twitch認証状態取得中、または自動同意処理中はスキップ
+    if (loading || twitchLoading || isAutoAccepting) {
+      console.log('[ConsentManager] Skipping auth change check:', {
+        loading,
+        twitchLoading,
+        isAutoAccepting
+      });
+      return;
+    }
+
+    console.log('[ConsentManager] Twitch auth state changed:', {
+      twitchAuthenticated,
+      showWelcome,
+      showTermsModal
+    });
+
+    // 認証状態が変わったら同意状態を再チェック
+    checkConsentStatus();
+  }, [twitchAuthenticated]);
 
   const checkConsentStatus = async () => {
     try {
@@ -82,6 +106,7 @@ export const ConsentManager: React.FC = () => {
 
   const handleLoginSuccess = async () => {
     console.log('[ConsentManager] Login successful, auto-accepting terms');
+    setIsAutoAccepting(true); // 自動同意処理中フラグを立てる
     setShowWelcome(false);
     setShowTermsModal(false); // 規約モーダルは確実に非表示
 
@@ -125,6 +150,9 @@ export const ConsentManager: React.FC = () => {
       }
     } catch (error) {
       console.error('[ConsentManager] Error auto-accepting terms:', error);
+    } finally {
+      setIsAutoAccepting(false); // 処理完了後、フラグを下ろす
+      console.log('[ConsentManager] Auto-accept process completed');
     }
   };
 
