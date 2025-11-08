@@ -52,32 +52,18 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
     const timer = window.setInterval(async () => {
       // ウィンドウが閉じられた場合
       if (authWindow.closed) {
-        console.log('[WelcomeScreen] Popup closed, retrying authentication check');
+        console.log('[WelcomeScreen] Popup closed, checking authentication');
         window.clearInterval(timer);
 
-        // リトライロジック: 最大5回（2.5秒間）認証状態をチェック
-        let retryCount = 0;
-        const maxRetries = 5;
-        const retryInterval = 500;
-
-        const retryTimer = window.setInterval(async () => {
-          retryCount++;
-          console.log(`[WelcomeScreen] Retry ${retryCount}/${maxRetries}`);
-
-          const authenticated = await refreshTwitchAuthStatus();
-
-          if (authenticated) {
-            console.log('[WelcomeScreen] Authentication successful after retry');
-            window.clearInterval(retryTimer);
-            setIsLoggingIn(false);
-            setLoginCompleted(true); // ボタンを「利用開始する」に変更
-          } else if (retryCount >= maxRetries) {
-            console.log('[WelcomeScreen] Max retries reached, authentication may have failed');
-            window.clearInterval(retryTimer);
-            setIsLoggingIn(false);
-          }
-        }, retryInterval);
-
+        // 即座に認証状態をチェック（1回のみ）
+        const authenticated = await refreshTwitchAuthStatus();
+        if (authenticated) {
+          console.log('[WelcomeScreen] Authentication confirmed');
+          setLoginCompleted(true); // ボタンを「利用開始する」に変更
+        } else {
+          console.log('[WelcomeScreen] Authentication not completed');
+        }
+        setIsLoggingIn(false);
         return;
       }
 
