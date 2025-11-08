@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiUrl } from '../../utils/api';
+import { apiUrl, apiFetch } from '../../utils/api';
 import { useAuthStore } from '../../stores/authStore';
 import styles from './WelcomeScreen.module.css';
 
@@ -9,6 +9,26 @@ interface WelcomeScreenProps {
 
 export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Element => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const setTwitchStatus = useAuthStore((state) => state.setTwitchStatus);
+
+  const refreshTwitchAuthStatus = async (): Promise<boolean> => {
+    try {
+      const response = await apiFetch('/auth/twitch/status');
+      if (!response.ok) {
+        return false;
+      }
+      const data = await response.json();
+      setTwitchStatus({
+        authenticated: Boolean(data.authenticated),
+        user: data.user,
+        error: undefined
+      });
+      return Boolean(data.authenticated);
+    } catch (error) {
+      console.error('[WelcomeScreen] Failed to refresh auth status:', error);
+      return false;
+    }
+  };
 
   const handleTwitchLogin = (): void => {
     setIsLoggingIn(true);
@@ -25,34 +45,47 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
       return;
     }
 
-    console.log('[WelcomeScreen] OAuth popup opened');
+    console.log('[WelcomeScreen] OAuth popup opened, starting polling');
 
     // ポーリング: 500msごとに認証状態を確認
-    const timer = window.setInterval(() => {
+    const timer = window.setInterval(async () => {
       // ウィンドウが閉じられた場合
       if (authWindow.closed) {
-        console.log('[WelcomeScreen] Popup closed');
+        console.log('[WelcomeScreen] Popup closed, retrying authentication check');
         window.clearInterval(timer);
 
-        // 認証状態を確認（少し遅延させる）
-        setTimeout(() => {
-          const authenticated = useAuthStore.getState().twitchAuthenticated;
+        // リトライロジック: 最大5回（2.5秒間）認証状態をチェック
+        let retryCount = 0;
+        const maxRetries = 5;
+        const retryInterval = 500;
+
+        const retryTimer = window.setInterval(async () => {
+          retryCount++;
+          console.log(`[WelcomeScreen] Retry ${retryCount}/${maxRetries}`);
+
+          const authenticated = await refreshTwitchAuthStatus();
+
           if (authenticated) {
-            console.log('[WelcomeScreen] Login successful');
+            console.log('[WelcomeScreen] Authentication successful after retry');
+            window.clearInterval(retryTimer);
             setIsLoggingIn(false);
             onLoginSuccess();
-          } else {
-            console.log('[WelcomeScreen] Login cancelled or failed');
+          } else if (retryCount >= maxRetries) {
+            console.log('[WelcomeScreen] Max retries reached, authentication may have failed');
+            window.clearInterval(retryTimer);
             setIsLoggingIn(false);
           }
-        }, 500);
+        }, retryInterval);
+
         return;
       }
 
+      // 認証状態を定期的に確認
+      const authenticated = await refreshTwitchAuthStatus();
+
       // 認証成功したらポップアップを閉じる
-      const authenticated = useAuthStore.getState().twitchAuthenticated;
       if (authenticated) {
-        console.log('[WelcomeScreen] Login successful, closing popup');
+        console.log('[WelcomeScreen] Authentication successful, closing popup');
         window.clearInterval(timer);
         authWindow.close();
         setIsLoggingIn(false);
