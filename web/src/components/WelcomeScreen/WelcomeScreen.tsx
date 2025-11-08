@@ -55,18 +55,18 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
         console.log('[WelcomeScreen] Popup closed, checking authentication');
         window.clearInterval(timer);
 
-        // 最大5回、1秒ごとにリトライ
+        // 最大10回、500msごとにリトライ（合計5秒）
         let authenticated = false;
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) {
           authenticated = await refreshTwitchAuthStatus();
           if (authenticated) {
             console.log(`[WelcomeScreen] Authentication confirmed on retry ${i + 1}`);
             break;
           }
 
-          if (i < 4) { // 最後の試行ではwaitしない
-            console.log(`[WelcomeScreen] Retry ${i + 1}/5, waiting 1s...`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+          if (i < 9) { // 最後の試行ではwaitしない
+            console.log(`[WelcomeScreen] Retry ${i + 1}/10, waiting 500ms...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
 
@@ -74,7 +74,7 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
           console.log('[WelcomeScreen] Authentication confirmed');
           setLoginCompleted(true); // ボタンを「利用開始する」に変更
         } else {
-          console.log('[WelcomeScreen] Authentication not completed after 5 retries');
+          console.log('[WelcomeScreen] Authentication not completed after 10 retries');
         }
 
         setIsLoggingIn(false);
