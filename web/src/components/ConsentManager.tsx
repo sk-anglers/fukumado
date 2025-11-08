@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { TermsAndPrivacyModal } from './TermsAndPrivacyModal';
 import { CookieConsentBanner } from './CookieConsentBanner';
+import { WelcomeScreen } from './WelcomeScreen/WelcomeScreen';
+import { useAuthStore } from '../stores/authStore';
 import { apiFetch } from '../utils/api';
 
 interface ConsentStatus {
@@ -24,12 +26,22 @@ export const ConsentManager: React.FC = () => {
   const [consentStatus, setConsentStatus] = useState<ConsentStatus | null>(null);
   const [consentNeeds, setConsentNeeds] = useState<ConsentNeeds | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showCookieBanner, setShowCookieBanner] = useState(false);
+
+  const twitchAuthenticated = useAuthStore((state) => state.twitchAuthenticated);
 
   useEffect(() => {
     checkConsentStatus();
   }, []);
+
+  // ログイン状態が変わったら同意状態を再チェック
+  useEffect(() => {
+    if (twitchAuthenticated && !loading) {
+      checkConsentStatus();
+    }
+  }, [twitchAuthenticated]);
 
   const checkConsentStatus = async () => {
     try {
@@ -40,17 +52,46 @@ export const ConsentManager: React.FC = () => {
       setConsentStatus(data.status);
       setConsentNeeds(data.needs);
 
-      // 同意が必要な場合、モーダル/バナーを表示
+      // フロー判定
       if (data.needs.needsTermsAndPrivacy) {
-        setShowTermsModal(true);
+        // 利用規約同意が必要
+        if (!twitchAuthenticated) {
+          // 未ログイン → Welcome画面
+          setShowWelcome(true);
+          setShowTermsModal(false);
+          setShowCookieBanner(false);
+        } else {
+          // ログイン済みだが規約未同意 → 規約モーダル
+          setShowWelcome(false);
+          setShowTermsModal(true);
+          setShowCookieBanner(false);
+        }
       } else if (data.needs.needsCookieConsent) {
+        // Cookie同意が必要
+        setShowWelcome(false);
+        setShowTermsModal(false);
         setShowCookieBanner(true);
+      } else {
+        // すべて同意済み
+        setShowWelcome(false);
+        setShowTermsModal(false);
+        setShowCookieBanner(false);
       }
     } catch (error) {
       console.error('Failed to check consent status:', error);
+      // エラー時は未ログインならWelcome表示
+      if (!twitchAuthenticated) {
+        setShowWelcome(true);
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLoginSuccess = () => {
+    console.log('[ConsentManager] Login successful, showing terms modal');
+    setShowWelcome(false);
+    setShowTermsModal(true);
   };
 
   const handleTermsAccept = async () => {
@@ -146,6 +187,9 @@ export const ConsentManager: React.FC = () => {
 
   return (
     <>
+      {showWelcome && (
+        <WelcomeScreen onLoginSuccess={handleLoginSuccess} />
+      )}
       <TermsAndPrivacyModal
         isOpen={showTermsModal}
         onAccept={handleTermsAccept}
