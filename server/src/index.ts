@@ -181,7 +181,7 @@ const sessionMiddleware = session({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // 本番環境のみHTTPS必須
-    sameSite: 'lax', // Safari OAuth redirect対応：同一ルートドメイン内ならlaxで動作
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 本番環境ではWebSocket接続のためnone、開発環境ではlax
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     domain: getCookieDomain() // サブドメイン間でCookie共有（本番環境のみ）
   }
