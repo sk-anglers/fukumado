@@ -393,10 +393,10 @@ function App(): JSX.Element {
     saveToServer
   ]);
 
-  // エラーテストモードが有効な場合はエラー画面を表示
+  // エラーテストモードが有効な場合はエラーをスロー（Error Boundaryでキャッチ）
   if (shouldThrowError) {
-    console.log('[App] Error test mode is enabled, displaying ErrorScreen');
-    return <ErrorScreen />;
+    console.log('[App] Error test mode is enabled, throwing error for Error Boundary');
+    throw new Error('エラーテストモード: Error Boundaryのテスト');
   }
 
   // メンテナンス中の場合はメンテナンス画面を表示

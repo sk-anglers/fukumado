@@ -35,6 +35,8 @@ class WebSocketService {
     }
 
     console.log('[WebSocketService] Establishing connection...');
+    console.log('[WebSocketService] WebSocket URL:', WS_URL);
+    console.log('[WebSocketService] Backend origin:', backendOrigin);
     this.isIntentionallyClosed = false;
 
     try {
@@ -76,6 +78,9 @@ class WebSocketService {
 
       this.ws.onerror = (error) => {
         console.error('[WebSocketService] Error:', error);
+        console.error('[WebSocketService] Error type:', error.type);
+        console.error('[WebSocketService] WebSocket readyState:', this.ws?.readyState);
+        console.error('[WebSocketService] WebSocket URL:', WS_URL);
 
         // エラーハンドラーを実行
         this.errorHandlers.forEach(handler => {
@@ -87,8 +92,11 @@ class WebSocketService {
         });
       };
 
-      this.ws.onclose = () => {
+      this.ws.onclose = (event) => {
         console.log('[WebSocketService] Connection closed');
+        console.log('[WebSocketService] Close code:', event.code);
+        console.log('[WebSocketService] Close reason:', event.reason);
+        console.log('[WebSocketService] Close wasClean:', event.wasClean);
         this.ws = null;
 
         // ハートビートを停止
@@ -116,6 +124,8 @@ class WebSocketService {
       };
     } catch (error) {
       console.error('[WebSocketService] Error creating WebSocket:', error);
+      console.error('[WebSocketService] Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('[WebSocketService] WebSocket URL:', WS_URL);
     }
   }
 
