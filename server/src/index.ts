@@ -178,6 +178,7 @@ const sessionMiddleware = session({
   secret: env.sessionSecret,
   resave: false,
   saveUninitialized: false,
+  rolling: true, // リクエストごとにCookieを更新してSameSite属性を即座に反映
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // 本番環境のみHTTPS必須
