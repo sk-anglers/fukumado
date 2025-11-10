@@ -120,7 +120,23 @@ consentRouter.get('/status', (req: Request, res: Response) => {
       lastUpdated: null
     };
 
-    const status = consent;
+    // Twitch認証済みだが同意未記録の場合、自動的に同意を設定（二重保護）
+    const isTwitchAuthenticated = req.session.twitchTokens && req.session.twitchUser;
+    if (isTwitchAuthenticated && (!consent.hasAcceptedTerms || !consent.hasAcceptedPrivacy)) {
+      req.session.consent = {
+        hasAcceptedTerms: true,
+        hasAcceptedPrivacy: true,
+        essentialCookies: true,
+        analyticsCookies: consent.analyticsCookies || false,
+        marketingCookies: consent.marketingCookies || false,
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+        lastUpdated: new Date()
+      };
+      console.log('[Consent API] Auto-accepted terms for authenticated Twitch user');
+    }
+
+    const status = req.session.consent || consent;
 
     // 同意が必要かチェック
     let needsTermsAndPrivacy = false;

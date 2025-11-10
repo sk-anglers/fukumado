@@ -191,6 +191,21 @@ authRouter.get('/twitch/callback', async (req, res) => {
       expiryDate: Date.now() + tokenResponse.expires_in * 1000
     });
 
+    // モバイルリダイレクト認証の場合、同意を自動記録（無限ループ対策）
+    if (!req.session.consent) {
+      req.session.consent = {
+        hasAcceptedTerms: true,
+        hasAcceptedPrivacy: true,
+        essentialCookies: true,
+        analyticsCookies: false,
+        marketingCookies: false,
+        termsVersion: '1.0.0',
+        privacyVersion: '1.0.0',
+        lastUpdated: new Date()
+      };
+      console.log('[Twitch Callback] Auto-accepted terms for mobile redirect auth');
+    }
+
     // 管理ダッシュボード用の認証の場合
     const isAdminAuth = req.session.isAdminAuth;
     req.session.isAdminAuth = undefined; // フラグをクリア

@@ -37,6 +37,14 @@ export const ConsentManager: React.FC = () => {
     fetchConsentStatus();
   }, []);
 
+  // ===== 認証状態が変化したら同意状態を再チェック（レースコンディション対策） =====
+  useEffect(() => {
+    if (twitchAuthenticated) {
+      console.log('[ConsentManager] Twitch authentication detected, refetching consent status');
+      fetchConsentStatus();
+    }
+  }, [twitchAuthenticated]);
+
   const fetchConsentStatus = async () => {
     try {
       setLoading(true);
