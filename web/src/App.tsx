@@ -404,8 +404,8 @@ function App(): JSX.Element {
     return <MaintenancePage />;
   }
 
-  // Safari非対応画面を表示
-  if (isSafari()) {
+  // Safari非対応画面を表示（beta環境では許可）
+  if (isSafari() && !config.isBeta) {
     return <UnsupportedBrowser />;
   }
 
