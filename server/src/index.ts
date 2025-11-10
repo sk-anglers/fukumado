@@ -142,6 +142,33 @@ const pgPool = new Pool({
   }
 });
 
+// Cookieドメイン抽出関数（サブドメイン間でセッション共有するため）
+const getCookieDomain = (): string | undefined => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Session] Cookie domain: undefined (development mode)');
+    return undefined; // ローカル環境ではドメイン設定不要
+  }
+
+  try {
+    const url = new URL(env.frontendUrl);
+    const hostname = url.hostname; // fukumado.jp or beta.fukumado.jp
+
+    // ルートドメインを抽出（.fukumado.jp）
+    const parts = hostname.split('.');
+    if (parts.length >= 2) {
+      const domain = '.' + parts.slice(-2).join('.'); // .fukumado.jp
+      console.log(`[Session] Cookie domain: ${domain}`);
+      return domain;
+    }
+    const domain = '.' + hostname;
+    console.log(`[Session] Cookie domain: ${domain}`);
+    return domain;
+  } catch (e) {
+    console.error('[Session] Failed to parse frontend URL for cookie domain:', e);
+    return undefined;
+  }
+};
+
 // セッションミドルウェア（WebSocketでも使用するためexport）
 const sessionMiddleware = session({
   store: new PgSession({
@@ -155,7 +182,8 @@ const sessionMiddleware = session({
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // 本番環境のみHTTPS必須
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Safari対応：本番環境では'none'、開発環境では'lax'
-    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    domain: getCookieDomain() // サブドメイン間でCookie共有（本番環境のみ）
   }
 });
 
