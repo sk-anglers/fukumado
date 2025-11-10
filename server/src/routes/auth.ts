@@ -301,7 +301,7 @@ authRouter.get('/success', (_req, res) => {
             閉じない場合は、下のボタンを押すか<br>
             手動でこのウィンドウを閉じてください。
           </p>
-          <button onclick="window.close()" style="padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; font-size: 1.1rem; font-weight: 600; cursor: pointer; min-height: 44px;">
+          <button onclick="window.close(); setTimeout(function() { window.location.href = '${env.frontendUrl}'; }, 500);" style="padding: 1rem 2rem; border-radius: 12px; border: none; background: #38bdf8; color: #0f172a; font-size: 1.1rem; font-weight: 600; cursor: pointer; min-height: 44px;">
             ウィンドウを閉じる
           </button>
         </div>
@@ -315,10 +315,10 @@ authRouter.get('/success', (_req, res) => {
               window.close();
 
               // window.close() が失敗した場合（リダイレクトで開いた場合など）
-              // さらに1秒後にルートにリダイレクト
+              // さらに1秒後にフロントエンドのルートにリダイレクト
               setTimeout(function() {
                 console.log('[Auth Success] Window still open, redirecting to home');
-                window.location.href = '/';
+                window.location.href = '${env.frontendUrl}';
               }, 1000);
             }, 2000);
           })();
