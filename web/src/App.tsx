@@ -404,10 +404,10 @@ function App(): JSX.Element {
     return <MaintenancePage />;
   }
 
-  // Safari非対応画面を表示（beta環境では許可）
-  if (isSafari() && !config.isBeta) {
-    return <UnsupportedBrowser />;
-  }
+  // Safari制限を解除（全環境でSafariアクセス可能）
+  // if (isSafari() && !config.isBeta) {
+  //   return <UnsupportedBrowser />;
+  // }
 
   // モバイル制限を解除（全環境でモバイルアクセス可能）
   // if (isMobile && !config.isBeta) {
