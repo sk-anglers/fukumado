@@ -93,6 +93,13 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
   };
 
   const handleTwitchLogin = (): void => {
+    // モバイルの場合はリダイレクト方式
+    if (isMobile) {
+      window.location.href = apiUrl('/auth/twitch');
+      return;
+    }
+
+    // デスクトップは既存のポップアップ方式
     const authWindow = window.open(
       apiUrl('/auth/twitch'),
       'twitch-oauth',

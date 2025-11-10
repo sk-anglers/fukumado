@@ -313,6 +313,13 @@ authRouter.get('/success', (_req, res) => {
             setTimeout(function() {
               console.log('[Auth Success] Attempting to close window');
               window.close();
+
+              // window.close() が失敗した場合（リダイレクトで開いた場合など）
+              // さらに1秒後にルートにリダイレクト
+              setTimeout(function() {
+                console.log('[Auth Success] Window still open, redirecting to home');
+                window.location.href = '/';
+              }, 1000);
             }, 2000);
           })();
         </script>

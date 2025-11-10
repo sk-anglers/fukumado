@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiUrl, apiFetch } from '../../utils/api';
 import { useAuthStore } from '../../stores/authStore';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 import styles from './WelcomeScreen.module.css';
 
 interface WelcomeScreenProps {
@@ -11,6 +12,7 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginCompleted, setLoginCompleted] = useState(false);
   const setTwitchStatus = useAuthStore((state) => state.setTwitchStatus);
+  const isMobile = useIsMobile();
 
   const refreshTwitchAuthStatus = async (): Promise<boolean> => {
     try {
@@ -32,6 +34,13 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
   };
 
   const handleTwitchLogin = (): void => {
+    // モバイルの場合はリダイレクト方式
+    if (isMobile) {
+      window.location.href = apiUrl('/auth/twitch');
+      return;
+    }
+
+    // デスクトップは既存のポップアップ方式
     setIsLoggingIn(true);
 
     const authWindow = window.open(
