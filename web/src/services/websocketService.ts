@@ -4,8 +4,19 @@
  */
 
 import { backendOrigin } from '../utils/api';
+import { useAuthStore } from '../stores/authStore';
 
-const WS_URL = backendOrigin.replace(/^http/, 'ws') + '/chat';
+const getWebSocketURL = (): string => {
+  const baseURL = backendOrigin.replace(/^http/, 'ws') + '/chat';
+
+  // Safari対応: sessionIDをクエリパラメータで送信
+  const sessionId = useAuthStore.getState().sessionId;
+  if (sessionId) {
+    return `${baseURL}?sessionId=${encodeURIComponent(sessionId)}`;
+  }
+
+  return baseURL;
+};
 
 type MessageHandler = (data: any) => void;
 type ConnectionHandler = () => void;
@@ -34,13 +45,15 @@ class WebSocketService {
       return;
     }
 
+    const wsURL = getWebSocketURL();
+
     console.log('[WebSocketService] Establishing connection...');
-    console.log('[WebSocketService] WebSocket URL:', WS_URL);
+    console.log('[WebSocketService] WebSocket URL:', wsURL);
     console.log('[WebSocketService] Backend origin:', backendOrigin);
     this.isIntentionallyClosed = false;
 
     try {
-      this.ws = new WebSocket(WS_URL);
+      this.ws = new WebSocket(wsURL);
 
       this.ws.onopen = () => {
         console.log('[WebSocketService] Connected successfully');
@@ -80,7 +93,7 @@ class WebSocketService {
         console.error('[WebSocketService] Error:', error);
         console.error('[WebSocketService] Error type:', error.type);
         console.error('[WebSocketService] WebSocket readyState:', this.ws?.readyState);
-        console.error('[WebSocketService] WebSocket URL:', WS_URL);
+        console.error('[WebSocketService] WebSocket URL:', wsURL);
 
         // エラーハンドラーを実行
         this.errorHandlers.forEach(handler => {
@@ -123,9 +136,10 @@ class WebSocketService {
         }
       };
     } catch (error) {
+      const wsURL = getWebSocketURL();
       console.error('[WebSocketService] Error creating WebSocket:', error);
       console.error('[WebSocketService] Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('[WebSocketService] WebSocket URL:', WS_URL);
+      console.error('[WebSocketService] WebSocket URL:', wsURL);
     }
   }
 

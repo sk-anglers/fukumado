@@ -6,6 +6,7 @@ export const useTwitchAuthStatus = (): void => {
   const setTwitchStatus = useAuthStore((state) => state.setTwitchStatus);
   const setTwitchLoading = useAuthStore((state) => state.setTwitchLoading);
   const setTwitchError = useAuthStore((state) => state.setTwitchError);
+  const setSessionId = useAuthStore((state) => state.setSessionId);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,6 +26,22 @@ export const useTwitchAuthStatus = (): void => {
           user: data.user,
           error: undefined
         });
+
+        // Safari対応: 認証成功時にsessionIDを取得
+        if (data.authenticated) {
+          try {
+            const sessionResponse = await apiFetch("/auth/session");
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              if (sessionData.sessionId) {
+                console.log('[useTwitchAuthStatus] Setting sessionId:', sessionData.sessionId);
+                setSessionId(sessionData.sessionId);
+              }
+            }
+          } catch (error) {
+            console.error('[useTwitchAuthStatus] Failed to fetch sessionId:', error);
+          }
+        }
       } catch (error) {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : "不明なエラー";
@@ -42,5 +59,5 @@ export const useTwitchAuthStatus = (): void => {
     return () => {
       cancelled = true;
     };
-  }, [setTwitchError, setTwitchLoading, setTwitchStatus]);
+  }, [setTwitchError, setTwitchLoading, setTwitchStatus, setSessionId]);
 };

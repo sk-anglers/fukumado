@@ -182,7 +182,7 @@ const sessionMiddleware = session({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // 本番環境のみHTTPS必須
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 本番環境ではWebSocket接続のためnone、開発環境ではlax
+    sameSite: 'lax', // Safari対応：同一ルートドメイン内で動作、WebSocketはクエリパラメータで認証
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     domain: getCookieDomain() // サブドメイン間でCookie共有（本番環境のみ）
   }
@@ -489,6 +489,14 @@ wss.on('connection', (ws, request) => {
   metricsCollector.recordWebSocketConnection(true); // メトリクス記録
   console.log('[WebSocket] Client connected');
 
+  // Safari対応: クエリパラメータからsessionIDを取得
+  const url = new URL(request.url || '', 'wss://dummy');
+  const sessionIdFromQuery = url.searchParams.get('sessionId');
+
+  if (sessionIdFromQuery) {
+    console.log(`[WebSocket] Using sessionId from query parameter: ${sessionIdFromQuery}`);
+  }
+
   // ハートビートを開始（無効化：アプリケーションレベルのheartbeatのみ使用）
   // wsHeartbeat.start(ws);
 
@@ -502,7 +510,9 @@ wss.on('connection', (ws, request) => {
   sessionMiddleware(request as any, mockResponse, () => {
     const req = request as any;
     const session = req.session;
-    const sessionId = req.sessionID || 'default';
+
+    // Safari対応: クエリパラメータのsessionIdを優先使用
+    const sessionId = sessionIdFromQuery || req.sessionID || 'default';
 
     const clientData: ClientData = {
       userId: sessionId, // セッションIDを使用

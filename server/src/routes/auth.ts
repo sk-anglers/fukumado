@@ -315,6 +315,27 @@ authRouter.get('/twitch/logout', (req, res) => {
   res.redirect('/');
 });
 
+// セッションID取得エンドポイント（Safari WebSocket対応）
+authRouter.get('/session', (req, res) => {
+  const hasAuth = (req.session.twitchTokens && req.session.twitchUser) ||
+                  (req.session.googleTokens && req.session.googleUser);
+
+  if (!hasAuth) {
+    return res.status(401).json({
+      success: false,
+      error: 'Not authenticated',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  res.json({
+    success: true,
+    sessionId: req.sessionID,
+    authenticated: true,
+    timestamp: new Date().toISOString()
+  });
+});
+
 authRouter.get('/success', (_req, res) => {
   const nonce = res.locals.nonce || '';
   res.send(`
