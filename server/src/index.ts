@@ -251,7 +251,38 @@ app.use('/api/analytics', apiRateLimiter, analyticsRouter);
 const server = createServer(app);
 
 // WebSocketサーバーを作成
-const wss = new WebSocketServer({ server, path: '/chat' });
+const wss = new WebSocketServer({
+  server,
+  path: '/chat',
+  // Safari対応: Origin検証を追加
+  verifyClient: (info: { origin: string; req: any }) => {
+    const origin = info.origin || info.req.headers.origin;
+    console.log('[WebSocket] Verifying client from origin:', origin);
+
+    // 許可するOriginのリスト
+    const allowedOrigins = [
+      'https://fukumado.jp',
+      'https://www.fukumado.jp',
+      'https://beta.fukumado.jp',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://192.168.11.18:5173'
+    ];
+
+    // Originヘッダーがない場合（直接接続等）も許可
+    if (!origin) {
+      console.log('[WebSocket] No origin header, allowing connection');
+      return true;
+    }
+
+    const isAllowed = allowedOrigins.includes(origin);
+    if (!isAllowed) {
+      console.warn(`[WebSocket] Origin not allowed: ${origin}`);
+    }
+
+    return isAllowed;
+  }
+});
 
 console.log('[WebSocket] WebSocket server initialized on path /chat');
 
