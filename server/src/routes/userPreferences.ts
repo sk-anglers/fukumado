@@ -9,16 +9,41 @@ export const userPreferencesRouter = Router();
  */
 userPreferencesRouter.get('/', async (req: Request, res: Response) => {
   try {
-    // セッションからユーザーIDを取得
-    const userId = (req.session as any)?.userId;
+    // Platform User ID（Twitch/Google）を取得
+    const twitchUserId = (req.session as any)?.twitchUser?.id;
+    const googleUserId = (req.session as any)?.googleUser?.id;
 
-    if (!userId) {
+    if (!twitchUserId && !googleUserId) {
       return res.status(401).json({
         success: false,
         error: 'Unauthorized',
         timestamp: new Date().toISOString()
       });
     }
+
+    // DBからUser.id（UUID）を検索
+    let dbUser = null;
+    if (twitchUserId) {
+      dbUser = await prisma.user.findUnique({
+        where: { twitchUserId },
+        select: { id: true }
+      });
+    } else if (googleUserId) {
+      dbUser = await prisma.user.findUnique({
+        where: { youtubeUserId: googleUserId },
+        select: { id: true }
+      });
+    }
+
+    if (!dbUser?.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found in database',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const userId = dbUser.id;
 
     // ユーザー設定を取得
     let preferences = await prisma.userPreference.findUnique({
@@ -69,16 +94,41 @@ userPreferencesRouter.get('/', async (req: Request, res: Response) => {
  */
 userPreferencesRouter.put('/', async (req: Request, res: Response) => {
   try {
-    // セッションからユーザーIDを取得
-    const userId = (req.session as any)?.userId;
+    // Platform User ID（Twitch/Google）を取得
+    const twitchUserId = (req.session as any)?.twitchUser?.id;
+    const googleUserId = (req.session as any)?.googleUser?.id;
 
-    if (!userId) {
+    if (!twitchUserId && !googleUserId) {
       return res.status(401).json({
         success: false,
         error: 'Unauthorized',
         timestamp: new Date().toISOString()
       });
     }
+
+    // DBからUser.id（UUID）を検索
+    let dbUser = null;
+    if (twitchUserId) {
+      dbUser = await prisma.user.findUnique({
+        where: { twitchUserId },
+        select: { id: true }
+      });
+    } else if (googleUserId) {
+      dbUser = await prisma.user.findUnique({
+        where: { youtubeUserId: googleUserId },
+        select: { id: true }
+      });
+    }
+
+    if (!dbUser?.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found in database',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const userId = dbUser.id;
 
     const { defaultLayout, savedLayouts, notificationSettings, preferences } = req.body;
 
