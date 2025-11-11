@@ -16,6 +16,7 @@ import {
 import { fetchGlobalEmotes } from '../services/twitchService';
 import { upsertGoogleUser, upsertTwitchUser } from '../services/userService';
 import { getFollowedChannelsWithDetails } from '../services/channelService';
+import prisma from '../services/prismaService';
 import { env } from '../config/env';
 
 export const authRouter = Router();
@@ -85,13 +86,30 @@ authRouter.get('/status', async (req, res) => {
   }
 
   try {
-    // ユーザーIDを取得（TwitchまたはGoogle）
-    const userId = req.session.twitchUser?.id || req.session.googleUser?.id;
+    // Platform User ID（Twitch/Google）を取得
+    const twitchUserId = req.session.twitchUser?.id;
+    const googleUserId = req.session.googleUser?.id;
 
     // フォローチャンネルリストを取得
     let followedChannels = [];
-    if (userId) {
-      followedChannels = await getFollowedChannelsWithDetails(userId);
+
+    // DBからUser.id（UUID）を検索
+    let dbUser = null;
+    if (twitchUserId) {
+      dbUser = await prisma.user.findUnique({
+        where: { twitchUserId },
+        select: { id: true }
+      });
+    } else if (googleUserId) {
+      dbUser = await prisma.user.findUnique({
+        where: { youtubeUserId: googleUserId },
+        select: { id: true }
+      });
+    }
+
+    // UUIDが見つかった場合のみフォローチャンネルを取得
+    if (dbUser?.id) {
+      followedChannels = await getFollowedChannelsWithDetails(dbUser.id);
     }
 
     res.json({
