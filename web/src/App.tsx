@@ -84,31 +84,6 @@ function App(): JSX.Element {
   // レイアウト変更を自動追跡
   useLayoutTracking(activeSlotsCount, preset);
 
-  // 初回ロード時にメンテナンス状態を取得
-  useEffect(() => {
-    const fetchMaintenanceStatus = async () => {
-      try {
-        const response = await apiFetch('/api/admin/maintenance/status');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.enabled) {
-            useMaintenanceStore.getState().setMaintenance({
-              enabled: true,
-              message: data.message || 'サービスは現在メンテナンス中です。',
-              enabledAt: data.enabledAt,
-              duration: data.duration,
-              scheduledEndAt: data.scheduledEndAt
-            });
-          }
-        }
-      } catch (error) {
-        console.error('[App] Failed to fetch maintenance status:', error);
-      }
-    };
-
-    fetchMaintenanceStatus();
-  }, []);
-
   // エラーテストモードをチェック
   useEffect(() => {
     const checkErrorTestMode = async () => {
