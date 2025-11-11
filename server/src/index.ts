@@ -497,32 +497,56 @@ wss.on('connection', (ws, request) => {
     console.log(`[WebSocket] Using sessionId from query parameter: ${sessionIdFromQuery}`);
   }
 
-  // ハートビートを開始（無効化：アプリケーションレベルのheartbeatのみ使用）
-  // wsHeartbeat.start(ws);
+  // Safari対応: クエリパラメータのsessionIdを使ってセッションストアから直接取得
+  const handleConnection = async () => {
+    let sessionData: any = null;
+    let sessionId = 'default';
 
-  // セッション情報を取得するためにミドルウェアを手動で適用
-  const mockResponse = {
-    getHeader: () => {},
-    setHeader: () => {},
-    end: () => {}
-  } as any;
+    if (sessionIdFromQuery) {
+      // クエリパラメータのsessionIdでセッションストアから取得
+      try {
+        const result = await pgPool.query(
+          'SELECT sess FROM sessions WHERE sid = $1 AND expire > NOW()',
+          [sessionIdFromQuery]
+        );
 
-  sessionMiddleware(request as any, mockResponse, () => {
-    const req = request as any;
-    const session = req.session;
+        if (result.rows.length > 0) {
+          sessionData = result.rows[0].sess;
+          sessionId = sessionIdFromQuery;
+          console.log(`[WebSocket] Session found in store for sessionId: ${sessionId}`);
+        } else {
+          console.warn(`[WebSocket] Session not found or expired for sessionId: ${sessionIdFromQuery}`);
+        }
+      } catch (error) {
+        console.error('[WebSocket] Error fetching session from store:', error);
+      }
+    } else {
+      // sessionIdがない場合はsessionMiddlewareを使用（Chrome等）
+      const mockResponse = {
+        getHeader: () => {},
+        setHeader: () => {},
+        end: () => {}
+      } as any;
 
-    // Safari対応: クエリパラメータのsessionIdを優先使用
-    const sessionId = sessionIdFromQuery || req.sessionID || 'default';
+      await new Promise<void>((resolve) => {
+        sessionMiddleware(request as any, mockResponse, () => {
+          const req = request as any;
+          sessionData = req.session;
+          sessionId = req.sessionID || 'default';
+          resolve();
+        });
+      });
+    }
 
     const clientData: ClientData = {
-      userId: sessionId, // セッションIDを使用
+      userId: sessionId,
       channels: new Set(),
       channelMapping: {},
       youtubeChannels: [],
       twitchChannels: [],
-      youtubeAccessToken: session?.streamSyncTokens?.youtube,
-      twitchAccessToken: session?.streamSyncTokens?.twitch,
-      lastMessageAt: Date.now() // 初期化時の現在時刻
+      youtubeAccessToken: sessionData?.streamSyncTokens?.youtube,
+      twitchAccessToken: sessionData?.streamSyncTokens?.twitch,
+      lastMessageAt: Date.now()
     };
 
     clients.set(ws, clientData);
@@ -730,7 +754,13 @@ wss.on('connection', (ws, request) => {
   ws.on('error', (error) => {
     console.error('[WebSocket] Client error:', error);
   });
-  }); // sessionMiddlewareコールバックの終了
+  }; // handleConnection 関数の終了
+
+  // 接続処理を実行
+  handleConnection().catch((error) => {
+    console.error('[WebSocket] Error in handleConnection:', error);
+    ws.close(1011, 'Internal server error');
+  });
 });
 
 /**
