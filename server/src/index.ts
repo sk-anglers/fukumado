@@ -644,7 +644,7 @@ wss.on('connection', (ws, request) => {
 
           // チャンネルエモートの先読み（非同期、ノンブロッキング）
           if (channelIdMapping && typeof channelIdMapping === 'object') {
-            const tokens = req.session?.twitchTokens;
+            const tokens = sessionData?.twitchTokens;
             if (tokens?.accessToken) {
               Object.values(channelIdMapping).forEach((channelId) => {
                 if (channelId && typeof channelId === 'string') {
