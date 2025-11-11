@@ -90,8 +90,14 @@ export const useStreamUpdates = (
 
   // WebSocket接続の確立とメッセージハンドラー登録（常に実行）
   useEffect(() => {
+    // Safari対応：sessionId がセットされるまで接続を待つ
+    if (!sessionId) {
+      console.log('[useStreamUpdates] Waiting for sessionId before connecting...');
+      return;
+    }
+
     // グローバルなWebSocket接続を確立
-    console.log('[useStreamUpdates] Ensuring WebSocket connection...');
+    console.log('[useStreamUpdates] Ensuring WebSocket connection with sessionId');
     websocketService.connect();
 
     // メッセージハンドラーを登録
@@ -170,6 +176,7 @@ export const useStreamUpdates = (
       unsubscribeError();
     };
   }, [
+    sessionId,
     setAvailableStreamsForPlatform,
     setStreamsError,
     setStreamsLoading,
