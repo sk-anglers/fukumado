@@ -142,8 +142,8 @@ export const StreamGrid = (): JSX.Element => {
     }
 
     // 全スロットに配信が割り当てられている場合
-    // 全ての配信が割り当てられたスロットの準備が完了しているかチェック（ツイッチ情報が消えた状態）
-    const allReady = assignedSlots.every((slot) => slotReadyStates[slot.id] === true);
+    // 全ての配信が実際に再生開始しているかチェック
+    const allReady = assignedSlots.every((slot) => slotPlayingStates[slot.id] === true);
 
     if (allReady && !autoUnmutedApplied) {
       // 全スロット準備完了 - 通知を表示し、準備中ポップアップを非表示
