@@ -46,9 +46,27 @@ export const HelpModal: React.FC = () => {
   };
 
   const renderMarkdown = (content: string) => {
-    // シンプルなMarkdownレンダリング（改行、太字、リンク、画像など）
+    // シンプルなMarkdownレンダリング（改行、太字、リンク、画像、ボタンなど）
     const lines = content.split('\n');
     return lines.map((line, index) => {
+      // ボタン [!button text](url)
+      const buttonMatch = line.match(/\[!button\s+([^\]]+)\]\((.+?)\)/);
+      if (buttonMatch) {
+        const text = buttonMatch[1];
+        const url = buttonMatch[2];
+        return (
+          <a
+            key={index}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="help-article-button"
+          >
+            {text}
+          </a>
+        );
+      }
+
       // 画像 ![alt](url)
       const imageMatch = line.match(/!\[([^\]]*)\]\((.+?)\)/);
       if (imageMatch) {

@@ -291,6 +291,27 @@
   border: 1px solid #334155;
 }
 
+.help-article-button {
+  display: inline-block;
+  background-color: #3498DB;
+  color: white !important;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 1rem;
+  text-decoration: none;
+  margin: 1rem 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  border: none;
+}
+
+.help-article-button:hover {
+  background-color: #0078C4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
 .help-article-meta {
   margin-top: 2rem;
   padding-top: 1rem;
