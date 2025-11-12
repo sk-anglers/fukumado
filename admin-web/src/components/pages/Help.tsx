@@ -38,6 +38,9 @@ export const Help: React.FC = () => {
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [imageAlt, setImageAlt] = useState('');
+  const [showButtonDialog, setShowButtonDialog] = useState(false);
+  const [buttonText, setButtonText] = useState('');
+  const [buttonUrl, setButtonUrl] = useState('');
 
   useEffect(() => {
     loadArticles();
@@ -164,6 +167,26 @@ export const Help: React.FC = () => {
     setImageAlt('');
   };
 
+  const handleInsertButton = () => {
+    if (!buttonText.trim() || !buttonUrl.trim()) {
+      alert('ボタンテキストとURLを入力してください');
+      return;
+    }
+
+    const markdown = `[!button ${buttonText}](${buttonUrl})`;
+
+    // カーソル位置に挿入（簡易実装：末尾に追加）
+    setFormData({
+      ...formData,
+      content: formData.content + '\n\n' + markdown + '\n\n'
+    });
+
+    // ダイアログをクリア
+    setShowButtonDialog(false);
+    setButtonText('');
+    setButtonUrl('');
+  };
+
   const uniqueCategories = Array.from(new Set(articles.map(a => a.category)));
 
   if (loading && articles.length === 0) {
@@ -226,6 +249,13 @@ export const Help: React.FC = () => {
                   className={styles.imageButton}
                 >
                   📷 画像挿入
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowButtonDialog(true)}
+                  className={styles.imageButton}
+                >
+                  🔘 ボタン挿入
                 </button>
               </div>
               <textarea
@@ -314,6 +344,57 @@ export const Help: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleInsertImage}
+                      className={styles.submitButton}
+                    >
+                      挿入
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ボタン挿入ダイアログ */}
+          {showButtonDialog && (
+            <div className={styles.imageDialogOverlay} onClick={() => setShowButtonDialog(false)}>
+              <div className={styles.imageDialog} onClick={(e) => e.stopPropagation()}>
+                <h3>ボタンを挿入</h3>
+                <div className={styles.imageDialogContent}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="buttonText">ボタンのテキスト</label>
+                    <input
+                      id="buttonText"
+                      type="text"
+                      value={buttonText}
+                      onChange={(e) => setButtonText(e.target.value)}
+                      placeholder="例: お問い合わせフォーム"
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="buttonUrl">リンク先URL</label>
+                    <input
+                      id="buttonUrl"
+                      type="text"
+                      value={buttonUrl}
+                      onChange={(e) => setButtonUrl(e.target.value)}
+                      placeholder="https://forms.gle/xxx"
+                    />
+                  </div>
+                  <div className={styles.imageDialogActions}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowButtonDialog(false);
+                        setButtonText('');
+                        setButtonUrl('');
+                      }}
+                      className={styles.cancelButton}
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleInsertButton}
                       className={styles.submitButton}
                     >
                       挿入
