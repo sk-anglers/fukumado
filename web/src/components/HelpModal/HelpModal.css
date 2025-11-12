@@ -23,7 +23,7 @@
 }
 
 .help-modal {
-  background-color: white;
+  background-color: #0f172a;
   border-radius: 8px;
   width: 100%;
   max-width: 800px;
@@ -50,20 +50,20 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #edebe9;
+  border-bottom: 1px solid #334155;
 }
 
 .help-modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .help-modal-close {
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #605e5c;
+  color: #94a3b8;
   cursor: pointer;
   padding: 0.5rem;
   width: 2rem;
@@ -76,7 +76,7 @@
 }
 
 .help-modal-close:hover {
-  background-color: #f3f2f1;
+  background-color: #1e293b;
 }
 
 .help-modal-content {
@@ -97,7 +97,7 @@
 .help-modal-loading {
   text-align: center;
   padding: 3rem;
-  color: #605e5c;
+  color: #94a3b8;
   font-size: 1.1rem;
 }
 
@@ -107,14 +107,14 @@
   flex-wrap: wrap;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #edebe9;
+  border-bottom: 1px solid #334155;
 }
 
 .help-category-button {
   padding: 0.5rem 1rem;
-  border: 1px solid #edebe9;
-  background-color: white;
-  color: #323130;
+  border: 1px solid #334155;
+  background-color: #1e293b;
+  color: #e2e8f0;
   border-radius: 20px;
   cursor: pointer;
   font-size: 0.9rem;
@@ -122,7 +122,7 @@
 }
 
 .help-category-button:hover {
-  background-color: #f3f2f1;
+  background-color: #334155;
 }
 
 .help-category-button.active {
@@ -140,7 +140,7 @@
 .help-no-articles {
   text-align: center;
   padding: 3rem;
-  color: #605e5c;
+  color: #94a3b8;
   font-style: italic;
 }
 
@@ -152,7 +152,7 @@
 
 .help-category-title {
   font-size: 1.25rem;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0;
   padding-bottom: 0.5rem;
   border-bottom: 2px solid #3498DB;
@@ -169,22 +169,22 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background-color: white;
-  border: 1px solid #edebe9;
+  background-color: #1e293b;
+  border: 1px solid #334155;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .help-article-item:hover {
-  background-color: #f9f9f9;
+  background-color: #334155;
   border-color: #3498DB;
   transform: translateX(4px);
 }
 
 .help-article-item-title {
   flex: 1;
-  color: #323130;
+  color: #e2e8f0;
   font-weight: 500;
 }
 
@@ -212,13 +212,13 @@
 }
 
 .help-back-button:hover {
-  background-color: #f3f2f1;
+  background-color: #1e293b;
 }
 
 .help-article-category {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background-color: #e3f2fd;
+  background-color: rgba(52, 152, 219, 0.2);
   color: #3498DB;
   border-radius: 12px;
   font-size: 0.875rem;
@@ -228,33 +228,33 @@
 
 .help-article-title {
   font-size: 1.75rem;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0.5rem 0 1rem 0;
 }
 
 .help-article-content {
   line-height: 1.8;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .help-article-content h1 {
   font-size: 1.5rem;
   margin: 1.5rem 0 1rem 0;
-  color: #323130;
-  border-bottom: 2px solid #edebe9;
+  color: #e2e8f0;
+  border-bottom: 2px solid #334155;
   padding-bottom: 0.5rem;
 }
 
 .help-article-content h2 {
   font-size: 1.3rem;
   margin: 1.25rem 0 0.75rem 0;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .help-article-content h3 {
   font-size: 1.1rem;
   margin: 1rem 0 0.5rem 0;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .help-article-content p {
@@ -279,14 +279,14 @@
 
 .help-article-content strong {
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
 }
 
 .help-article-meta {
   margin-top: 2rem;
   padding-top: 1rem;
-  border-top: 1px solid #edebe9;
-  color: #605e5c;
+  border-top: 1px solid #334155;
+  color: #94a3b8;
   font-size: 0.875rem;
 }
 
