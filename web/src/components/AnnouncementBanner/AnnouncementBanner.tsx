@@ -1,20 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useAnnouncementStore } from '../../stores/announcementStore';
 import { getAnnouncementColor, getAnnouncementBgColor } from '../../api/announcements';
 import './AnnouncementBanner.css';
 
 export const AnnouncementBanner: React.FC = () => {
-  const {
-    loadAnnouncements,
-    dismissAnnouncement,
-    getVisibleAnnouncements
-  } = useAnnouncementStore();
+  const announcements = useAnnouncementStore((state) => state.announcements);
+  const dismissedVersions = useAnnouncementStore((state) => state.dismissedVersions);
+  const loadAnnouncements = useAnnouncementStore((state) => state.loadAnnouncements);
+  const dismissAnnouncement = useAnnouncementStore((state) => state.dismissAnnouncement);
 
-  const visibleAnnouncements = getVisibleAnnouncements();
+  // storeの状態から表示すべきお知らせを計算
+  const visibleAnnouncements = useMemo(() => {
+    return announcements.filter(announcement => {
+      const dismissedVersion = dismissedVersions.get(announcement.id);
+      // 閉じられていない、または閉じた時より新しいバージョンなら表示
+      return dismissedVersion === undefined || announcement.forceDisplayVersion > dismissedVersion;
+    });
+  }, [announcements, dismissedVersions]);
 
   useEffect(() => {
     loadAnnouncements();
-  }, []);
+  }, [loadAnnouncements]);
 
   if (visibleAnnouncements.length === 0) {
     return null;

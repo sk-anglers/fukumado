@@ -120,9 +120,9 @@ export const useAnnouncementStore = create<AnnouncementState>((set, get) => ({
 
 /**
  * お知らせの自動更新を開始
- * @param intervalMs 更新間隔（ミリ秒）デフォルト: 5分
+ * @param intervalMs 更新間隔（ミリ秒）デフォルト: 1分
  */
-export const startAnnouncementAutoUpdate = (intervalMs: number = 5 * 60 * 1000): (() => void) => {
+export const startAnnouncementAutoUpdate = (intervalMs: number = 60 * 1000): (() => void) => {
   const store = useAnnouncementStore.getState();
 
   // 初回読み込み
