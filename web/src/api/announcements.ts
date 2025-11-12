@@ -9,6 +9,7 @@ export interface Announcement {
   linkText: string | null;
   priority: number;
   isActive: boolean;
+  forceDisplayVersion: number;
   startAt: string | null;
   endAt: string | null;
   createdAt: string;

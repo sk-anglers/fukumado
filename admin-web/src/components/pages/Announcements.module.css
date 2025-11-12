@@ -133,6 +133,7 @@
 
 .editButton,
 .toggleButton,
+.forceDisplayButton,
 .deleteButton {
   padding: 0.4rem 0.8rem;
   border: none;
@@ -160,6 +161,16 @@
 
 .toggleButton:hover {
   background-color: #475569;
+}
+
+.forceDisplayButton {
+  background-color: #f59f00;
+  color: white;
+  border: 1px solid #d68400;
+}
+
+.forceDisplayButton:hover {
+  background-color: #d68400;
 }
 
 .deleteButton {

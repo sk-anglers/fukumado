@@ -59,7 +59,7 @@ export const AnnouncementBanner: React.FC = () => {
           </div>
           <button
             className="announcement-close"
-            onClick={() => dismissAnnouncement(announcement.id)}
+            onClick={() => dismissAnnouncement(announcement.id, announcement.forceDisplayVersion)}
             aria-label="お知らせを閉じる"
           >
             ✕

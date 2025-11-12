@@ -1088,3 +1088,12 @@ export const toggleAnnouncementActive = async (id: string, isActive: boolean): P
     body: JSON.stringify({ isActive })
   });
 };
+
+/**
+ * お知らせを強制表示（全ユーザーに再表示）
+ */
+export const forceDisplayAnnouncement = async (id: string): Promise<Announcement> => {
+  return fetchAPI<Announcement>(`/announcements/${id}/force-display`, {
+    method: 'PUT'
+  });
+};

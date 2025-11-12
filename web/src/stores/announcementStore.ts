@@ -6,49 +6,61 @@ const DISMISSED_ANNOUNCEMENTS_KEY = 'fukumado_dismissed_announcements';
 interface AnnouncementState {
   // 状態
   announcements: Announcement[];
-  dismissedIds: Set<string>;
+  dismissedVersions: Map<string, number>; // id -> 閉じた時のversion
   loading: boolean;
   error: string | null;
 
   // アクション
   loadAnnouncements: () => Promise<void>;
-  dismissAnnouncement: (id: string) => void;
+  dismissAnnouncement: (id: string, version: number) => void;
   clearDismissed: () => void;
   getVisibleAnnouncements: () => Announcement[];
   setError: (error: string | null) => void;
 }
 
 /**
- * ローカルストレージから閉じられたお知らせIDを取得
+ * ローカルストレージから閉じられたお知らせID->versionマップを取得
  */
-const loadDismissedIds = (): Set<string> => {
+const loadDismissedVersions = (): Map<string, number> => {
   try {
     const stored = localStorage.getItem(DISMISSED_ANNOUNCEMENTS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      return new Set(Array.isArray(parsed) ? parsed : []);
+      // オブジェクト形式 {id: version} から Map へ変換
+      if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return new Map(Object.entries(parsed).map(([id, version]) => [id, version as number]));
+      }
+      // 旧形式（配列）の場合は version=1 として扱う（後方互換性）
+      if (Array.isArray(parsed)) {
+        return new Map(parsed.map(id => [id, 1]));
+      }
     }
   } catch (error) {
-    console.error('[AnnouncementStore] Error loading dismissed IDs:', error);
+    console.error('[AnnouncementStore] Error loading dismissed versions:', error);
   }
-  return new Set();
+  return new Map();
 };
 
 /**
- * ローカルストレージに閉じられたお知らせIDを保存
+ * ローカルストレージに閉じられたお知らせID->versionマップを保存
  */
-const saveDismissedIds = (ids: Set<string>): void => {
+const saveDismissedVersions = (versions: Map<string, number>): void => {
   try {
-    localStorage.setItem(DISMISSED_ANNOUNCEMENTS_KEY, JSON.stringify(Array.from(ids)));
+    // Map を オブジェクト形式 {id: version} に変換
+    const obj: Record<string, number> = {};
+    versions.forEach((version, id) => {
+      obj[id] = version;
+    });
+    localStorage.setItem(DISMISSED_ANNOUNCEMENTS_KEY, JSON.stringify(obj));
   } catch (error) {
-    console.error('[AnnouncementStore] Error saving dismissed IDs:', error);
+    console.error('[AnnouncementStore] Error saving dismissed versions:', error);
   }
 };
 
 export const useAnnouncementStore = create<AnnouncementState>((set, get) => ({
   // 初期状態
   announcements: [],
-  dismissedIds: loadDismissedIds(),
+  dismissedVersions: loadDismissedVersions(),
   loading: false,
   error: null,
 
@@ -74,25 +86,30 @@ export const useAnnouncementStore = create<AnnouncementState>((set, get) => ({
     }
   },
 
-  // お知らせを閉じる
-  dismissAnnouncement: (id: string) => {
-    const { dismissedIds } = get();
-    const newDismissedIds = new Set(dismissedIds);
-    newDismissedIds.add(id);
-    saveDismissedIds(newDismissedIds);
-    set({ dismissedIds: newDismissedIds });
+  // お知らせを閉じる（id と version を記録）
+  dismissAnnouncement: (id: string, version: number) => {
+    const { dismissedVersions } = get();
+    const newDismissedVersions = new Map(dismissedVersions);
+    newDismissedVersions.set(id, version);
+    saveDismissedVersions(newDismissedVersions);
+    set({ dismissedVersions: newDismissedVersions });
   },
 
   // 閉じたお知らせをクリア（全て再表示）
   clearDismissed: () => {
-    saveDismissedIds(new Set());
-    set({ dismissedIds: new Set() });
+    saveDismissedVersions(new Map());
+    set({ dismissedVersions: new Map() });
   },
 
-  // 表示すべきお知らせを取得（閉じられていないもの）
+  // 表示すべきお知らせを取得
+  // お知らせのforceDisplayVersionが、閉じた時のversionより大きければ再表示
   getVisibleAnnouncements: () => {
-    const { announcements, dismissedIds } = get();
-    return announcements.filter(announcement => !dismissedIds.has(announcement.id));
+    const { announcements, dismissedVersions } = get();
+    return announcements.filter(announcement => {
+      const dismissedVersion = dismissedVersions.get(announcement.id);
+      // 閉じられていない、または閉じた時より新しいバージョンなら表示
+      return dismissedVersion === undefined || announcement.forceDisplayVersion > dismissedVersion;
+    });
   },
 
   // エラーを設定
