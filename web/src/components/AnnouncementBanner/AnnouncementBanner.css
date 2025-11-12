@@ -1,0 +1,136 @@
+.announcement-banner-container {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.announcement-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-left: 4px solid;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.announcement-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.announcement-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.announcement-type-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.announcement-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #323130;
+}
+
+.announcement-text {
+  color: #605e5c;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.announcement-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-decoration: none;
+  margin-top: 0.25rem;
+  transition: opacity 0.2s;
+}
+
+.announcement-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.announcement-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #605e5c;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  margin-left: 1rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.announcement-close:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.announcement-close:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .announcement-banner {
+    padding: 0.75rem 1rem;
+  }
+
+  .announcement-header {
+    gap: 0.5rem;
+  }
+
+  .announcement-type-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .announcement-title {
+    font-size: 0.95rem;
+  }
+
+  .announcement-text {
+    font-size: 0.9rem;
+  }
+
+  .announcement-link {
+    font-size: 0.9rem;
+  }
+
+  .announcement-close {
+    margin-left: 0.5rem;
+    padding: 0.25rem;
+  }
+}

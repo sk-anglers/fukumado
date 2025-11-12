@@ -23,6 +23,8 @@ import { cacheRouter } from './routes/cache';
 import { adminStreamsRouter } from './routes/adminStreams';
 import { adminRouter, getErrorTestModeStatus } from './routes/admin';
 import { userPreferencesRouter } from './routes/userPreferences';
+import { helpRouter } from './routes/help';
+import { announcementsRouter } from './routes/announcements';
 import { twitchChatService } from './services/twitchChatService';
 import { streamSyncService, tokenStorage } from './services/streamSyncService';
 import { fetchChannelEmotes } from './services/twitchService';
@@ -225,6 +227,8 @@ app.use('/api/security', apiRateLimiter, securityRouter);
 app.use('/api/consent', apiRateLimiter, consentRouter);
 app.use('/api/legal', apiRateLimiter, legalRouter);
 app.use('/api/user/preferences', apiRateLimiter, userPreferencesRouter);
+app.use('/api/help', apiRateLimiter, helpRouter);
+app.use('/api/announcements', apiRateLimiter, announcementsRouter);
 
 // エラーテストモード状態取得（認証不要、本サービスからアクセス）
 app.get('/api/error-test/status', (req, res) => {

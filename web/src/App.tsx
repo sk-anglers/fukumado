@@ -6,6 +6,8 @@ import { MobileRestriction } from "./components/MobileRestriction/MobileRestrict
 import { UnsupportedBrowser } from "./components/UnsupportedBrowser/UnsupportedBrowser";
 import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
 import { ErrorScreen } from "./components/ErrorScreen/ErrorScreen";
+import { AnnouncementBanner } from "./components/AnnouncementBanner/AnnouncementBanner";
+import { HelpModal } from "./components/HelpModal/HelpModal";
 import { useStreamUpdates } from "./hooks/useStreamUpdates";
 import { useTwitchChat } from "./hooks/useTwitchChat";
 import { useLayoutStore } from "./stores/layoutStore";
@@ -17,6 +19,7 @@ import { useSyncStore } from "./stores/syncStore";
 import { useMaintenanceStore } from "./stores/maintenanceStore";
 import { useIsMobile } from "./hooks/useMediaQuery";
 import { useLayoutTracking } from "./hooks/useAnalytics";
+import { startAnnouncementAutoUpdate } from "./stores/announcementStore";
 import { apiFetch } from "./utils/api";
 import { isSafari } from "./utils/browserDetection";
 import { config } from "./config";
@@ -111,6 +114,17 @@ function App(): JSX.Element {
     };
 
     checkErrorTestMode();
+  }, []);
+
+  // お知らせの自動更新を開始
+  useEffect(() => {
+    console.log('[App] Starting announcement auto-update...');
+    const cleanup = startAnnouncementAutoUpdate();
+
+    return () => {
+      console.log('[App] Stopping announcement auto-update...');
+      cleanup();
+    };
   }, []);
 
   // グローバルエラーハンドラー（デバッグ用）
@@ -392,7 +406,9 @@ function App(): JSX.Element {
   return (
     <ErrorBoundary>
       <ConsentManager />
+      <AnnouncementBanner />
       <AppShell />
+      <HelpModal />
     </ErrorBoundary>
   );
 }

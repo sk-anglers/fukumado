@@ -33,7 +33,9 @@ const navItems: NavItem[] = [
   { id: 'cache', label: 'キャッシュ/DB', path: '/cache', icon: '💾' },
   { id: 'api-monitor', label: 'API監視', path: '/api-monitor', icon: '🌐' },
   { id: 'services', label: 'サービス監視', path: '/services', icon: '🚀' },
-  { id: 'maintenance', label: 'メンテナンス', path: '/maintenance', icon: '🔧' }
+  { id: 'maintenance', label: 'メンテナンス', path: '/maintenance', icon: '🔧' },
+  { id: 'help', label: 'ヘルプ記事管理', path: '/help', icon: '❓' },
+  { id: 'announcements', label: 'お知らせ管理', path: '/announcements', icon: '📢' }
 ];
 
 /**

@@ -1,0 +1,366 @@
+.container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 1.75rem;
+  color: #323130;
+  margin: 0;
+}
+
+.createButton {
+  background-color: #3498DB;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.createButton:hover {
+  background-color: #0078C4;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #605e5c;
+  font-size: 1.1rem;
+}
+
+.error {
+  background-color: #fde7e9;
+  color: #a4262c;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #a4262c;
+}
+
+.tableContainer {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background-color: #EEEEEE;
+}
+
+.table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #323130;
+  border-bottom: 2px solid #edebe9;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 1rem;
+  color: #605e5c;
+  border-bottom: 1px solid #edebe9;
+}
+
+.table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.noData {
+  text-align: center;
+  padding: 3rem !important;
+  color: #605e5c;
+  font-style: italic;
+}
+
+.titleCell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.typeBadge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+}
+
+.active,
+.inactive {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.active {
+  background-color: #dff6dd;
+  color: #107c10;
+}
+
+.inactive {
+  background-color: #f3f2f1;
+  color: #605e5c;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.editButton,
+.toggleButton,
+.deleteButton {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.editButton {
+  background-color: #3498DB;
+  color: white;
+}
+
+.editButton:hover {
+  background-color: #0078C4;
+}
+
+.toggleButton {
+  background-color: #f3f2f1;
+  color: #323130;
+  border: 1px solid #edebe9;
+}
+
+.toggleButton:hover {
+  background-color: #e1dfdd;
+}
+
+.deleteButton {
+  background-color: #fde7e9;
+  color: #a4262c;
+}
+
+.deleteButton:hover {
+  background-color: #f4d3d6;
+}
+
+.deleteConfirm {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.confirmDelete,
+.cancelDelete {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirmDelete {
+  background-color: #a4262c;
+  color: white;
+}
+
+.confirmDelete:hover {
+  background-color: #8a1f23;
+}
+
+.cancelDelete {
+  background-color: #f3f2f1;
+  color: #323130;
+}
+
+.cancelDelete:hover {
+  background-color: #e1dfdd;
+}
+
+.formContainer {
+  background-color: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.formContainer h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #323130;
+  font-size: 1.5rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formGroup label {
+  font-weight: 600;
+  color: #323130;
+  font-size: 0.95rem;
+}
+
+.formGroup input[type="text"],
+.formGroup input[type="url"],
+.formGroup input[type="number"],
+.formGroup input[type="datetime-local"],
+.formGroup select,
+.formGroup textarea {
+  padding: 0.75rem;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  font-size: 1rem;
+  color: #323130;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  background-color: white;
+}
+
+.formGroup input[type="text"]:focus,
+.formGroup input[type="url"]:focus,
+.formGroup input[type="number"]:focus,
+.formGroup input[type="datetime-local"]:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #3498DB;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.formGroup select {
+  cursor: pointer;
+}
+
+.formGroup textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding-top: 0.75rem;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.formActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #edebe9;
+}
+
+.cancelButton,
+.submitButton {
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.cancelButton {
+  background-color: #f3f2f1;
+  color: #323130;
+  border: 1px solid #edebe9;
+}
+
+.cancelButton:hover {
+  background-color: #e1dfdd;
+}
+
+.submitButton {
+  background-color: #3498DB;
+  color: white;
+}
+
+.submitButton:hover {
+  background-color: #0078C4;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .tableContainer {
+    overflow-x: auto;
+  }
+
+  .table {
+    min-width: 1000px;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .formActions {
+    flex-direction: column-reverse;
+  }
+
+  .cancelButton,
+  .submitButton {
+    width: 100%;
+  }
+}

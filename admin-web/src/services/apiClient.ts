@@ -32,7 +32,9 @@ import {
   AnalyticsStats,
   ThresholdInfo,
   BlockedIPsResponse,
-  WhitelistedIPsResponse
+  WhitelistedIPsResponse,
+  HelpArticle,
+  Announcement
 } from '../types';
 
 /**
@@ -937,5 +939,152 @@ export const enableErrorTest = async (): Promise<{ enabled: boolean; message: st
 export const disableErrorTest = async (): Promise<{ enabled: boolean }> => {
   return fetchAPI<{ enabled: boolean }>('/maintenance/test-error/disable', {
     method: 'POST'
+  });
+};
+
+// ============================================
+// Help Articles API
+// ============================================
+
+/**
+ * ヘルプ記事一覧取得
+ */
+export const getHelpArticles = async (category?: string): Promise<HelpArticle[]> => {
+  const query = category ? `?category=${encodeURIComponent(category)}` : '';
+  return fetchAPI<HelpArticle[]>(`/help/articles${query}`);
+};
+
+/**
+ * ヘルプ記事詳細取得
+ */
+export const getHelpArticle = async (id: string): Promise<HelpArticle> => {
+  return fetchAPI<HelpArticle>(`/help/articles/${id}`);
+};
+
+/**
+ * ヘルプ記事作成
+ */
+export const createHelpArticle = async (data: {
+  category: string;
+  title: string;
+  content: string;
+  order?: number;
+  isPublished?: boolean;
+}): Promise<HelpArticle> => {
+  return fetchAPI<HelpArticle>('/help/articles', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+};
+
+/**
+ * ヘルプ記事更新
+ */
+export const updateHelpArticle = async (id: string, data: {
+  category: string;
+  title: string;
+  content: string;
+  order?: number;
+  isPublished?: boolean;
+}): Promise<HelpArticle> => {
+  return fetchAPI<HelpArticle>(`/help/articles/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+};
+
+/**
+ * ヘルプ記事削除
+ */
+export const deleteHelpArticle = async (id: string): Promise<void> => {
+  return fetchAPI<void>(`/help/articles/${id}`, {
+    method: 'DELETE'
+  });
+};
+
+/**
+ * ヘルプ記事公開/非公開切替
+ */
+export const toggleHelpArticlePublish = async (id: string, isPublished: boolean): Promise<HelpArticle> => {
+  return fetchAPI<HelpArticle>(`/help/articles/${id}/publish`, {
+    method: 'PUT',
+    body: JSON.stringify({ isPublished })
+  });
+};
+
+// ============================================
+// Announcements API
+// ============================================
+
+/**
+ * お知らせ一覧取得
+ */
+export const getAnnouncements = async (): Promise<Announcement[]> => {
+  return fetchAPI<Announcement[]>('/announcements');
+};
+
+/**
+ * お知らせ詳細取得
+ */
+export const getAnnouncement = async (id: string): Promise<Announcement> => {
+  return fetchAPI<Announcement>(`/announcements/${id}`);
+};
+
+/**
+ * お知らせ作成
+ */
+export const createAnnouncement = async (data: {
+  type: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  content: string;
+  link?: string | null;
+  linkText?: string | null;
+  priority?: number;
+  isActive?: boolean;
+  startAt?: string | null;
+  endAt?: string | null;
+}): Promise<Announcement> => {
+  return fetchAPI<Announcement>('/announcements', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+};
+
+/**
+ * お知らせ更新
+ */
+export const updateAnnouncement = async (id: string, data: {
+  type: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  content: string;
+  link?: string | null;
+  linkText?: string | null;
+  priority?: number;
+  isActive?: boolean;
+  startAt?: string | null;
+  endAt?: string | null;
+}): Promise<Announcement> => {
+  return fetchAPI<Announcement>(`/announcements/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+};
+
+/**
+ * お知らせ削除
+ */
+export const deleteAnnouncement = async (id: string): Promise<void> => {
+  return fetchAPI<void>(`/announcements/${id}`, {
+    method: 'DELETE'
+  });
+};
+
+/**
+ * お知らせ有効/無効切替
+ */
+export const toggleAnnouncement = async (id: string, isActive: boolean): Promise<Announcement> => {
+  return fetchAPI<Announcement>(`/announcements/${id}/toggle`, {
+    method: 'PUT',
+    body: JSON.stringify({ isActive })
   });
 };

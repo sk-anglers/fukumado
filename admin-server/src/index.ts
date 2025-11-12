@@ -20,6 +20,8 @@ import { apiMonitorRouter } from './routes/apiMonitor';
 import { auditLogsRouter } from './routes/auditLogs';
 import { alertsRouter } from './routes/alerts';
 import { servicesRouter } from './routes/services';
+import { helpRouter } from './routes/help';
+import { announcementsRouter } from './routes/announcements';
 import pvRouter from './routes/pv';
 import analyticsRouter from './routes/analytics';
 import { metricsCollector } from './services/metricsCollector';
@@ -101,6 +103,8 @@ app.use('/admin/api/alert-settings', alertsRouter);
 app.use('/admin/api/services', servicesRouter);
 app.use('/admin/api/pv', pvRouter);
 app.use('/admin/api/analytics', analyticsRouter);
+app.use('/admin/api/help', helpRouter);
+app.use('/admin/api/announcements', announcementsRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);

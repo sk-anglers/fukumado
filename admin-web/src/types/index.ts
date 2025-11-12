@@ -918,3 +918,34 @@ export interface AnalyticsStats {
     }>;
   };
 }
+
+// ============================================
+// Help & Announcements
+// ============================================
+
+export interface HelpArticle {
+  id: string;
+  category: string;
+  title: string;
+  content: string;
+  order: number;
+  isPublished: boolean;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Announcement {
+  id: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  content: string;
+  link: string | null;
+  linkText: string | null;
+  priority: number;
+  isActive: boolean;
+  startAt: string | null;
+  endAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -319,3 +319,44 @@ model Session {
   @@index([userId])
   @@map("sessions")
 }
+
+// ============================================
+// Help & Announcements
+// ============================================
+
+model HelpArticle {
+  id          BigInt   @id @default(autoincrement())
+  category    String   @db.VarChar(50)
+  title       String   @db.VarChar(255)
+  content     String   @db.Text
+  order       Int      @default(0)
+  isPublished Boolean  @default(false) @map("is_published")
+  viewCount   Int      @default(0) @map("view_count")
+
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([category, order])
+  @@index([isPublished, order])
+  @@map("help_articles")
+}
+
+model Announcement {
+  id          BigInt    @id @default(autoincrement())
+  type        String    @db.VarChar(20)
+  title       String    @db.VarChar(255)
+  content     String    @db.Text
+  link        String?   @db.VarChar(500)
+  linkText    String?   @map("link_text") @db.VarChar(100)
+  priority    Int       @default(0)
+  isActive    Boolean   @default(true) @map("is_active")
+  startAt     DateTime? @map("start_at") @db.Timestamptz(6)
+  endAt       DateTime? @map("end_at") @db.Timestamptz(6)
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([isActive, priority(sort: Desc)])
+  @@index([startAt, endAt])
+  @@map("announcements")
+}
