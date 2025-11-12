@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { apiFetch } from '../utils/api';
 
 export interface Announcement {
   id: string;
@@ -27,7 +27,7 @@ export interface AnnouncementsResponse {
  */
 export const getActiveAnnouncements = async (): Promise<Announcement[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/announcements`);
+    const response = await apiFetch('/api/announcements');
 
     if (!response.ok) {
       throw new Error(`Failed to fetch announcements: ${response.statusText}`);
