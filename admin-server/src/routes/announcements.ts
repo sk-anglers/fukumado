@@ -4,6 +4,21 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 export const announcementsRouter = Router();
 
+// BigIntをStringに変換するヘルパー関数
+const serializeBigInt = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return obj.toString();
+  if (Array.isArray(obj)) return obj.map(serializeBigInt);
+  if (typeof obj === 'object') {
+    const serialized: any = {};
+    for (const key in obj) {
+      serialized[key] = serializeBigInt(obj[key]);
+    }
+    return serialized;
+  }
+  return obj;
+};
+
 /**
  * GET /api/admin/announcements
  * 全お知らせ一覧取得（有効/無効含む）
@@ -20,7 +35,7 @@ announcementsRouter.get('/', async (req, res) => {
 
     res.json({
       success: true,
-      data: announcements,
+      data: serializeBigInt(announcements),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -57,7 +72,7 @@ announcementsRouter.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: announcement,
+      data: serializeBigInt(announcement),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -104,7 +119,7 @@ announcementsRouter.post('/', async (req, res) => {
 
     res.json({
       success: true,
-      data: announcement,
+      data: serializeBigInt(announcement),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -154,7 +169,7 @@ announcementsRouter.put('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: announcement,
+      data: serializeBigInt(announcement),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -222,7 +237,7 @@ announcementsRouter.put('/:id/toggle', async (req, res) => {
 
     res.json({
       success: true,
-      data: announcement,
+      data: serializeBigInt(announcement),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
