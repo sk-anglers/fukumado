@@ -13,7 +13,7 @@
 
 .header h1 {
   font-size: 1.75rem;
-  color: #323130;
+  color: #e2e8f0;
   margin: 0;
 }
 
@@ -35,7 +35,7 @@
 .loading {
   text-align: center;
   padding: 3rem;
-  color: #605e5c;
+  color: #94a3b8;
   font-size: 1.1rem;
 }
 
@@ -49,10 +49,10 @@
 }
 
 .tableContainer {
-  background-color: white;
+  background-color: #1e293b;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .table {
@@ -61,32 +61,32 @@
 }
 
 .table thead {
-  background-color: #EEEEEE;
+  background-color: #0f172a;
 }
 
 .table th {
   padding: 1rem;
   text-align: left;
   font-weight: 600;
-  color: #323130;
-  border-bottom: 2px solid #edebe9;
+  color: #e2e8f0;
+  border-bottom: 2px solid #334155;
   white-space: nowrap;
 }
 
 .table td {
   padding: 1rem;
-  color: #605e5c;
-  border-bottom: 1px solid #edebe9;
+  color: #94a3b8;
+  border-bottom: 1px solid #334155;
 }
 
 .table tbody tr:hover {
-  background-color: #f9f9f9;
+  background-color: #334155;
 }
 
 .noData {
   text-align: center;
   padding: 3rem !important;
-  color: #605e5c;
+  color: #94a3b8;
   font-style: italic;
 }
 
@@ -116,13 +116,13 @@
 }
 
 .active {
-  background-color: #dff6dd;
-  color: #107c10;
+  background-color: rgba(16, 124, 16, 0.2);
+  color: #4ade80;
 }
 
 .inactive {
-  background-color: #f3f2f1;
-  color: #605e5c;
+  background-color: #334155;
+  color: #94a3b8;
 }
 
 .actions {
@@ -153,13 +153,13 @@
 }
 
 .toggleButton {
-  background-color: #f3f2f1;
-  color: #323130;
-  border: 1px solid #edebe9;
+  background-color: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
 }
 
 .toggleButton:hover {
-  background-color: #e1dfdd;
+  background-color: #475569;
 }
 
 .deleteButton {
@@ -196,25 +196,25 @@
 }
 
 .cancelDelete {
-  background-color: #f3f2f1;
-  color: #323130;
+  background-color: #334155;
+  color: #e2e8f0;
 }
 
 .cancelDelete:hover {
-  background-color: #e1dfdd;
+  background-color: #475569;
 }
 
 .formContainer {
-  background-color: white;
+  background-color: #1e293b;
   border-radius: 8px;
   padding: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .formContainer h2 {
   margin-top: 0;
   margin-bottom: 1.5rem;
-  color: #323130;
+  color: #e2e8f0;
   font-size: 1.5rem;
 }
 
@@ -232,7 +232,7 @@
 
 .formGroup label {
   font-weight: 600;
-  color: #323130;
+  color: #e2e8f0;
   font-size: 0.95rem;
 }
 
@@ -243,13 +243,13 @@
 .formGroup select,
 .formGroup textarea {
   padding: 0.75rem;
-  border: 1px solid #edebe9;
+  border: 1px solid #334155;
   border-radius: 4px;
   font-size: 1rem;
-  color: #323130;
+  color: #e2e8f0;
   font-family: inherit;
   transition: border-color 0.2s;
-  background-color: white;
+  background-color: #0f172a;
 }
 
 .formGroup input[type="text"]:focus,
@@ -299,7 +299,7 @@
   justify-content: flex-end;
   margin-top: 1rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #edebe9;
+  border-top: 1px solid #334155;
 }
 
 .cancelButton,
@@ -314,13 +314,13 @@
 }
 
 .cancelButton {
-  background-color: #f3f2f1;
-  color: #323130;
-  border: 1px solid #edebe9;
+  background-color: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
 }
 
 .cancelButton:hover {
-  background-color: #e1dfdd;
+  background-color: #475569;
 }
 
 .submitButton {
