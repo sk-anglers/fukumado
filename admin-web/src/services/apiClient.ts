@@ -1082,7 +1082,7 @@ export const deleteAnnouncement = async (id: string): Promise<void> => {
 /**
  * お知らせ有効/無効切替
  */
-export const toggleAnnouncement = async (id: string, isActive: boolean): Promise<Announcement> => {
+export const toggleAnnouncementActive = async (id: string, isActive: boolean): Promise<Announcement> => {
   return fetchAPI<Announcement>(`/announcements/${id}/toggle`, {
     method: 'PUT',
     body: JSON.stringify({ isActive })
