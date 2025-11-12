@@ -88,7 +88,6 @@ export const useStreamUpdates = (
   const sessionId = useAuthStore((state) => state.sessionId);
   const setMaintenance = useMaintenanceStore((state) => state.setMaintenance);
   const clearMaintenance = useMaintenanceStore((state) => state.clearMaintenance);
-  const loadAnnouncements = useAnnouncementStore((state) => state.loadAnnouncements);
 
   // WebSocket接続の確立とメッセージハンドラー登録（常に実行）
   useEffect(() => {
@@ -165,7 +164,7 @@ export const useStreamUpdates = (
         }
       } else if (message.type === 'announcement_update') {
         console.log('[useStreamUpdates] Announcement update received, reloading announcements');
-        loadAnnouncements();
+        useAnnouncementStore.getState().loadAnnouncements();
       }
     });
 
@@ -189,8 +188,7 @@ export const useStreamUpdates = (
     setLastSyncTime,
     addNotification,
     setMaintenance,
-    clearMaintenance,
-    loadAnnouncements
+    clearMaintenance
   ]);
 
   // チャンネルまたはsessionIdが変更されたらsubscribeメッセージを送信
