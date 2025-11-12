@@ -134,10 +134,10 @@ export const Help: React.FC = () => {
 
   const convertGoogleDriveUrl = (url: string): string => {
     // Google Drive の共有リンクを画像表示用URLに変換
-    // https://drive.google.com/file/d/FILE_ID/view → https://drive.google.com/uc?export=view&id=FILE_ID
+    // https://drive.google.com/file/d/FILE_ID/view → https://lh3.googleusercontent.com/d/FILE_ID
     const match = url.match(/\/file\/d\/([^\/]+)/);
     if (match) {
-      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      return `https://lh3.googleusercontent.com/d/${match[1]}`;
     }
     // 既に変換済み、または通常のURL
     return url;
