@@ -10,15 +10,13 @@ import {
   StarIcon,
   BellAlertIcon,
   Bars3Icon,
-  ChatBubbleLeftRightIcon,
-  QuestionMarkCircleIcon
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { MAX_ACTIVE_SLOTS, useLayoutStore } from '../../stores/layoutStore';
 import { useUserStore } from '../../stores/userStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useMobileMenuStore } from '../../stores/mobileMenuStore';
-import { useHelpStore } from '../../stores/helpStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { apiFetch } from '../../utils/api';
@@ -101,7 +99,6 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
   }, [followedChannels]);
 
   const unreadCount = useNotificationStore((state) => state.getUnreadCount());
-  const openHelpModal = useHelpStore((state) => state.openModal);
 
   // 音量レベルに応じた色を計算
   const getAudioLevelColor = (level: number): string => {
@@ -769,20 +766,6 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
             {unreadCount > 0 && <span className={styles.unreadBadge}>{unreadCount}</span>}
           </button>
           {showNotificationMenu && <NotificationMenu onClose={() => setShowNotificationMenu(false)} />}
-        </div>
-        <div className={styles.menuGroup}>
-          <button
-            className={styles.controlButton}
-            type="button"
-            onClick={() => {
-              openHelpModal();
-              trackButton('help', 'header');
-            }}
-            title="ヘルプ"
-          >
-            <QuestionMarkCircleIcon />
-            <span>ヘルプ</span>
-          </button>
         </div>
         <div className={styles.menuGroup} ref={accountMenuRef}>
           <button

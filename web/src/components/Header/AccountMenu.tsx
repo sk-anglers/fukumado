@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { AdjustmentsHorizontalIcon, CircleStackIcon, ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon, CircleStackIcon, ArrowPathIcon, ClockIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../stores/authStore';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { useUserStore } from '../../stores/userStore';
 import { useSyncStore, SYNC_INTERVAL_OPTIONS } from '../../stores/syncStore';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useDataUsageStore } from '../../stores/dataUsageStore';
+import { useHelpStore } from '../../stores/helpStore';
 import { apiFetch, apiUrl } from '../../utils/api';
 import { config } from '../../config';
 import type { VideoQuality, QualityBandwidth } from '../../types';
@@ -69,7 +70,8 @@ interface ChannelResult {
 }
 
 export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
-  const { trackAuth, trackFeature } = useAnalytics();
+  const { trackAuth, trackFeature, trackButton } = useAnalytics();
+  const openHelpModal = useHelpStore((state) => state.openModal);
 
   const authenticated = useAuthStore((state) => state.authenticated);
   const authUser = useAuthStore((state) => state.user);
@@ -735,6 +737,28 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
             </span>
           </button>
         </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <QuestionMarkCircleIcon />
+          <h3 className={styles.sectionTitle}>ヘルプ</h3>
+        </div>
+        <p className={styles.description}>
+          使い方やよくある質問を確認できます。
+        </p>
+        <button
+          type="button"
+          className={styles.helpButton}
+          onClick={() => {
+            openHelpModal();
+            trackButton('help', 'account_menu');
+            onClose();
+          }}
+        >
+          <QuestionMarkCircleIcon />
+          <span>ヘルプを開く</span>
+        </button>
       </section>
     </div>
   );

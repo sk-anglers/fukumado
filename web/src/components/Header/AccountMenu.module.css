@@ -558,3 +558,29 @@
   line-height: 1.4;
   font-style: italic;
 }
+
+.helpButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  background: rgba(14, 116, 144, 0.35);
+  padding: 0.5rem 0.8rem;
+  font-size: 0.8rem;
+  color: rgba(191, 219, 254, 0.92);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.helpButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.helpButton:hover {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(8, 145, 178, 0.5);
+}
