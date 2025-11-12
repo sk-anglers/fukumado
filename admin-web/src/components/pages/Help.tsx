@@ -35,6 +35,9 @@ export const Help: React.FC = () => {
   const [formData, setFormData] = useState<HelpFormData>(INITIAL_FORM_DATA);
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageAlt, setImageAlt] = useState('');
 
   useEffect(() => {
     loadArticles();
@@ -129,6 +132,38 @@ export const Help: React.FC = () => {
     }
   };
 
+  const convertGoogleDriveUrl = (url: string): string => {
+    // Google Drive の共有リンクを画像表示用URLに変換
+    // https://drive.google.com/file/d/FILE_ID/view → https://drive.google.com/uc?export=view&id=FILE_ID
+    const match = url.match(/\/file\/d\/([^\/]+)/);
+    if (match) {
+      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+    }
+    // 既に変換済み、または通常のURL
+    return url;
+  };
+
+  const handleInsertImage = () => {
+    if (!imageUrl.trim()) {
+      alert('画像URLを入力してください');
+      return;
+    }
+
+    const convertedUrl = convertGoogleDriveUrl(imageUrl);
+    const markdown = `![${imageAlt || '画像'}](${convertedUrl})`;
+
+    // カーソル位置に挿入（簡易実装：末尾に追加）
+    setFormData({
+      ...formData,
+      content: formData.content + '\n\n' + markdown + '\n\n'
+    });
+
+    // ダイアログをクリア
+    setShowImageDialog(false);
+    setImageUrl('');
+    setImageAlt('');
+  };
+
   const uniqueCategories = Array.from(new Set(articles.map(a => a.category)));
 
   if (loading && articles.length === 0) {
@@ -184,6 +219,15 @@ export const Help: React.FC = () => {
 
             <div className={styles.formGroup}>
               <label htmlFor="content">内容（Markdown対応）</label>
+              <div className={styles.contentActions}>
+                <button
+                  type="button"
+                  onClick={() => setShowImageDialog(true)}
+                  className={styles.imageButton}
+                >
+                  📷 画像挿入
+                </button>
+              </div>
               <textarea
                 id="content"
                 value={formData.content}
@@ -227,6 +271,58 @@ export const Help: React.FC = () => {
               </button>
             </div>
           </form>
+
+          {/* 画像挿入ダイアログ */}
+          {showImageDialog && (
+            <div className={styles.imageDialogOverlay} onClick={() => setShowImageDialog(false)}>
+              <div className={styles.imageDialog} onClick={(e) => e.stopPropagation()}>
+                <h3>画像を挿入</h3>
+                <div className={styles.imageDialogContent}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="imageUrl">画像URL（Googleドライブの共有リンク可）</label>
+                    <input
+                      id="imageUrl"
+                      type="text"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="https://drive.google.com/file/d/xxx/view"
+                    />
+                    <small>※ Googleドライブの場合、「リンクを知っている全員」に設定してください</small>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="imageAlt">画像の説明（任意）</label>
+                    <input
+                      id="imageAlt"
+                      type="text"
+                      value={imageAlt}
+                      onChange={(e) => setImageAlt(e.target.value)}
+                      placeholder="例: スクリーンショット"
+                    />
+                  </div>
+                  <div className={styles.imageDialogActions}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowImageDialog(false);
+                        setImageUrl('');
+                        setImageAlt('');
+                      }}
+                      className={styles.cancelButton}
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleInsertImage}
+                      className={styles.submitButton}
+                    >
+                      挿入
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <>

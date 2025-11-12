@@ -264,6 +264,33 @@
   line-height: 1.6;
 }
 
+.formGroup small {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+.contentActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.imageButton {
+  padding: 0.5rem 1rem;
+  background-color: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.imageButton:hover {
+  background-color: #475569;
+}
+
 .formRow {
   display: grid;
   grid-template-columns: 200px 1fr;
@@ -322,6 +349,48 @@
 
 .submitButton:hover {
   background-color: #0078C4;
+}
+
+.imageDialogOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.imageDialog {
+  background-color: #1e293b;
+  border-radius: 8px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.imageDialog h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #e2e8f0;
+  font-size: 1.25rem;
+}
+
+.imageDialogContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.imageDialogActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 768px) {
