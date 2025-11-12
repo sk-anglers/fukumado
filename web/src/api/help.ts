@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { apiFetch } from '../utils/api';
 
 export interface HelpArticle {
   id: string;
@@ -34,8 +34,8 @@ export const getHelpArticles = async (category?: string): Promise<HelpArticle[]>
       params.append('category', category);
     }
 
-    const url = `${API_BASE_URL}/api/help/articles${params.toString() ? `?${params.toString()}` : ''}`;
-    const response = await fetch(url);
+    const url = `/api/help/articles${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await apiFetch(url);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch help articles: ${response.statusText}`);
@@ -59,7 +59,7 @@ export const getHelpArticles = async (category?: string): Promise<HelpArticle[]>
  */
 export const getHelpArticle = async (id: string): Promise<HelpArticle> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/help/articles/${id}`);
+    const response = await apiFetch(`/api/help/articles/${id}`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch help article: ${response.statusText}`);
@@ -83,7 +83,7 @@ export const getHelpArticle = async (id: string): Promise<HelpArticle> => {
  */
 export const incrementArticleView = async (id: string): Promise<void> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/help/articles/${id}/view`, {
+    const response = await apiFetch(`/api/help/articles/${id}/view`, {
       method: 'POST'
     });
 
