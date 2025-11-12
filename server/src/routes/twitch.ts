@@ -224,11 +224,18 @@ async function parseEmotesFromMessage(
   message: string
 ): Promise<Array<{ id: string; positions: Array<{ start: number; end: number }> }>> {
   try {
+    console.log('[Twitch Chat] parseEmotesFromMessage - Start');
+    console.log('[Twitch Chat]   - Message:', message);
+    console.log('[Twitch Chat]   - BroadcasterId:', broadcasterId);
+
     // グローバルエモートとチャンネルエモートを取得
     const [globalEmotes, channelEmotes] = await Promise.all([
       fetchGlobalEmotes(accessToken),
       fetchChannelEmotes(accessToken, broadcasterId)
     ]);
+
+    console.log('[Twitch Chat]   - Global emotes count:', globalEmotes.length);
+    console.log('[Twitch Chat]   - Channel emotes count:', channelEmotes.length);
 
     // エモート名をIDにマッピング
     const emoteMap = new Map<string, string>();
@@ -236,15 +243,22 @@ async function parseEmotesFromMessage(
       emoteMap.set(emote.name, emote.id);
     });
 
+    console.log('[Twitch Chat]   - Total emote map size:', emoteMap.size);
+    console.log('[Twitch Chat]   - Sample emotes:', Array.from(emoteMap.keys()).slice(0, 10));
+
     // メッセージをトークンに分割してエモートを検出
     const emotePositions = new Map<string, Array<{ start: number; end: number }>>();
     let currentPos = 0;
 
     // スペースで分割してトークンを処理
     const tokens = message.split(' ');
+    console.log('[Twitch Chat]   - Tokens to check:', tokens);
+
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
       const emoteId = emoteMap.get(token);
+
+      console.log(`[Twitch Chat]   - Token "${token}": ${emoteId ? `Found (ID: ${emoteId})` : 'Not found'}`);
 
       if (emoteId) {
         // エモートが見つかった
@@ -270,9 +284,12 @@ async function parseEmotesFromMessage(
       result.push({ id, positions });
     });
 
+    console.log('[Twitch Chat]   - Result emotes:', result.length);
     return result;
   } catch (error) {
     console.error('[Twitch Chat] Error parsing emotes:', error);
+    console.error('[Twitch Chat] Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('[Twitch Chat] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     // エモートのパースに失敗しても、メッセージ送信自体は成功しているので空配列を返す
     return [];
   }
