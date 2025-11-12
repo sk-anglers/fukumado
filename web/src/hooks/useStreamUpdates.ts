@@ -4,7 +4,6 @@ import { useNotificationStore } from '../stores/notificationStore';
 import { useSyncStore } from '../stores/syncStore';
 import { useAuthStore } from '../stores/authStore';
 import { useMaintenanceStore } from '../stores/maintenanceStore';
-import { useAnnouncementStore } from '../stores/announcementStore';
 import { websocketService } from '../services/websocketService';
 import type { Streamer } from '../types';
 
@@ -162,9 +161,6 @@ export const useStreamUpdates = (
           console.log('[useStreamUpdates] Initial load, skipping notifications');
           isFirstLoadRef.current = false;
         }
-      } else if (message.type === 'announcement_update') {
-        console.log('[useStreamUpdates] Announcement update received, reloading announcements');
-        useAnnouncementStore.getState().loadAnnouncements();
       }
     });
 
