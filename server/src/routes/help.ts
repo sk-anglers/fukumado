@@ -4,6 +4,21 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 export const helpRouter = Router();
 
+// BigIntをStringに変換するヘルパー関数
+const serializeBigInt = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return obj.toString();
+  if (Array.isArray(obj)) return obj.map(serializeBigInt);
+  if (typeof obj === 'object') {
+    const serialized: any = {};
+    for (const key in obj) {
+      serialized[key] = serializeBigInt(obj[key]);
+    }
+    return serialized;
+  }
+  return obj;
+};
+
 /**
  * GET /api/help/articles
  * 公開済みヘルプ記事一覧取得（カテゴリ別、表示順でソート）
@@ -40,7 +55,7 @@ helpRouter.get('/articles', async (req, res) => {
 
     res.json({
       success: true,
-      data: articles,
+      data: serializeBigInt(articles),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -80,7 +95,7 @@ helpRouter.get('/articles/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: article,
+      data: serializeBigInt(article),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -120,7 +135,7 @@ helpRouter.post('/articles/:id/view', async (req, res) => {
 
     res.json({
       success: true,
-      data: article,
+      data: serializeBigInt(article),
       timestamp: new Date().toISOString()
     });
   } catch (error) {

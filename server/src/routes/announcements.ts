@@ -4,6 +4,21 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 export const announcementsRouter = Router();
 
+// BigIntをStringに変換するヘルパー関数
+const serializeBigInt = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return obj.toString();
+  if (Array.isArray(obj)) return obj.map(serializeBigInt);
+  if (typeof obj === 'object') {
+    const serialized: any = {};
+    for (const key in obj) {
+      serialized[key] = serializeBigInt(obj[key]);
+    }
+    return serialized;
+  }
+  return obj;
+};
+
 /**
  * GET /api/announcements
  * 有効なお知らせ一覧取得（表示期間内、優先度順）
@@ -50,7 +65,7 @@ announcementsRouter.get('/', async (req, res) => {
 
     res.json({
       success: true,
-      data: announcements,
+      data: serializeBigInt(announcements),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
