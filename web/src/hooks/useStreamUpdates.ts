@@ -4,6 +4,7 @@ import { useNotificationStore } from '../stores/notificationStore';
 import { useSyncStore } from '../stores/syncStore';
 import { useAuthStore } from '../stores/authStore';
 import { useMaintenanceStore } from '../stores/maintenanceStore';
+import { useAnnouncementStore } from '../stores/announcementStore';
 import { websocketService } from '../services/websocketService';
 import type { Streamer } from '../types';
 
@@ -87,6 +88,7 @@ export const useStreamUpdates = (
   const sessionId = useAuthStore((state) => state.sessionId);
   const setMaintenance = useMaintenanceStore((state) => state.setMaintenance);
   const clearMaintenance = useMaintenanceStore((state) => state.clearMaintenance);
+  const loadAnnouncements = useAnnouncementStore((state) => state.loadAnnouncements);
 
   // WebSocket接続の確立とメッセージハンドラー登録（常に実行）
   useEffect(() => {
@@ -161,6 +163,9 @@ export const useStreamUpdates = (
           console.log('[useStreamUpdates] Initial load, skipping notifications');
           isFirstLoadRef.current = false;
         }
+      } else if (message.type === 'announcement_update') {
+        console.log('[useStreamUpdates] Announcement update received, reloading announcements');
+        loadAnnouncements();
       }
     });
 
@@ -184,7 +189,8 @@ export const useStreamUpdates = (
     setLastSyncTime,
     addNotification,
     setMaintenance,
-    clearMaintenance
+    clearMaintenance,
+    loadAnnouncements
   ]);
 
   // チャンネルまたはsessionIdが変更されたらsubscribeメッセージを送信
