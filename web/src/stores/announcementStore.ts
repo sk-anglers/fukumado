@@ -6,61 +6,57 @@ const DISMISSED_ANNOUNCEMENTS_KEY = 'fukumado_dismissed_announcements';
 interface AnnouncementState {
   // 状態
   announcements: Announcement[];
-  dismissedVersions: Map<string, number>; // id -> 閉じた時のversion
+  dismissedIds: Set<string>; // 閉じられたお知らせのIDセット
   loading: boolean;
   error: string | null;
 
   // アクション
   loadAnnouncements: () => Promise<void>;
-  dismissAnnouncement: (id: string, version: number) => void;
+  dismissAnnouncement: (id: string) => void;
   clearDismissed: () => void;
   getVisibleAnnouncements: () => Announcement[];
   setError: (error: string | null) => void;
 }
 
 /**
- * ローカルストレージから閉じられたお知らせID->versionマップを取得
+ * ローカルストレージから閉じられたお知らせIDセットを取得
  */
-const loadDismissedVersions = (): Map<string, number> => {
+const loadDismissedIds = (): Set<string> => {
   try {
     const stored = localStorage.getItem(DISMISSED_ANNOUNCEMENTS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // オブジェクト形式 {id: version} から Map へ変換
-      if (typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return new Map(Object.entries(parsed).map(([id, version]) => [id, version as number]));
-      }
-      // 旧形式（配列）の場合は version=1 として扱う（後方互換性）
+      // 配列形式の場合はSetに変換
       if (Array.isArray(parsed)) {
-        return new Map(parsed.map(id => [id, 1]));
+        return new Set(parsed);
+      }
+      // オブジェクト形式（旧version管理形式）の場合はキーのみ取得（後方互換性）
+      if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return new Set(Object.keys(parsed));
       }
     }
   } catch (error) {
-    console.error('[AnnouncementStore] Error loading dismissed versions:', error);
+    console.error('[AnnouncementStore] Error loading dismissed IDs:', error);
   }
-  return new Map();
+  return new Set();
 };
 
 /**
- * ローカルストレージに閉じられたお知らせID->versionマップを保存
+ * ローカルストレージに閉じられたお知らせIDセットを保存
  */
-const saveDismissedVersions = (versions: Map<string, number>): void => {
+const saveDismissedIds = (ids: Set<string>): void => {
   try {
-    // Map を オブジェクト形式 {id: version} に変換
-    const obj: Record<string, number> = {};
-    versions.forEach((version, id) => {
-      obj[id] = version;
-    });
-    localStorage.setItem(DISMISSED_ANNOUNCEMENTS_KEY, JSON.stringify(obj));
+    // Setを配列に変換して保存
+    localStorage.setItem(DISMISSED_ANNOUNCEMENTS_KEY, JSON.stringify([...ids]));
   } catch (error) {
-    console.error('[AnnouncementStore] Error saving dismissed versions:', error);
+    console.error('[AnnouncementStore] Error saving dismissed IDs:', error);
   }
 };
 
 export const useAnnouncementStore = create<AnnouncementState>((set, get) => ({
   // 初期状態
   announcements: [],
-  dismissedVersions: loadDismissedVersions(),
+  dismissedIds: loadDismissedIds(),
   loading: false,
   error: null,
 
@@ -86,29 +82,27 @@ export const useAnnouncementStore = create<AnnouncementState>((set, get) => ({
     }
   },
 
-  // お知らせを閉じる（id と version を記録）
-  dismissAnnouncement: (id: string, version: number) => {
-    const { dismissedVersions } = get();
-    const newDismissedVersions = new Map(dismissedVersions);
-    newDismissedVersions.set(id, version);
-    saveDismissedVersions(newDismissedVersions);
-    set({ dismissedVersions: newDismissedVersions });
+  // お知らせを閉じる（IDを記録）
+  dismissAnnouncement: (id: string) => {
+    const { dismissedIds } = get();
+    const newDismissedIds = new Set(dismissedIds);
+    newDismissedIds.add(id);
+    saveDismissedIds(newDismissedIds);
+    set({ dismissedIds: newDismissedIds });
   },
 
   // 閉じたお知らせをクリア（全て再表示）
   clearDismissed: () => {
-    saveDismissedVersions(new Map());
-    set({ dismissedVersions: new Map() });
+    saveDismissedIds(new Set());
+    set({ dismissedIds: new Set() });
   },
 
   // 表示すべきお知らせを取得
-  // お知らせのforceDisplayVersionが、閉じた時のversionより大きければ再表示
   getVisibleAnnouncements: () => {
-    const { announcements, dismissedVersions } = get();
+    const { announcements, dismissedIds } = get();
     return announcements.filter(announcement => {
-      const dismissedVersion = dismissedVersions.get(announcement.id);
-      // 閉じられていない、または閉じた時より新しいバージョンなら表示
-      return dismissedVersion === undefined || announcement.forceDisplayVersion > dismissedVersion;
+      // 閉じられていないお知らせのみ表示
+      return !dismissedIds.has(announcement.id);
     });
   },
 

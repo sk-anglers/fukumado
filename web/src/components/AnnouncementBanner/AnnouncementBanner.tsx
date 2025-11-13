@@ -5,18 +5,17 @@ import './AnnouncementBanner.css';
 
 export const AnnouncementBanner: React.FC = () => {
   const announcements = useAnnouncementStore((state) => state.announcements);
-  const dismissedVersions = useAnnouncementStore((state) => state.dismissedVersions);
+  const dismissedIds = useAnnouncementStore((state) => state.dismissedIds);
   const loadAnnouncements = useAnnouncementStore((state) => state.loadAnnouncements);
   const dismissAnnouncement = useAnnouncementStore((state) => state.dismissAnnouncement);
 
   // storeの状態から表示すべきお知らせを計算
   const visibleAnnouncements = useMemo(() => {
     return announcements.filter(announcement => {
-      const dismissedVersion = dismissedVersions.get(announcement.id);
-      // 閉じられていない、または閉じた時より新しいバージョンなら表示
-      return dismissedVersion === undefined || announcement.forceDisplayVersion > dismissedVersion;
+      // 閉じられていないお知らせのみ表示
+      return !dismissedIds.has(announcement.id);
     });
-  }, [announcements, dismissedVersions]);
+  }, [announcements, dismissedIds]);
 
   useEffect(() => {
     loadAnnouncements();
@@ -65,7 +64,7 @@ export const AnnouncementBanner: React.FC = () => {
           </div>
           <button
             className="announcement-close"
-            onClick={() => dismissAnnouncement(announcement.id, announcement.forceDisplayVersion)}
+            onClick={() => dismissAnnouncement(announcement.id)}
             aria-label="お知らせを閉じる"
           >
             ✕

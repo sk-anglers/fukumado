@@ -6,7 +6,6 @@ import {
   updateAnnouncement,
   deleteAnnouncement,
   toggleAnnouncementActive,
-  forceDisplayAnnouncement,
   type Announcement
 } from '../../services/apiClient';
 import styles from './Announcements.module.css';
@@ -160,17 +159,6 @@ export const Announcements: React.FC = () => {
     }
   };
 
-  const handleForceDisplay = async (id: string) => {
-    try {
-      setError(null);
-      await forceDisplayAnnouncement(id);
-      alert('お知らせを全ユーザーに強制表示しました');
-      await loadAnnouncements();
-    } catch (err) {
-      setError('強制表示に失敗しました');
-      console.error('Failed to force display announcement:', err);
-    }
-  };
 
   const getTypeLabel = (type: string) => {
     return ANNOUNCEMENT_TYPES.find(t => t.value === type)?.label || type;
@@ -394,13 +382,6 @@ export const Announcements: React.FC = () => {
                         className={styles.toggleButton}
                       >
                         {announcement.isActive ? '無効化' : '有効化'}
-                      </button>
-                      <button
-                        onClick={() => handleForceDisplay(announcement.id)}
-                        className={styles.forceDisplayButton}
-                        title="全ユーザーに再表示"
-                      >
-                        強制表示
                       </button>
                       {showDeleteConfirm === announcement.id ? (
                         <div className={styles.deleteConfirm}>
