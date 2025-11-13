@@ -1,6 +1,7 @@
 import { BellAlertIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { config } from '../../config';
+import { trackButtonClick } from '../../utils/gtm';
 import styles from './NotificationMenu.module.css';
 
 interface NotificationMenuProps {
@@ -69,11 +70,29 @@ export const NotificationMenu = ({ onClose }: NotificationMenuProps): JSX.Elemen
           <div className={styles.notificationHistoryHeader}>
             <span>通知履歴 ({notifications.filter(n => !n.read).length}件未読)</span>
             <div className={styles.notificationActions}>
-              <button type="button" onClick={markAllAsRead} disabled={notifications.length === 0}>
+              <button
+                type="button"
+                onClick={() => {
+                  trackButtonClick('notification_mark_all_read', {
+                    unread_count: notifications.filter(n => !n.read).length
+                  });
+                  markAllAsRead();
+                }}
+                disabled={notifications.length === 0}
+              >
                 <CheckIcon />
                 全て既読
               </button>
-              <button type="button" onClick={clearAll} disabled={notifications.length === 0}>
+              <button
+                type="button"
+                onClick={() => {
+                  trackButtonClick('notification_clear_all', {
+                    notification_count: notifications.length
+                  });
+                  clearAll();
+                }}
+                disabled={notifications.length === 0}
+              >
                 <TrashIcon />
                 クリア
               </button>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { trackButtonClick } from '../utils/gtm';
 import './CookieConsentBanner.css';
 
 interface CookieConsentBannerProps {
@@ -16,6 +17,8 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ isOpen
   const [marketingCookies, setMarketingCookies] = useState(true);
 
   const handleAcceptAll = () => {
+    // GTMトラッキング
+    trackButtonClick('cookie_consent_accept_all');
     onAccept({
       essential_cookies: true,
       analytics_cookies: true,
@@ -24,6 +27,11 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ isOpen
   };
 
   const handleAcceptSelected = () => {
+    // GTMトラッキング
+    trackButtonClick('cookie_consent_save_selection', {
+      analytics_cookies: analyticsCookies,
+      marketing_cookies: marketingCookies
+    });
     onAccept({
       essential_cookies: true,
       analytics_cookies: analyticsCookies,
@@ -32,6 +40,8 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ isOpen
   };
 
   const handleRejectAll = () => {
+    // GTMトラッキング
+    trackButtonClick('cookie_consent_essential_only');
     onAccept({
       essential_cookies: true,
       analytics_cookies: false,
@@ -116,7 +126,13 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ isOpen
               <button className="cookie-button cookie-button-primary" onClick={handleAcceptAll}>
                 すべて許可
               </button>
-              <button className="cookie-button cookie-button-secondary" onClick={() => setShowCustomize(true)}>
+              <button
+                className="cookie-button cookie-button-secondary"
+                onClick={() => {
+                  trackButtonClick('cookie_consent_customize');
+                  setShowCustomize(true);
+                }}
+              >
                 カスタマイズ
               </button>
               <button className="cookie-button cookie-button-tertiary" onClick={handleRejectAll}>
@@ -128,7 +144,13 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ isOpen
               <button className="cookie-button cookie-button-primary" onClick={handleAcceptSelected}>
                 選択を保存
               </button>
-              <button className="cookie-button cookie-button-secondary" onClick={() => setShowCustomize(false)}>
+              <button
+                className="cookie-button cookie-button-secondary"
+                onClick={() => {
+                  trackButtonClick('cookie_consent_back');
+                  setShowCustomize(false);
+                }}
+              >
                 戻る
               </button>
             </>

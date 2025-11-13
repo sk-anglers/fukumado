@@ -20,6 +20,7 @@ import { useMobileMenuStore } from '../../stores/mobileMenuStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { apiFetch } from '../../utils/api';
+import { trackButtonClick, trackSearch } from '../../utils/gtm';
 import type { ChannelSearchResult, LayoutPreset } from '../../types';
 import { config } from '../../config';
 import { AccountMenu } from './AccountMenu';
@@ -170,6 +171,9 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
       setShowDropdown(false);
       return;
     }
+
+    // GTMトラッキング
+    trackSearch(trimmed);
 
     setShowDropdown(true);
     setChannelSearchLoading(true);
@@ -562,7 +566,13 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                       <button
                         type="button"
                         className={clsx(styles.volumeSlotMute, slot.muted && styles.volumeSlotMuteMuted)}
-                        onClick={() => toggleSlotMute(slot.id)}
+                        onClick={() => {
+                          trackButtonClick('header_slot_mute_toggle', {
+                            slot_id: slot.id,
+                            action: slot.muted ? 'unmute' : 'mute'
+                          });
+                          toggleSlotMute(slot.id);
+                        }}
                         title={slot.muted ? 'ミュート解除' : 'ミュート'}
                       >
                         {slot.muted ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
@@ -657,6 +667,9 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                       activeSlotsCount === count && styles.slotMenuButtonActive
                     )}
                     onClick={() => {
+                      trackButtonClick('header_layout_change', {
+                        slots_count: count
+                      });
                       setActiveSlotsCount(count);
                     }}
                   >
@@ -710,7 +723,13 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                                   <button
                                     type="button"
                                     className={styles.followListDelete}
-                                    onClick={() => removeFollowedChannel(channel.channelId)}
+                                    onClick={() => {
+                                      trackButtonClick('header_unfollow_channel', {
+                                        platform: 'youtube',
+                                        channel_id: channel.channelId
+                                      });
+                                      removeFollowedChannel(channel.channelId);
+                                    }}
                                     title="フォロー削除"
                                   >
                                     <TrashIcon />
@@ -737,7 +756,13 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
                                   <button
                                     type="button"
                                     className={styles.followListDelete}
-                                    onClick={() => removeFollowedChannel(channel.channelId)}
+                                    onClick={() => {
+                                      trackButtonClick('header_unfollow_channel', {
+                                        platform: 'twitch',
+                                        channel_id: channel.channelId
+                                      });
+                                      removeFollowedChannel(channel.channelId);
+                                    }}
                                     title="フォロー削除"
                                   >
                                     <TrashIcon />
@@ -759,7 +784,12 @@ export const Header = ({ onOpenPresetModal }: HeaderProps): JSX.Element => {
           <button
             className={styles.controlButton}
             type="button"
-            onClick={() => setShowNotificationMenu(!showNotificationMenu)}
+            onClick={() => {
+              trackButtonClick('header_notification_menu_toggle', {
+                action: showNotificationMenu ? 'close' : 'open'
+              });
+              setShowNotificationMenu(!showNotificationMenu);
+            }}
           >
             <BellAlertIcon />
             <span>通知</span>

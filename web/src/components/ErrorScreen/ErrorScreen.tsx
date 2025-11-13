@@ -1,4 +1,5 @@
 import React from 'react';
+import { trackButtonClick } from '../../utils/gtm';
 import styles from './ErrorScreen.module.css';
 
 interface ErrorScreenProps {
@@ -26,11 +27,19 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({ error, resetError }) =
 
   const handleReload = () => {
     console.log('[ErrorScreen] Reload button clicked');
+    // GTMトラッキング
+    trackButtonClick('error_screen_reload', {
+      error_message: error?.message
+    });
     window.location.reload();
   };
 
   const handleGoHome = () => {
     console.log('[ErrorScreen] Home button clicked');
+    // GTMトラッキング
+    trackButtonClick('error_screen_go_home', {
+      error_message: error?.message
+    });
     window.location.href = '/';
   };
 

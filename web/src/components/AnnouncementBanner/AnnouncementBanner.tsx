@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useAnnouncementStore } from '../../stores/announcementStore';
 import { getAnnouncementColor, getAnnouncementBgColor } from '../../api/announcements';
+import { trackButtonClick } from '../../utils/gtm';
 import './AnnouncementBanner.css';
 
 export const AnnouncementBanner: React.FC = () => {
@@ -64,7 +65,13 @@ export const AnnouncementBanner: React.FC = () => {
           </div>
           <button
             className="announcement-close"
-            onClick={() => dismissAnnouncement(announcement.id)}
+            onClick={() => {
+              trackButtonClick('announcement_dismiss', {
+                announcement_id: announcement.id,
+                announcement_type: announcement.type
+              });
+              dismissAnnouncement(announcement.id);
+            }}
             aria-label="お知らせを閉じる"
           >
             ✕

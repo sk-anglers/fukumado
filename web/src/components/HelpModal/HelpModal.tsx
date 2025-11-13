@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useHelpStore } from '../../stores/helpStore';
+import { trackButtonClick } from '../../utils/gtm';
 import './HelpModal.css';
 
 export const HelpModal: React.FC = () => {
@@ -34,6 +35,10 @@ export const HelpModal: React.FC = () => {
   };
 
   const handleCategoryChange = (category: string | null) => {
+    // GTMトラッキング
+    trackButtonClick('help_category_change', {
+      category: category || 'all'
+    });
     setSelectedCategory(category);
   };
 
@@ -42,6 +47,10 @@ export const HelpModal: React.FC = () => {
   };
 
   const handleBack = () => {
+    // GTMトラッキング
+    trackButtonClick('help_article_back', {
+      article_id: selectedArticle?.id
+    });
     useHelpStore.setState({ selectedArticle: null });
   };
 
@@ -127,7 +136,13 @@ export const HelpModal: React.FC = () => {
       <div className="help-modal">
         <div className="help-modal-header">
           <h2>ヘルプ</h2>
-          <button className="help-modal-close" onClick={closeModal}>
+          <button
+            className="help-modal-close"
+            onClick={() => {
+              trackButtonClick('help_modal_close');
+              closeModal();
+            }}
+          >
             ✕
           </button>
         </div>

@@ -6,6 +6,7 @@ import { useLayoutStore } from '../../stores/layoutStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { apiFetch } from '../../utils/api';
+import { trackButtonClick } from '../../utils/gtm';
 import styles from './EmotePicker.module.css';
 
 interface Emote {
@@ -142,12 +143,23 @@ export const EmotePicker = ({ onSelectEmote }: EmotePickerProps): JSX.Element =>
       console.error('[EmotePicker] Analytics tracking error:', err);
     }
 
+    // GTMトラッキング
+    trackButtonClick('emote_select', {
+      emote_name: emoteName,
+      category: category
+    });
+
     onSelectEmote(emoteName);
     setIsOpen(false);
     setSearchQuery('');
   };
 
   const togglePicker = () => {
+    // GTMトラッキング
+    trackButtonClick('emote_picker_toggle', {
+      action: isOpen ? 'close' : 'open'
+    });
+
     setIsOpen(!isOpen);
     if (!isOpen) {
       setSearchQuery('');
@@ -255,7 +267,12 @@ export const EmotePicker = ({ onSelectEmote }: EmotePickerProps): JSX.Element =>
               <button
                 type="button"
                 className={clsx(styles.tabButton, category === 'global' && styles.tabButtonActive)}
-                onClick={() => setCategory('global')}
+                onClick={() => {
+                  trackButtonClick('emote_category_change', {
+                    category: 'global'
+                  });
+                  setCategory('global');
+                }}
               >
                 グローバル
               </button>
@@ -263,7 +280,12 @@ export const EmotePicker = ({ onSelectEmote }: EmotePickerProps): JSX.Element =>
                 <button
                   type="button"
                   className={clsx(styles.tabButton, category === 'channel' && styles.tabButtonActive)}
-                  onClick={() => setCategory('channel')}
+                  onClick={() => {
+                    trackButtonClick('emote_category_change', {
+                      category: 'channel'
+                    });
+                    setCategory('channel');
+                  }}
                 >
                   チャンネル
                 </button>

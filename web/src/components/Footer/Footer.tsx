@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { LegalModal } from '../Legal/LegalModal';
+import { trackButtonClick } from '../../utils/gtm';
 import styles from './Footer.module.css';
 
 export function Footer(): JSX.Element {
@@ -7,11 +8,15 @@ export function Footer(): JSX.Element {
   const [legalType, setLegalType] = useState<'terms' | 'privacy'>('terms');
 
   const handleOpenTerms = (): void => {
+    // GTMトラッキング
+    trackButtonClick('footer_open_terms');
     setLegalType('terms');
     setLegalModalOpen(true);
   };
 
   const handleOpenPrivacy = (): void => {
+    // GTMトラッキング
+    trackButtonClick('footer_open_privacy');
     setLegalType('privacy');
     setLegalModalOpen(true);
   };

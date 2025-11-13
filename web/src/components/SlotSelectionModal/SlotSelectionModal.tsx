@@ -2,6 +2,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { useLayoutStore } from '../../stores/layoutStore';
 import type { Streamer } from '../../types';
+import { trackButtonClick } from '../../utils/gtm';
 import styles from './SlotSelectionModal.module.css';
 
 interface SlotSelectionModalProps {
@@ -26,6 +27,13 @@ export const SlotSelectionModal = ({ stream, onClose }: SlotSelectionModalProps)
   const activeSlots = slots.slice(0, activeSlotsCount);
 
   const handleSlotClick = (slotId: string): void => {
+    // GTMトラッキング
+    trackButtonClick('slot_selection_assign', {
+      slot_id: slotId,
+      platform: stream.platform,
+      channel_id: stream.id
+    });
+
     assignStream(slotId, stream);
     onClose();
   };
@@ -41,7 +49,14 @@ export const SlotSelectionModal = ({ stream, onClose }: SlotSelectionModalProps)
       <div className={styles.modal}>
         <div className={styles.header}>
           <h2>配置する枠を選択</h2>
-          <button type="button" className={styles.closeButton} onClick={onClose}>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={() => {
+              trackButtonClick('slot_selection_modal_close');
+              onClose();
+            }}
+          >
             <XMarkIcon />
           </button>
         </div>
