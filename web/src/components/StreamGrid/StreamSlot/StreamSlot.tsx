@@ -11,6 +11,7 @@ import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { useLayoutStore } from '../../../stores/layoutStore';
 import { useAnalytics } from '../../../hooks/useAnalytics';
+import { trackStreamAction, trackButtonClick } from '../../../utils/gtm';
 import type { StreamSlot, VideoQuality } from '../../../types';
 import { loadYouTubeIframeApi } from '../../../hooks/useYouTubeIframeApi';
 import { loadTwitchEmbedApi, type TwitchPlayer, type TwitchQuality } from '../../../hooks/useTwitchEmbed';
@@ -777,6 +778,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                           platform: assignedStream.platform,
                           slotId: slot.id
                         });
+                        trackStreamAction('clear', assignedStream.platform, slot.id);
                       }
                     }}
                     aria-label="配信を削除"
@@ -800,6 +802,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                           platform: assignedStream.platform,
                           slotId: slot.id
                         });
+                        trackStreamAction(slot.muted ? 'unmute' : 'mute', assignedStream.platform, slot.id);
                       }
                     }}
                     aria-label={slot.muted ? 'ミュート解除' : 'ミュート'}
@@ -824,6 +827,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
               e.stopPropagation();
               setShowSelectionModal(true);
               setModalOpen(true);
+              trackButtonClick('stream_slot_add');
             }}
           >
             <span className={styles.placeholderIcon}>＋</span>
@@ -868,6 +872,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                             platform: assignedStream.platform,
                             slotId: slot.id
                           });
+                          trackStreamAction('clear', assignedStream.platform, slot.id);
                         }
                       }}
                     >
@@ -913,6 +918,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                             platform: assignedStream.platform,
                             slotId: slot.id
                           });
+                          trackStreamAction(slot.muted ? 'unmute' : 'mute', assignedStream.platform, slot.id);
                         }
                       }}
                     >
@@ -940,6 +946,11 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                               platform: assignedStream.platform,
                               slotId: slot.id,
                               value: slot.volume
+                            });
+                            trackButtonClick('stream_slot_volume', {
+                              platform: assignedStream.platform,
+                              slot_index: slot.id,
+                              volume: slot.volume
                             });
                           }
                         }}

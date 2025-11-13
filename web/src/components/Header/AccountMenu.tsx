@@ -9,6 +9,7 @@ import { useDataUsageStore } from '../../stores/dataUsageStore';
 import { useHelpStore } from '../../stores/helpStore';
 import { apiFetch, apiUrl } from '../../utils/api';
 import { config } from '../../config';
+import { trackAuth, trackButtonClick, trackSyncAction } from '../../utils/gtm';
 import type { VideoQuality, QualityBandwidth } from '../../types';
 import type { TwitchPlayer } from '../../hooks/useTwitchEmbed';
 import styles from './AccountMenu.module.css';
@@ -306,11 +307,15 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
 
       // ログアウトをトラッキング
       trackAuth('youtube', 'logout', true);
+      // GTMトラッキング
+      trackAuth('logout', 'youtube', true);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setAuthError(message);
       // ログアウト失敗もトラッキング
       trackAuth('youtube', 'logout', false);
+      // GTMトラッキング
+      trackAuth('logout', 'youtube', false);
     } finally {
       setAuthLoading(false);
     }
@@ -376,6 +381,8 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   };
 
   const handleTwitchLogin = (): void => {
+    // GTMトラッキング
+    trackButtonClick('twitch_login_button');
     const authWindow = window.open(
       apiUrl('/auth/twitch'),
       'twitch-oauth',
@@ -456,11 +463,15 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
 
       // Twitchログアウト成功をトラッキング
       trackAuth('twitch', 'logout', true);
+      // GTMトラッキング
+      trackAuth('logout', 'twitch', true);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setTwitchError(message);
       // Twitchログアウト失敗をトラッキング
       trackAuth('twitch', 'logout', false);
+      // GTMトラッキング
+      trackAuth('logout', 'twitch', false);
     } finally {
       setTwitchLoading(false);
     }

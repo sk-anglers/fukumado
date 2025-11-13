@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { apiUrl, apiFetch } from '../../utils/api';
 import { useAuthStore } from '../../stores/authStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import { trackButtonClick } from '../../utils/gtm';
 import styles from './WelcomeScreen.module.css';
 
 interface WelcomeScreenProps {
@@ -34,6 +35,9 @@ export const WelcomeScreen = ({ onLoginSuccess }: WelcomeScreenProps): JSX.Eleme
   };
 
   const handleTwitchLogin = (): void => {
+    // GTMトラッキング
+    trackButtonClick('welcome_twitch_login');
+
     // モバイルの場合はリダイレクト方式
     if (isMobile) {
       window.location.href = apiUrl('/auth/twitch');

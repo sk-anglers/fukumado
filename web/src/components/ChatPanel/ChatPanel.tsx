@@ -11,6 +11,7 @@ import { config } from '../../config';
 import { apiFetch } from '../../utils/api';
 import type { Platform, ChatMessage, TwitchEmote } from '../../types';
 import { EmotePicker } from '../EmotePicker/EmotePicker';
+import { trackButtonClick, trackChatAction } from '../../utils/gtm';
 import styles from './ChatPanel.module.css';
 
 // メッセージテキストをエモート画像付きでレンダリング
@@ -254,7 +255,10 @@ export const ChatPanel = (): JSX.Element => {
             <button
               type="button"
               className={styles.closeButton}
-              onClick={() => setChatOpen(false)}
+              onClick={() => {
+                trackChatAction('close');
+                setChatOpen(false);
+              }}
               aria-label="チャットを閉じる"
             >
               <XMarkIcon />
@@ -270,7 +274,10 @@ export const ChatPanel = (): JSX.Element => {
             key={key}
             type="button"
             className={clsx(styles.tabButton, filter === key && styles.tabButtonActive)}
-            onClick={() => setFilter(key)}
+            onClick={() => {
+              trackButtonClick('chat_filter_change', { filter: key });
+              setFilter(key);
+            }}
           >
             {filterLabels[key]}
           </button>
@@ -362,7 +369,12 @@ export const ChatPanel = (): JSX.Element => {
           <button
             type="button"
             className={clsx(messageInput.trim().length > 0 && !isSending && styles.sendButtonActive)}
-            onClick={handleSendMessage}
+            onClick={() => {
+              trackButtonClick('chat_send_message', {
+                channel_id: selectedChannelId || undefined
+              });
+              handleSendMessage();
+            }}
             disabled={watchingStreams.length === 0 || !messageInput.trim() || isSending}
           >
             {isSending ? '送信中...' : '送信'}

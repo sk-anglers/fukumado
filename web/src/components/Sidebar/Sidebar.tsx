@@ -9,6 +9,7 @@ import { useIsMobile } from "../../hooks/useMediaQuery";
 import { SlotSelectionModal } from "../SlotSelectionModal/SlotSelectionModal";
 import { config } from "../../config";
 import { apiUrl, apiFetch } from "../../utils/api";
+import { trackButtonClick } from "../../utils/gtm";
 import styles from "./Sidebar.module.css";
 
 interface SidebarProps {
@@ -93,6 +94,9 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
   };
 
   const handleTwitchLogin = (): void => {
+    // GTMトラッキング
+    trackButtonClick('sidebar_twitch_login');
+
     // モバイルの場合はリダイレクト方式
     if (isMobile) {
       window.location.href = apiUrl('/auth/twitch');
@@ -242,6 +246,10 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                     style={{ backgroundColor: platformAccent[stream.platform] }}
                     onClick={(e) => {
                       e.stopPropagation();
+                      trackButtonClick('sidebar_open_on_platform', {
+                        platform: stream.platform,
+                        channel_id: stream.id
+                      });
                       const url = stream.platform === 'twitch'
                         ? `https://www.twitch.tv/${stream.channelLogin || stream.id}`
                         : stream.platform === 'youtube'
@@ -266,6 +274,10 @@ export const Sidebar = ({ onOpenPresetModal }: SidebarProps): JSX.Element => {
                   type="button"
                   className={styles.assignButton}
                   onClick={() => {
+                    trackButtonClick('sidebar_assign_stream', {
+                      platform: stream.platform,
+                      channel_id: stream.id
+                    });
                     setPendingStream(stream);
                   }}
                 >
