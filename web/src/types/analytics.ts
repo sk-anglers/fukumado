@@ -25,6 +25,8 @@ export type EventType =
   | 'search_performed'
   | 'volume_change'
   | 'chat_opened'
+  | 'chat_message_sent'
+  | 'emote_sent'
   | 'help_opened';
 
 export type LayoutPreset = 'twoByTwo' | 'oneByTwo' | 'focus';
@@ -317,6 +319,30 @@ export interface HelpOpenedEvent extends BaseEventData {
   };
 }
 
+// チャットメッセージ送信イベント
+export interface ChatMessageSentEvent extends BaseEventData {
+  type: 'chat_message_sent';
+  data: {
+    platform: Platform;
+    channelId: string;
+    channelName: string;
+    messageLength: number;
+    hasEmote: boolean;
+  };
+}
+
+// エモート送信イベント
+export interface EmoteSentEvent extends BaseEventData {
+  type: 'emote_sent';
+  data: {
+    platform: Platform;
+    channelId: string;
+    channelName: string;
+    emoteId: string;
+    emoteName: string;
+  };
+}
+
 export type AnalyticsEvent =
   | LayoutChangeEvent
   | ButtonClickEvent
@@ -340,4 +366,6 @@ export type AnalyticsEvent =
   | SearchPerformedEvent
   | VolumeChangeEvent
   | ChatOpenedEvent
+  | ChatMessageSentEvent
+  | EmoteSentEvent
   | HelpOpenedEvent;

@@ -22,6 +22,8 @@ import type {
   SearchPerformedEvent,
   VolumeChangeEvent,
   ChatOpenedEvent,
+  ChatMessageSentEvent,
+  EmoteSentEvent,
   HelpOpenedEvent,
   LayoutPreset,
   DeviceType,
@@ -631,6 +633,44 @@ export function trackHelpOpened(data: {
 }): void {
   const event: HelpOpenedEvent = {
     type: 'help_opened',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * チャットメッセージ送信イベントを送信
+ */
+export function trackChatMessageSent(data: {
+  platform: Platform;
+  channelId: string;
+  channelName: string;
+  messageLength: number;
+  hasEmote: boolean;
+}): void {
+  const event: ChatMessageSentEvent = {
+    type: 'chat_message_sent',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * エモート送信イベントを送信
+ */
+export function trackEmoteSent(data: {
+  platform: Platform;
+  channelId: string;
+  channelName: string;
+  emoteId: string;
+  emoteName: string;
+}): void {
+  const event: EmoteSentEvent = {
+    type: 'emote_sent',
     ...createBaseEventData(),
     data
   };

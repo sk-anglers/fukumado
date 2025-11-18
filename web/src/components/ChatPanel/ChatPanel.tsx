@@ -11,7 +11,7 @@ import { config } from '../../config';
 import { apiFetch } from '../../utils/api';
 import type { Platform, ChatMessage, TwitchEmote } from '../../types';
 import { EmotePicker } from '../EmotePicker/EmotePicker';
-import { trackButtonClick, trackChatAction } from '../../utils/gtm';
+import { trackChatOpened, trackChatMessageSent, trackEmoteSent } from '../../services/analyticsService';
 import styles from './ChatPanel.module.css';
 
 // メッセージテキストをエモート画像付きでレンダリング
@@ -174,9 +174,28 @@ export const ChatPanel = (): JSX.Element => {
       const emotes = responseData.emotes || [];
       const badges = responseData.badges || [];
 
-      // チャット送信成功をトラッキング（エラーがあっても継続）
+      // チャットメッセージ送信をトラッキング
       try {
-        trackFeature('chat', selectedStream.platform);
+        trackChatMessageSent({
+          platform: selectedStream.platform,
+          channelId: selectedChannelId,
+          channelName: selectedStream.displayName || selectedStream.channelLogin || 'unknown',
+          messageLength: messageInput.trim().length,
+          hasEmote: emotes.length > 0
+        });
+
+        // エモートが含まれている場合、各エモートをトラッキング
+        if (emotes.length > 0) {
+          emotes.forEach((emote: TwitchEmote) => {
+            trackEmoteSent({
+              platform: selectedStream.platform as Platform,
+              channelId: selectedChannelId,
+              channelName: selectedStream.displayName || selectedStream.channelLogin || 'unknown',
+              emoteId: emote.id,
+              emoteName: emote.name || 'unknown'
+            });
+          });
+        }
       } catch (err) {
         console.error('[ChatPanel] Analytics tracking error:', err);
       }
