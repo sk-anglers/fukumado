@@ -280,10 +280,10 @@ export const getMainServiceSummary = async (): Promise<SecuritySummary | null> =
 // ========================================
 
 /**
- * 配信詳細情報取得（/streams/を使用）
+ * 配信詳細情報取得（/streams/detailsを使用）
  */
 export const getStreamDetails = async (): Promise<StreamDetails> => {
-  return fetchAPI<StreamDetails>('/streams');
+  return fetchAPI<StreamDetails>('/streams/details');
 };
 
 /**
