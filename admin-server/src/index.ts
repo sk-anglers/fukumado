@@ -24,7 +24,6 @@ import { helpRouter } from './routes/help';
 import { announcementsRouter } from './routes/announcements';
 import pvRouter from './routes/pv';
 import analyticsRouter from './routes/analytics';
-import { adminRouter } from './routes/admin';
 import { metricsCollector } from './services/metricsCollector';
 import { securityMonitor } from './services/securityMonitor';
 
@@ -72,16 +71,16 @@ app.get('/health', (_, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.use('/api/admin/health', healthRouter);
+app.use('/admin/api/health', healthRouter);
 
 // 認証エンドポイント（認証不要）
 app.use('/auth', authRouter);
 
 // 以降のエンドポイントはBasic認証必須
-app.use('/api/admin', basicAuth);
+app.use('/admin/api', basicAuth);
 
 // セキュリティログ記録ミドルウェア
-app.use('/api/admin', (req, res, next) => {
+app.use('/admin/api', (req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
   const userAgent = req.headers['user-agent'] || 'unknown';
   securityMonitor.logAccess(ip, req.path, userAgent);
@@ -89,24 +88,23 @@ app.use('/api/admin', (req, res, next) => {
 });
 
 // APIルート
-app.use('/api/admin/metrics', metricsRouter);
-app.use('/api/admin/security', securityRouter);
-app.use('/api/admin/maintenance', maintenanceRouter);
-app.use('/api/admin/streams', streamsRouter);
-app.use('/api/admin/users', usersRouter);
-app.use('/api/admin/logs', logsRouter);
-app.use('/api/admin/eventsub', eventsubRouter);
-app.use('/api/admin/cache', cacheRouter);
-app.use('/api/admin/api-monitor', apiMonitorRouter);
-app.use('/api/admin/audit-logs', auditLogsRouter);
-app.use('/api/admin/alerts', alertsRouter);
-app.use('/api/admin/alert-settings', alertsRouter);
-app.use('/api/admin/services', servicesRouter);
-app.use('/api/admin/pv', pvRouter);
-app.use('/api/admin/analytics', analyticsRouter);
-app.use('/api/admin/help', helpRouter);
-app.use('/api/admin/announcements', announcementsRouter);
-app.use('/api/admin', adminRouter);
+app.use('/admin/api/metrics', metricsRouter);
+app.use('/admin/api/security', securityRouter);
+app.use('/admin/api/maintenance', maintenanceRouter);
+app.use('/admin/api/streams', streamsRouter);
+app.use('/admin/api/users', usersRouter);
+app.use('/admin/api/logs', logsRouter);
+app.use('/admin/api/eventsub', eventsubRouter);
+app.use('/admin/api/cache', cacheRouter);
+app.use('/admin/api/api-monitor', apiMonitorRouter);
+app.use('/admin/api/audit-logs', auditLogsRouter);
+app.use('/admin/api/alerts', alertsRouter);
+app.use('/admin/api/alert-settings', alertsRouter);
+app.use('/admin/api/services', servicesRouter);
+app.use('/admin/api/pv', pvRouter);
+app.use('/admin/api/analytics', analyticsRouter);
+app.use('/admin/api/help', helpRouter);
+app.use('/admin/api/announcements', announcementsRouter);
 
 // HTTPサーバーを作成
 const server = createServer(app);
