@@ -274,7 +274,7 @@ export const ApiMonitor: React.FC = () => {
                     {rateLimit.remaining} / {rateLimit.limit} 残り
                   </div>
                   <div className={styles.limitReset}>
-                    リセット: {new Date(rateLimit.reset * 1000).toLocaleTimeString('ja-JP')}
+                    リセット: {new Date(rateLimit.resetAt).toLocaleTimeString('ja-JP')}
                   </div>
                 </div>
               </Card>
@@ -289,7 +289,7 @@ export const ApiMonitor: React.FC = () => {
                     />
                   </div>
                   <div className={styles.limitText}>
-                    {quota.usedToday.toLocaleString()} / {quota.totalQuota.toLocaleString()} units
+                    {quota.used.toLocaleString()} / {quota.limit.toLocaleString()} units
                   </div>
                   <div className={styles.limitReset}>
                     残り: {quota.remaining.toLocaleString()} units
