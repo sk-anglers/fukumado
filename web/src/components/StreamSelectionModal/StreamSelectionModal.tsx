@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useLayoutStore } from '../../stores/layoutStore';
 import type { Platform, Streamer } from '../../types';
 import { trackButtonClick, trackStreamAction } from '../../utils/gtm';
+import { trackStreamSelected } from '../../services/analyticsService';
 import styles from './StreamSelectionModal.module.css';
 
 interface StreamSelectionModalProps {
@@ -29,6 +30,19 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
   }));
 
   const handleSelectStream = (stream: Streamer): void => {
+    // 配信選択を追跡（ファネル分析用）
+    console.log('[Analytics] Tracking stream selection:', stream.title);
+    trackStreamSelected({
+      platform: stream.platform,
+      streamId: stream.id,
+      streamTitle: stream.title,
+      channelName: stream.displayName,
+      channelId: stream.channelId || stream.id,
+      slotId,
+      viewerCount: stream.viewerCount
+    });
+
+    // GTMトラッキング（既存）
     trackStreamAction('assign', stream.platform, slotId);
     assignStream(slotId, stream);
     onClose();

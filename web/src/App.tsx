@@ -20,6 +20,7 @@ import { useMaintenanceStore } from "./stores/maintenanceStore";
 import { useIsMobile } from "./hooks/useMediaQuery";
 import { useLayoutTracking } from "./hooks/useAnalytics";
 import { startAnnouncementAutoUpdate } from "./stores/announcementStore";
+import { trackPageView } from "./services/analyticsService";
 import { apiFetch } from "./utils/api";
 import { isSafari } from "./utils/browserDetection";
 import { config } from "./config";
@@ -86,6 +87,26 @@ function App(): JSX.Element {
 
   // レイアウト変更を自動追跡
   useLayoutTracking(activeSlotsCount, preset);
+
+  // 初回ランディング時のページビューイベントを送信（ファネル分析用）
+  useEffect(() => {
+    const screenName = activeSlotsCount > 0 ? 'stream_grid' : 'welcome';
+    const pageTitle = activeSlotsCount > 0
+      ? `${activeSlotsCount}配信同時視聴中 - ふくまど`
+      : 'ふくまど - マルチプラットフォーム配信同期サービス';
+    const pageLocation = activeSlotsCount > 0
+      ? `/stream-grid-${activeSlotsCount}slots`
+      : '/';
+
+    console.log('[Analytics] Tracking landing page view:', { screenName, pageTitle });
+
+    trackPageView({
+      pageLocation,
+      pageTitle,
+      screenName,
+      referrer: document.referrer || undefined
+    });
+  }, []); // 初回マウント時のみ実行
 
   // エラーテストモードをチェック
   useEffect(() => {

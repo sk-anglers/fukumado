@@ -10,6 +10,7 @@ import { useHelpStore } from '../../stores/helpStore';
 import { apiFetch, apiUrl } from '../../utils/api';
 import { config } from '../../config';
 import { trackAuth as trackGTMAuth, trackButtonClick, trackSyncAction } from '../../utils/gtm';
+import { trackLoginButtonClick, trackAuthCompleted, sessionManager } from '../../services/analyticsService';
 import type { VideoQuality, QualityBandwidth } from '../../types';
 import type { TwitchPlayer } from '../../hooks/useTwitchEmbed';
 import styles from './AccountMenu.module.css';
@@ -227,6 +228,13 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   };
 
   const handleLogin = (): void => {
+    // ログインボタンクリックを追跡（ファネル分析用）
+    console.log('[Analytics] Tracking YouTube login button click');
+    trackLoginButtonClick({
+      platform: 'youtube',
+      location: 'account_menu'
+    });
+
     const authWindow = window.open(
       apiUrl('/auth/google'),
       'google-oauth',
@@ -277,8 +285,17 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
         console.log('[Google Auth] Authentication successful, closing popup');
         window.clearInterval(timer);
         authWindow.close();
+
         // YouTubeログイン成功をトラッキング
         trackAuth('youtube', 'login', true);
+
+        // 認証完了イベント（コンバージョン）
+        console.log('[Analytics] Tracking YouTube auth completed');
+        trackAuthCompleted({
+          platform: 'youtube',
+          timeSincePageLoad: sessionManager.getTimeSincePageLoad(),
+          hadPreviousAuth: false // 新規ログイン
+        });
       }
     }, 500);
   };
@@ -381,6 +398,13 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   };
 
   const handleTwitchLogin = (): void => {
+    // ログインボタンクリックを追跡（ファネル分析用）
+    console.log('[Analytics] Tracking Twitch login button click');
+    trackLoginButtonClick({
+      platform: 'twitch',
+      location: 'account_menu'
+    });
+
     // GTMトラッキング
     trackButtonClick('twitch_login_button');
     const authWindow = window.open(
@@ -433,8 +457,17 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
         console.log('[Twitch Auth] Authentication successful, closing popup');
         window.clearInterval(timer);
         authWindow.close();
+
         // Twitchログイン成功をトラッキング
         trackAuth('twitch', 'login', true);
+
+        // 認証完了イベント（コンバージョン）
+        console.log('[Analytics] Tracking Twitch auth completed');
+        trackAuthCompleted({
+          platform: 'twitch',
+          timeSincePageLoad: sessionManager.getTimeSincePageLoad(),
+          hadPreviousAuth: false // 新規ログイン
+        });
       }
     }, 500);
   };

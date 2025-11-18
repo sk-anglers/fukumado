@@ -12,7 +12,13 @@ import { shallow } from 'zustand/shallow';
 import { useLayoutStore } from '../../../stores/layoutStore';
 import { useAnalytics } from '../../../hooks/useAnalytics';
 import { trackStreamAction, trackButtonClick } from '../../../utils/gtm';
-import type { StreamSlot, VideoQuality } from '../../../types';
+import {
+  trackStreamPlaybackStarted,
+  trackFirstStreamPlayback,
+  trackMultiStreamActive,
+  sessionManager
+} from '../../../services/analyticsService';
+import type { StreamSlot, VideoQuality, Platform } from '../../../types';
 import { loadYouTubeIframeApi } from '../../../hooks/useYouTubeIframeApi';
 import { loadTwitchEmbedApi, type TwitchPlayer, type TwitchQuality } from '../../../hooks/useTwitchEmbed';
 import { StreamSelectionModal } from '../../StreamSelectionModal/StreamSelectionModal';
@@ -332,6 +338,57 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
             if (!isMounted) return;
             setSlotPlaying(slot.id, true); // 再生開始を通知
 
+            // 視聴開始イベントを追跡（ファネル分析用）
+            if (assignedStream) {
+              console.log('[Analytics] Tracking Twitch stream playback started:', assignedStream.title);
+              trackStreamPlaybackStarted({
+                platform: 'twitch',
+                streamId: assignedStream.id,
+                streamTitle: assignedStream.title,
+                channelName: assignedStream.displayName,
+                channelId: assignedStream.channelId || assignedStream.id,
+                slotId: slot.id,
+                quality: slot.quality,
+                activeStreamsCount: activeSlotsCount
+              });
+
+              // 初回視聴イベント（コンバージョン）
+              const hasPlayedBefore = localStorage.getItem('fukumado_has_played_stream');
+              if (!hasPlayedBefore) {
+                console.log('[Analytics] Tracking first stream playback (Twitch)');
+                sessionManager.recordFirstStreamPlayback();
+                trackFirstStreamPlayback({
+                  platform: 'twitch',
+                  streamId: assignedStream.id,
+                  channelName: assignedStream.displayName,
+                  timeSincePageLoad: sessionManager.getTimeSincePageLoad()
+                });
+                localStorage.setItem('fukumado_has_played_stream', 'true');
+              }
+
+              // 複数配信同時視聴イベント（コンバージョン）
+              if (activeSlotsCount >= 2) {
+                const hasTriggeredMultiStream = localStorage.getItem('fukumado_multi_stream_triggered');
+                if (!hasTriggeredMultiStream) {
+                  console.log('[Analytics] Tracking multi-stream active');
+
+                  // 視聴中のプラットフォーム一覧を取得
+                  const { slots: allSlots } = useLayoutStore.getState();
+                  const activePlatforms: Platform[] = allSlots
+                    .filter(s => s.assignedStream && s.id !== slot.id)
+                    .map(s => s.assignedStream!.platform);
+                  activePlatforms.push('twitch');
+
+                  trackMultiStreamActive({
+                    streamsCount: activeSlotsCount,
+                    platforms: activePlatforms,
+                    timeSinceFirstPlay: sessionManager.getTimeSinceFirstPlay()
+                  });
+                  localStorage.setItem('fukumado_multi_stream_triggered', 'true');
+                }
+              }
+            }
+
             // 再生開始時、スロットがミュートされていなければミュート解除
             if (playerInstanceRef.current && !slot.muted) {
               try {
@@ -418,6 +475,57 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                 // YT.PlayerState.PLAYING = 1, YT.PlayerState.PAUSED = 2
                 if (event.data === 1) {
                   setSlotPlaying(slot.id, true); // 再生開始
+
+                  // 視聴開始イベントを追跡（ファネル分析用）
+                  if (assignedStream) {
+                    console.log('[Analytics] Tracking YouTube stream playback started:', assignedStream.title);
+                    trackStreamPlaybackStarted({
+                      platform: 'youtube',
+                      streamId: assignedStream.id,
+                      streamTitle: assignedStream.title,
+                      channelName: assignedStream.displayName,
+                      channelId: assignedStream.channelId || assignedStream.id,
+                      slotId: slot.id,
+                      quality: slot.quality,
+                      activeStreamsCount: activeSlotsCount
+                    });
+
+                    // 初回視聴イベント（コンバージョン）
+                    const hasPlayedBefore = localStorage.getItem('fukumado_has_played_stream');
+                    if (!hasPlayedBefore) {
+                      console.log('[Analytics] Tracking first stream playback (YouTube)');
+                      sessionManager.recordFirstStreamPlayback();
+                      trackFirstStreamPlayback({
+                        platform: 'youtube',
+                        streamId: assignedStream.id,
+                        channelName: assignedStream.displayName,
+                        timeSincePageLoad: sessionManager.getTimeSincePageLoad()
+                      });
+                      localStorage.setItem('fukumado_has_played_stream', 'true');
+                    }
+
+                    // 複数配信同時視聴イベント（コンバージョン）
+                    if (activeSlotsCount >= 2) {
+                      const hasTriggeredMultiStream = localStorage.getItem('fukumado_multi_stream_triggered');
+                      if (!hasTriggeredMultiStream) {
+                        console.log('[Analytics] Tracking multi-stream active');
+
+                        // 視聴中のプラットフォーム一覧を取得
+                        const { slots: allSlots } = useLayoutStore.getState();
+                        const activePlatforms: Platform[] = allSlots
+                          .filter(s => s.assignedStream && s.id !== slot.id)
+                          .map(s => s.assignedStream!.platform);
+                        activePlatforms.push('youtube');
+
+                        trackMultiStreamActive({
+                          streamsCount: activeSlotsCount,
+                          platforms: activePlatforms,
+                          timeSinceFirstPlay: sessionManager.getTimeSinceFirstPlay()
+                        });
+                        localStorage.setItem('fukumado_multi_stream_triggered', 'true');
+                      }
+                    }
+                  }
 
                   // 再生開始時、スロットがミュートされていなければミュート解除
                   if (playerInstanceRef.current && !slot.muted) {

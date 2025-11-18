@@ -10,11 +10,19 @@ export type EventType =
   | 'stream_action'
   | 'auth_action'
   | 'session_start'
-  | 'session_end';
+  | 'session_end'
+  | 'login_button_clicked'
+  | 'stream_selected'
+  | 'stream_playback_started'
+  | 'first_stream_playback'
+  | 'multi_stream_active'
+  | 'auth_completed';
 
-export type LayoutPreset = 'twoByTwo' | 'oneByTwo';
+export type LayoutPreset = 'twoByTwo' | 'oneByTwo' | 'focus';
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 export type Platform = 'youtube' | 'twitch' | 'niconico';
+export type UserType = 'new' | 'returning' | 'guest';
+export type ReferrerType = 'organic' | 'paid' | 'direct' | 'social' | 'email' | 'referral' | 'unknown';
 
 export type ButtonType =
   | 'sync_start'
@@ -53,6 +61,11 @@ export interface BaseEventData {
   screenWidth?: number;
   screenHeight?: number;
   deviceType?: DeviceType;
+  // 分析強化用カスタムディメンション
+  userType?: UserType;           // 新規/既存/ゲスト
+  referrerType?: ReferrerType;   // 流入元タイプ
+  deviceCategory?: DeviceType;   // デバイスカテゴリ（deviceTypeと同じだが明示的に）
+  engagementScore?: number;      // エンゲージメントスコア（0-100）
 }
 
 export interface LayoutChangeEvent extends BaseEventData {
@@ -119,6 +132,83 @@ export interface SessionEndEvent extends BaseEventData {
   };
 }
 
+// ファネル分析用イベント
+export interface PageViewEvent extends BaseEventData {
+  type: 'page_view';
+  data: {
+    pageLocation: string;      // 現在のURL状態（例: '/stream-grid-4slots'）
+    pageTitle: string;          // ページタイトル（例: '4配信同時視聴中'）
+    screenName: string;         // 画面名（例: 'stream_grid', 'welcome'）
+    referrer?: string;          // リファラー
+    engagementTimeMsec?: number; // 前の画面での滞在時間（ミリ秒）
+    previousScreen?: string;    // 前の画面名
+  };
+}
+
+export interface LoginButtonClickedEvent extends BaseEventData {
+  type: 'login_button_clicked';
+  data: {
+    platform: Platform;         // youtube | twitch
+    location: string;           // ボタンの配置場所（例: 'account_menu', 'header'）
+  };
+}
+
+export interface StreamSelectedEvent extends BaseEventData {
+  type: 'stream_selected';
+  data: {
+    platform: Platform;         // youtube | twitch | niconico
+    streamId: string;           // 配信ID
+    streamTitle: string;        // 配信タイトル
+    channelName: string;        // チャンネル名
+    channelId: string;          // チャンネルID
+    slotId: string;             // 割り当てスロットID
+    viewerCount?: number;       // 視聴者数（取得可能な場合）
+  };
+}
+
+export interface StreamPlaybackStartedEvent extends BaseEventData {
+  type: 'stream_playback_started';
+  data: {
+    platform: Platform;         // youtube | twitch | niconico
+    streamId: string;           // 配信ID
+    streamTitle: string;        // 配信タイトル
+    channelName: string;        // チャンネル名
+    channelId: string;          // チャンネルID
+    slotId: string;             // 再生スロットID
+    quality: string;            // 再生画質（例: '1080p', '720p', 'auto'）
+    activeStreamsCount: number; // 同時視聴配信数
+  };
+}
+
+// コンバージョンイベント
+export interface FirstStreamPlaybackEvent extends BaseEventData {
+  type: 'first_stream_playback';
+  data: {
+    platform: Platform;         // 初回視聴プラットフォーム
+    streamId: string;           // 配信ID
+    channelName: string;        // チャンネル名
+    timeSincePageLoad: number;  // ページ読み込みから視聴開始までの時間（秒）
+  };
+}
+
+export interface MultiStreamActiveEvent extends BaseEventData {
+  type: 'multi_stream_active';
+  data: {
+    streamsCount: number;       // 同時視聴配信数
+    platforms: Platform[];      // 視聴中のプラットフォーム一覧
+    timeSinceFirstPlay: number; // 初回視聴から複数視聴開始までの時間（秒）
+  };
+}
+
+export interface AuthCompletedEvent extends BaseEventData {
+  type: 'auth_completed';
+  data: {
+    platform: Platform;         // 認証完了プラットフォーム
+    timeSincePageLoad: number;  // ページ読み込みから認証完了までの時間（秒）
+    hadPreviousAuth: boolean;   // 以前に認証済みだったか
+  };
+}
+
 export type AnalyticsEvent =
   | LayoutChangeEvent
   | ButtonClickEvent
@@ -126,4 +216,11 @@ export type AnalyticsEvent =
   | StreamActionEvent
   | AuthActionEvent
   | SessionStartEvent
-  | SessionEndEvent;
+  | SessionEndEvent
+  | PageViewEvent
+  | LoginButtonClickedEvent
+  | StreamSelectedEvent
+  | StreamPlaybackStartedEvent
+  | FirstStreamPlaybackEvent
+  | MultiStreamActiveEvent
+  | AuthCompletedEvent;
