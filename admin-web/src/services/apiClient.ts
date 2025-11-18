@@ -579,14 +579,14 @@ export const getApiStats = async (service?: 'twitch' | 'youtube' | 'other'): Pro
  * Twitchレート制限情報を取得
  */
 export const getApiRateLimit = async (): Promise<any> => {
-  return fetchAPI('/api-tracking/rate-limit');
+  return fetchAPI('/api-monitor/rate-limit');
 };
 
 /**
  * YouTubeクォータ使用量を取得
  */
 export const getApiYouTubeQuota = async (): Promise<any> => {
-  return fetchAPI('/api-tracking/youtube-quota');
+  return fetchAPI('/api-monitor/youtube-quota');
 };
 
 /**
