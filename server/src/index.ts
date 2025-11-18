@@ -248,6 +248,8 @@ app.use('/api/admin/logs', adminApiAuth, logsRouter);
 app.use('/api/admin/eventsub', adminApiAuth, eventsubRouter);
 app.use('/api/admin/cache', adminApiAuth, cacheRouter);
 app.use('/api/admin/streams', adminApiAuth, adminStreamsRouter);
+app.use('/api/admin/help', adminApiAuth, helpRouter);
+app.use('/api/admin/announcements', adminApiAuth, announcementsRouter);
 app.use('/api/admin', adminApiAuth, adminRouter);
 app.use('/api/analytics', apiRateLimiter, analyticsRouter);
 
