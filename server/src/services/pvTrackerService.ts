@@ -36,7 +36,7 @@ export class PVTrackerService {
   }
 
   /**
-   * 今日のPV統計を取得
+   * 今日のPV統計を取得（最適化版：生SQLでCOUNT(DISTINCT)を使用）
    */
   async getTodayStats(): Promise<{
     pv: number;
@@ -46,32 +46,25 @@ export class PVTrackerService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const [pvCount, uniqueCount] = await Promise.all([
-        // 総PV数
-        prisma.pageView.count({
-          where: {
-            createdAt: {
-              gte: today,
-            },
-          },
-        }),
-        // ユニークユーザー数（IPハッシュでカウント）
-        prisma.pageView.findMany({
-          where: {
-            createdAt: {
-              gte: today,
-            },
-          },
-          select: {
-            ipHash: true,
-          },
-          distinct: ['ipHash'],
-        }),
-      ]);
+      // 1クエリで集計（メモリ効率的）
+      const result = await prisma.$queryRaw<Array<{
+        pv: bigint;
+        unique_users: bigint;
+      }>>`
+        SELECT
+          COUNT(*) as pv,
+          COUNT(DISTINCT ip_hash) as unique_users
+        FROM page_views
+        WHERE created_at >= ${today}
+      `;
+
+      if (result.length === 0) {
+        return { pv: 0, uniqueUsers: 0 };
+      }
 
       return {
-        pv: pvCount,
-        uniqueUsers: uniqueCount.length,
+        pv: Number(result[0].pv),
+        uniqueUsers: Number(result[0].unique_users),
       };
     } catch (error) {
       console.error('[PVTrackerService] Error getting today stats:', error);
@@ -80,7 +73,7 @@ export class PVTrackerService {
   }
 
   /**
-   * 今月のPV統計を取得
+   * 今月のPV統計を取得（最適化版：生SQLでCOUNT(DISTINCT)を使用）
    */
   async getMonthStats(): Promise<{
     pv: number;
@@ -91,30 +84,25 @@ export class PVTrackerService {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const [pvCount, uniqueCount] = await Promise.all([
-        prisma.pageView.count({
-          where: {
-            createdAt: {
-              gte: startOfMonth,
-            },
-          },
-        }),
-        prisma.pageView.findMany({
-          where: {
-            createdAt: {
-              gte: startOfMonth,
-            },
-          },
-          select: {
-            ipHash: true,
-          },
-          distinct: ['ipHash'],
-        }),
-      ]);
+      // 1クエリで集計（メモリ効率的）
+      const result = await prisma.$queryRaw<Array<{
+        pv: bigint;
+        unique_users: bigint;
+      }>>`
+        SELECT
+          COUNT(*) as pv,
+          COUNT(DISTINCT ip_hash) as unique_users
+        FROM page_views
+        WHERE created_at >= ${startOfMonth}
+      `;
+
+      if (result.length === 0) {
+        return { pv: 0, uniqueUsers: 0 };
+      }
 
       return {
-        pv: pvCount,
-        uniqueUsers: uniqueCount.length,
+        pv: Number(result[0].pv),
+        uniqueUsers: Number(result[0].unique_users),
       };
     } catch (error) {
       console.error('[PVTrackerService] Error getting month stats:', error);
@@ -136,7 +124,7 @@ export class PVTrackerService {
   }
 
   /**
-   * 過去N日分の日次PVを取得
+   * 過去N日分の日次PVを取得（最適化版：生SQLでCOUNT(DISTINCT)を使用）
    */
   async getDailyStats(days: number = 30): Promise<
     Array<{
@@ -146,50 +134,33 @@ export class PVTrackerService {
     }>
   > {
     try {
-      const stats: Array<{ date: string; pv: number; uniqueUsers: number }> = [];
       const now = new Date();
+      const startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - days + 1);
+      startDate.setHours(0, 0, 0, 0);
 
-      for (let i = 0; i < days; i++) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        const startOfDay = new Date(date);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(date);
-        endOfDay.setHours(23, 59, 59, 999);
+      // 1クエリで全期間のデータを集計（メモリ効率的）
+      const result = await prisma.$queryRaw<Array<{
+        date: string;
+        pv: bigint;
+        unique_users: bigint;
+      }>>`
+        SELECT
+          DATE(created_at AT TIME ZONE 'Asia/Tokyo') as date,
+          COUNT(*) as pv,
+          COUNT(DISTINCT ip_hash) as unique_users
+        FROM page_views
+        WHERE created_at >= ${startDate}
+        GROUP BY DATE(created_at AT TIME ZONE 'Asia/Tokyo')
+        ORDER BY date ASC
+      `;
 
-        const dateKey = this.getDateKey(date);
-
-        const [pvCount, uniqueIPs] = await Promise.all([
-          prisma.pageView.count({
-            where: {
-              createdAt: {
-                gte: startOfDay,
-                lte: endOfDay,
-              },
-            },
-          }),
-          prisma.pageView.findMany({
-            where: {
-              createdAt: {
-                gte: startOfDay,
-                lte: endOfDay,
-              },
-            },
-            select: {
-              ipHash: true,
-            },
-            distinct: ['ipHash'],
-          }),
-        ]);
-
-        stats.push({
-          date: dateKey,
-          pv: pvCount,
-          uniqueUsers: uniqueIPs.length,
-        });
-      }
-
-      return stats.reverse(); // 古い順に並び替え
+      // BigIntをNumberに変換
+      return result.map(row => ({
+        date: row.date,
+        pv: Number(row.pv),
+        uniqueUsers: Number(row.unique_users)
+      }));
     } catch (error) {
       console.error('[PVTrackerService] Error getting daily stats:', error);
       return [];
@@ -197,7 +168,7 @@ export class PVTrackerService {
   }
 
   /**
-   * 過去N月分の月次PVを取得
+   * 過去N月分の月次PVを取得（最適化版：生SQLでCOUNT(DISTINCT)を使用）
    */
   async getMonthlyStats(months: number = 12): Promise<
     Array<{
@@ -207,48 +178,34 @@ export class PVTrackerService {
     }>
   > {
     try {
-      const stats: Array<{ month: string; pv: number; uniqueUsers: number }> = [];
       const now = new Date();
+      const startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() - months + 1);
+      startDate.setDate(1);
+      startDate.setHours(0, 0, 0, 0);
 
-      for (let i = 0; i < months; i++) {
-        const date = new Date(now);
-        date.setMonth(date.getMonth() - i);
-        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
-        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+      // 1クエリで全期間のデータを集計（メモリ効率的）
+      const result = await prisma.$queryRaw<Array<{
+        month: string;
+        pv: bigint;
+        unique_users: bigint;
+      }>>`
+        SELECT
+          TO_CHAR(created_at AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM') as month,
+          COUNT(*) as pv,
+          COUNT(DISTINCT ip_hash) as unique_users
+        FROM page_views
+        WHERE created_at >= ${startDate}
+        GROUP BY TO_CHAR(created_at AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM')
+        ORDER BY month ASC
+      `;
 
-        const monthKey = this.getMonthKey(date);
-
-        const [pvCount, uniqueIPs] = await Promise.all([
-          prisma.pageView.count({
-            where: {
-              createdAt: {
-                gte: startOfMonth,
-                lte: endOfMonth,
-              },
-            },
-          }),
-          prisma.pageView.findMany({
-            where: {
-              createdAt: {
-                gte: startOfMonth,
-                lte: endOfMonth,
-              },
-            },
-            select: {
-              ipHash: true,
-            },
-            distinct: ['ipHash'],
-          }),
-        ]);
-
-        stats.push({
-          month: monthKey,
-          pv: pvCount,
-          uniqueUsers: uniqueIPs.length,
-        });
-      }
-
-      return stats.reverse(); // 古い順に並び替え
+      // BigIntをNumberに変換
+      return result.map(row => ({
+        month: row.month,
+        pv: Number(row.pv),
+        uniqueUsers: Number(row.unique_users)
+      }));
     } catch (error) {
       console.error('[PVTrackerService] Error getting monthly stats:', error);
       return [];
