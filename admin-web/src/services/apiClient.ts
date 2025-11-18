@@ -150,7 +150,8 @@ export const getYouTubeQuota = async (): Promise<YouTubeQuota> => {
  * セキュリティメトリクス取得
  */
 export const getSecurityMetrics = async (): Promise<SecurityMetrics> => {
-  return fetchAPI<SecurityMetrics>('/security/metrics');
+  console.warn('[API] getSecurityMetrics is not implemented yet');
+  return {} as SecurityMetrics;
 };
 
 /**
@@ -328,7 +329,8 @@ export const deleteUser = async (userId: string): Promise<void> => {
  * サービス状態取得
  */
 export const getServicesStatus = async (): Promise<ServicesStatusResponse> => {
-  return fetchAPI<ServicesStatusResponse>('/services/status');
+  console.warn('[API] getServicesStatus is not implemented yet');
+  return {} as ServicesStatusResponse;
 };
 
 // ========================================
@@ -451,7 +453,7 @@ export const reconnectEventSub = async (): Promise<void> => {
  * 動的閾値情報を取得
  */
 export const getThresholdInfo = async (): Promise<ThresholdInfo> => {
-  return fetchAPI<ThresholdInfo>('/eventsub/threshold/info');
+  return fetchAPI<ThresholdInfo>('/threshold/info');
 };
 
 // ========================================
@@ -931,14 +933,14 @@ export const migrateAlertsTable = async (): Promise<void> => {
  * エラーテストモード状態を取得
  */
 export const getErrorTestStatus = async (): Promise<{ enabled: boolean }> => {
-  return fetchAPI<{ enabled: boolean }>('/maintenance/test-error/status');
+  return fetchAPI<{ enabled: boolean }>('/test/error/status');
 };
 
 /**
  * エラーテストモードを有効化
  */
 export const enableErrorTest = async (): Promise<{ enabled: boolean; message: string }> => {
-  return fetchAPI<{ enabled: boolean; message: string }>('/maintenance/test-error/enable', {
+  return fetchAPI<{ enabled: boolean; message: string }>('/test/error/enable', {
     method: 'POST'
   });
 };
@@ -947,7 +949,7 @@ export const enableErrorTest = async (): Promise<{ enabled: boolean; message: st
  * エラーテストモードを無効化
  */
 export const disableErrorTest = async (): Promise<{ enabled: boolean }> => {
-  return fetchAPI<{ enabled: boolean }>('/maintenance/test-error/disable', {
+  return fetchAPI<{ enabled: boolean }>('/test/error/disable', {
     method: 'POST'
   });
 };
