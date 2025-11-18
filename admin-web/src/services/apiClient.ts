@@ -330,8 +330,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
  * サービス状態取得
  */
 export const getServicesStatus = async (): Promise<ServicesStatusResponse | null> => {
-  console.warn('[API] getServicesStatus is not implemented yet');
-  return null;
+  return fetchAPI<ServicesStatusResponse>('/services/status');
 };
 
 // ========================================
