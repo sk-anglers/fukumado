@@ -149,9 +149,9 @@ export const getYouTubeQuota = async (): Promise<YouTubeQuota> => {
 /**
  * セキュリティメトリクス取得
  */
-export const getSecurityMetrics = async (): Promise<SecurityMetrics> => {
+export const getSecurityMetrics = async (): Promise<SecurityMetrics | null> => {
   console.warn('[API] getSecurityMetrics is not implemented yet');
-  return {} as SecurityMetrics;
+  return null;
 };
 
 /**
@@ -225,19 +225,19 @@ export const disableMaintenance = async (): Promise<void> => {
 /**
  * 本サービスのセキュリティ統計取得（未実装のため空データを返す）
  */
-export const getMainServiceStats = async (): Promise<MainServiceSecurityStats> => {
+export const getMainServiceStats = async (): Promise<MainServiceSecurityStats | null> => {
   // TODO: サーバー側で実装後に有効化
   console.warn('[API] getMainServiceStats is not implemented yet');
-  return {} as MainServiceSecurityStats;
+  return null;
 };
 
 /**
  * 本サービスのセキュリティヘルスチェック（未実装のため空データを返す）
  */
-export const getMainServiceHealth = async (): Promise<MainServiceHealthCheck> => {
+export const getMainServiceHealth = async (): Promise<MainServiceHealthCheck | null> => {
   // TODO: サーバー側で実装後に有効化
   console.warn('[API] getMainServiceHealth is not implemented yet');
-  return {} as MainServiceHealthCheck;
+  return null;
 };
 
 /**
@@ -252,27 +252,27 @@ export const getMainServiceAlerts = async (limit: number = 50): Promise<AnomalyA
 /**
  * 本サービスのセッション統計取得（未実装のため空データを返す）
  */
-export const getMainServiceSessions = async (): Promise<SessionStats> => {
+export const getMainServiceSessions = async (): Promise<SessionStats | null> => {
   // TODO: サーバー側で実装後に有効化
   console.warn('[API] getMainServiceSessions is not implemented yet');
-  return {} as SessionStats;
+  return null;
 };
 
 /**
  * 本サービスのWebSocket統計取得（WebSocketエンドポイントから取得）
  */
-export const getMainServiceWebSocket = async (): Promise<WebSocketStats> => {
+export const getMainServiceWebSocket = async (): Promise<WebSocketStats | null> => {
   console.warn('[API] getMainServiceWebSocket is not implemented in admin-server yet');
-  return {} as WebSocketStats;
+  return null;
 };
 
 /**
  * 本サービスのセキュリティサマリー取得（未実装のため空データを返す）
  */
-export const getMainServiceSummary = async (): Promise<SecuritySummary> => {
+export const getMainServiceSummary = async (): Promise<SecuritySummary | null> => {
   // TODO: サーバー側で実装後に有効化
   console.warn('[API] getMainServiceSummary is not implemented yet');
-  return {} as SecuritySummary;
+  return null;
 };
 
 // ========================================
@@ -329,9 +329,9 @@ export const deleteUser = async (userId: string): Promise<void> => {
 /**
  * サービス状態取得
  */
-export const getServicesStatus = async (): Promise<ServicesStatusResponse> => {
+export const getServicesStatus = async (): Promise<ServicesStatusResponse | null> => {
   console.warn('[API] getServicesStatus is not implemented yet');
-  return {} as ServicesStatusResponse;
+  return null;
 };
 
 // ========================================
