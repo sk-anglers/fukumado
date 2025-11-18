@@ -136,14 +136,14 @@ export const getSystemMetrics = async (): Promise<SystemMetrics> => {
  * Twitch APIレート制限情報取得
  */
 export const getTwitchRateLimit = async (): Promise<TwitchRateLimit> => {
-  return fetchAPI<TwitchRateLimit>('/api-tracking/rate-limit');
+  return fetchAPI<TwitchRateLimit>('/api-monitor/rate-limit');
 };
 
 /**
  * YouTube APIクォータ情報取得
  */
 export const getYouTubeQuota = async (): Promise<YouTubeQuota> => {
-  return fetchAPI<YouTubeQuota>('/api-tracking/youtube-quota');
+  return fetchAPI<YouTubeQuota>('/api-monitor/youtube-quota');
 };
 
 /**
