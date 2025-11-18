@@ -23,7 +23,7 @@ import type {
   UserType,
   ReferrerType
 } from '../types/analytics';
-import { backendOrigin } from '../utils/api';
+import { sendGA4Event } from '../utils/gtm';
 
 /**
  * デバイスタイプを判定
@@ -176,24 +176,42 @@ function createBaseEventData(): {
 }
 
 /**
- * イベントをサーバーに送信
+ * イベントをGA4に送信
  */
-async function sendEvent(event: AnalyticsEvent): Promise<void> {
+function sendEvent(event: AnalyticsEvent): void {
   try {
-    const response = await fetch(`${backendOrigin}/api/analytics/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(event),
-      credentials: 'include' // セッションCookieを含める
+    // GA4イベントパラメータを構築
+    const params: Record<string, any> = {
+      // カスタムディメンション
+      user_type: event.userType,
+      referrer_type: event.referrerType,
+      device_category: event.deviceCategory,
+      device_type: event.deviceType,
+      engagement_score: event.engagementScore,
+      screen_width: event.screenWidth,
+      screen_height: event.screenHeight,
+      // イベント固有データ
+      ...event.data
+    };
+
+    // 配列をカンマ区切り文字列に変換（GA4は配列を直接サポートしないため）
+    Object.keys(params).forEach(key => {
+      if (Array.isArray(params[key])) {
+        params[key] = params[key].join(',');
+      }
     });
 
-    if (!response.ok) {
-      console.error('[Analytics] Failed to send event:', response.statusText);
-    }
+    // 未定義の値を除外
+    Object.keys(params).forEach(key => {
+      if (params[key] === undefined || params[key] === null) {
+        delete params[key];
+      }
+    });
+
+    // GA4にイベントを送信
+    sendGA4Event(event.type, params);
   } catch (error) {
-    // ネットワークエラーなどでも分析を妨げないように、エラーは静かに処理
+    // エラーは静かに処理
     console.debug('[Analytics] Error sending event:', error);
   }
 }
