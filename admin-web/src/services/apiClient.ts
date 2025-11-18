@@ -136,14 +136,14 @@ export const getSystemMetrics = async (): Promise<SystemMetrics> => {
  * Twitch APIレート制限情報取得
  */
 export const getTwitchRateLimit = async (): Promise<TwitchRateLimit> => {
-  return fetchAPI<TwitchRateLimit>('/api-monitor/rate-limit');
+  return fetchAPI<TwitchRateLimit>('/metrics/api/twitch');
 };
 
 /**
  * YouTube APIクォータ情報取得
  */
 export const getYouTubeQuota = async (): Promise<YouTubeQuota> => {
-  return fetchAPI<YouTubeQuota>('/api-monitor/youtube-quota');
+  return fetchAPI<YouTubeQuota>('/metrics/api/youtube');
 };
 
 /**
@@ -580,14 +580,14 @@ export const getApiStats = async (service?: 'twitch' | 'youtube' | 'other'): Pro
  * Twitchレート制限情報を取得
  */
 export const getApiRateLimit = async (): Promise<any> => {
-  return fetchAPI('/api-monitor/rate-limit');
+  return fetchAPI('/metrics/api/twitch');
 };
 
 /**
  * YouTubeクォータ使用量を取得
  */
 export const getApiYouTubeQuota = async (): Promise<any> => {
-  return fetchAPI('/api-monitor/youtube-quota');
+  return fetchAPI('/metrics/api/youtube');
 };
 
 /**
@@ -696,7 +696,9 @@ export const exportAnalyticsStats = async (format: 'json' | 'csv', days: number 
   try {
     const response = await fetch(`${API_BASE_URL}/analytics/export?format=${format}&days=${days}`, {
       method: 'GET',
-      headers: getAuthHeaders()
+      headers: {
+        'Authorization': getAuthHeader()
+      }
     });
 
     if (!response.ok) {
