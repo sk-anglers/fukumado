@@ -126,10 +126,10 @@ export const getHealth = async (): Promise<{
 };
 
 /**
- * システムメトリクス取得（/system/metricsから取得）
+ * システムメトリクス取得（/metrics/systemから取得）
  */
 export const getSystemMetrics = async (): Promise<SystemMetrics> => {
-  return fetchAPI<SystemMetrics>('/system/metrics');
+  return fetchAPI<SystemMetrics>('/metrics/system');
 };
 
 /**
