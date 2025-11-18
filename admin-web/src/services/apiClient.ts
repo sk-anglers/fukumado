@@ -42,8 +42,8 @@ import {
  * 本番環境では環境変数VITE_ADMIN_API_URLを使用
  */
 const API_BASE_URL = import.meta.env.VITE_ADMIN_API_URL
-  ? `${import.meta.env.VITE_ADMIN_API_URL}/api/admin`
-  : '/api/admin';
+  ? `${import.meta.env.VITE_ADMIN_API_URL}/admin/api`
+  : '/admin/api';
 
 /**
  * Basic認証のクレデンシャル
