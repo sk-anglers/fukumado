@@ -579,14 +579,14 @@ export const getApiStats = async (service?: 'twitch' | 'youtube' | 'other'): Pro
  * Twitchレート制限情報を取得
  */
 export const getApiRateLimit = async (): Promise<any> => {
-  return fetchAPI('/api-monitor/rate-limit');
+  return fetchAPI('/api-tracking/rate-limit');
 };
 
 /**
  * YouTubeクォータ使用量を取得
  */
 export const getApiYouTubeQuota = async (): Promise<any> => {
-  return fetchAPI('/api-monitor/youtube-quota');
+  return fetchAPI('/api-tracking/youtube-quota');
 };
 
 /**
@@ -596,11 +596,8 @@ export const getApiRecentCalls = async (
   service: 'twitch' | 'youtube' | 'other',
   minutes: number = 60
 ): Promise<any> => {
-  const params = new URLSearchParams();
-  params.set('service', service);
-  params.set('minutes', minutes.toString());
-
-  return fetchAPI(`/api-monitor/recent-calls?${params.toString()}`);
+  console.warn('[API] getApiRecentCalls is not implemented yet');
+  return { calls: [] };
 };
 
 /**
