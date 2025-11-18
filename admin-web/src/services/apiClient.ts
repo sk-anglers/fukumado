@@ -262,7 +262,8 @@ export const getMainServiceSessions = async (): Promise<SessionStats> => {
  * 本サービスのWebSocket統計取得（WebSocketエンドポイントから取得）
  */
 export const getMainServiceWebSocket = async (): Promise<WebSocketStats> => {
-  return fetchAPI<WebSocketStats>('/websocket/stats');
+  console.warn('[API] getMainServiceWebSocket is not implemented in admin-server yet');
+  return {} as WebSocketStats;
 };
 
 /**
