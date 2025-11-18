@@ -10,8 +10,6 @@ import { type CSSProperties, memo, useEffect, useMemo, useRef, useState } from '
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { useLayoutStore } from '../../../stores/layoutStore';
-import { useAnalytics } from '../../../hooks/useAnalytics';
-import { trackStreamAction, trackButtonClick } from '../../../utils/gtm';
 import {
   trackStreamPlaybackStarted,
   trackFirstStreamPlayback,
@@ -90,8 +88,6 @@ const formatViewerLabel = (viewerCount?: number): string =>
   viewerCount != null ? `${viewerCount.toLocaleString()} 人視聴中` : '視聴者数 -';
 
 const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelection, onSelect }: StreamSlotCardProps): JSX.Element => {
-  const { trackStream } = useAnalytics();
-
   const { setVolume, toggleSlotMute, preset, setPreset, clearSlot, fullscreen, masterVolume, swapSlots, setModalOpen, userInteracted, masterSlotId, setSlotReady, setSlotPlaying } = useStoreWithEqualityFn(useLayoutStore, (state) => ({
     setVolume: state.setVolume,
     toggleSlotMute: state.toggleSlotMute,
@@ -879,15 +875,6 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                     onClick={(event) => {
                       event.stopPropagation();
                       clearSlot(slot.id);
-                      // 配信削除をトラッキング
-                      if (assignedStream) {
-                        trackStream({
-                          actionType: 'clear',
-                          platform: assignedStream.platform,
-                          slotId: slot.id
-                        });
-                        trackStreamAction('clear', assignedStream.platform, slot.id);
-                      }
                     }}
                     aria-label="配信を削除"
                     style={{
@@ -903,15 +890,6 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                     onClick={(event) => {
                       event.stopPropagation();
                       toggleSlotMute(slot.id);
-                      // ミュート/ミュート解除をトラッキング
-                      if (assignedStream) {
-                        trackStream({
-                          actionType: slot.muted ? 'unmute' : 'mute',
-                          platform: assignedStream.platform,
-                          slotId: slot.id
-                        });
-                        trackStreamAction(slot.muted ? 'unmute' : 'mute', assignedStream.platform, slot.id);
-                      }
                     }}
                     aria-label={slot.muted ? 'ミュート解除' : 'ミュート'}
                     style={{
@@ -935,7 +913,6 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
               e.stopPropagation();
               setShowSelectionModal(true);
               setModalOpen(true);
-              trackButtonClick('stream_slot_add');
             }}
           >
             <span className={styles.placeholderIcon}>＋</span>
@@ -973,15 +950,6 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                       onClick={(event) => {
                         event.stopPropagation();
                         clearSlot(slot.id);
-                        // 配信削除をトラッキング
-                        if (assignedStream) {
-                          trackStream({
-                            actionType: 'clear',
-                            platform: assignedStream.platform,
-                            slotId: slot.id
-                          });
-                          trackStreamAction('clear', assignedStream.platform, slot.id);
-                        }
                       }}
                     >
                       <XMarkIcon />
@@ -1019,15 +987,6 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                       onClick={(event) => {
                         event.stopPropagation();
                         toggleSlotMute(slot.id);
-                        // ミュート/ミュート解除をトラッキング
-                        if (assignedStream) {
-                          trackStream({
-                            actionType: slot.muted ? 'unmute' : 'mute',
-                            platform: assignedStream.platform,
-                            slotId: slot.id
-                          });
-                          trackStreamAction(slot.muted ? 'unmute' : 'mute', assignedStream.platform, slot.id);
-                        }
                       }}
                     >
                       {slot.muted ? <SpeakerXMarkIcon /> : <SpeakerWaveIcon />}
@@ -1046,22 +1005,7 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                             toggleSlotMute(slot.id);
                           }
                         }}
-                        onMouseUp={() => {
-                          // 音量変更完了時にトラッキング
-                          if (assignedStream) {
-                            trackStream({
-                              actionType: 'volume_change',
-                              platform: assignedStream.platform,
-                              slotId: slot.id,
-                              value: slot.volume
-                            });
-                            trackButtonClick('stream_slot_volume', {
-                              platform: assignedStream.platform,
-                              slot_index: slot.id,
-                              volume: slot.volume
-                            });
-                          }
-                        }}
+                        onMouseUp={() => {}}
                         onClick={(event) => event.stopPropagation()}
                         onMouseDown={(event) => event.stopPropagation()}
                         onPointerDown={(event) => event.stopPropagation()}

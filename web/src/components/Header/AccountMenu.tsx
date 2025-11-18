@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AdjustmentsHorizontalIcon, CircleStackIcon, ArrowPathIcon, ClockIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../stores/authStore';
-import { useAnalytics } from '../../hooks/useAnalytics';
 import { useUserStore } from '../../stores/userStore';
 import { useSyncStore, SYNC_INTERVAL_OPTIONS } from '../../stores/syncStore';
 import { useLayoutStore } from '../../stores/layoutStore';
@@ -9,7 +8,6 @@ import { useDataUsageStore } from '../../stores/dataUsageStore';
 import { useHelpStore } from '../../stores/helpStore';
 import { apiFetch, apiUrl } from '../../utils/api';
 import { config } from '../../config';
-import { trackAuth as trackGTMAuth, trackButtonClick, trackSyncAction } from '../../utils/gtm';
 import { trackLoginButtonClick, trackAuthCompleted, sessionManager } from '../../services/analyticsService';
 import type { VideoQuality, QualityBandwidth } from '../../types';
 import type { TwitchPlayer } from '../../hooks/useTwitchEmbed';
@@ -72,7 +70,6 @@ interface ChannelResult {
 }
 
 export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
-  const { trackAuth, trackFeature, trackButton } = useAnalytics();
   const openHelpModal = useHelpStore((state) => state.openModal);
 
   const authenticated = useAuthStore((state) => state.authenticated);
@@ -216,13 +213,6 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
   };
 
   const handleManualSync = (): void => {
-    // 手動同期をトラッキング（エラーがあっても継続）
-    try {
-      trackFeature('sync');
-    } catch (err) {
-      console.error('[AccountMenu] Analytics tracking error:', err);
-    }
-
     // 手動同期を実行
     triggerManualSync();
   };
@@ -286,9 +276,6 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
         window.clearInterval(timer);
         authWindow.close();
 
-        // YouTubeログイン成功をトラッキング
-        trackAuth('youtube', 'login', true);
-
         // 認証完了イベント（コンバージョン）
         console.log('[Analytics] Tracking YouTube auth completed');
         trackAuthCompleted({
@@ -321,18 +308,9 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       layoutState.setAvailableStreamsForPlatform('youtube', []);
       // SessionIDをクリア（再ログイン時に新しいsessionIdを取得）
       useAuthStore.getState().clearSessionId();
-
-      // ログアウトをトラッキング
-      trackAuth('youtube', 'logout', true);
-      // GTMトラッキング
-      trackGTMAuth('logout', 'youtube', true);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setAuthError(message);
-      // ログアウト失敗もトラッキング
-      trackAuth('youtube', 'logout', false);
-      // GTMトラッキング
-      trackGTMAuth('logout', 'youtube', false);
     } finally {
       setAuthLoading(false);
     }
@@ -405,8 +383,6 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       location: 'account_menu'
     });
 
-    // GTMトラッキング
-    trackButtonClick('twitch_login_button');
     const authWindow = window.open(
       apiUrl('/auth/twitch'),
       'twitch-oauth',
@@ -458,9 +434,6 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
         window.clearInterval(timer);
         authWindow.close();
 
-        // Twitchログイン成功をトラッキング
-        trackAuth('twitch', 'login', true);
-
         // 認証完了イベント（コンバージョン）
         console.log('[Analytics] Tracking Twitch auth completed');
         trackAuthCompleted({
@@ -493,18 +466,9 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
       layoutState.setAvailableStreamsForPlatform('twitch', []);
       // SessionIDをクリア（再ログイン時に新しいsessionIdを取得）
       useAuthStore.getState().clearSessionId();
-
-      // Twitchログアウト成功をトラッキング
-      trackAuth('twitch', 'logout', true);
-      // GTMトラッキング
-      trackGTMAuth('logout', 'twitch', true);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラー';
       setTwitchError(message);
-      // Twitchログアウト失敗をトラッキング
-      trackAuth('twitch', 'logout', false);
-      // GTMトラッキング
-      trackGTMAuth('logout', 'twitch', false);
     } finally {
       setTwitchLoading(false);
     }
@@ -796,7 +760,6 @@ export const AccountMenu = ({ onClose }: AccountMenuProps): JSX.Element => {
           className={styles.helpButton}
           onClick={() => {
             openHelpModal();
-            trackButton('help', 'account_menu');
             onClose();
           }}
         >

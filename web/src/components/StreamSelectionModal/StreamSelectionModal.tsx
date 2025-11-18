@@ -2,7 +2,6 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { createPortal } from 'react-dom';
 import { useLayoutStore } from '../../stores/layoutStore';
 import type { Platform, Streamer } from '../../types';
-import { trackButtonClick, trackStreamAction } from '../../utils/gtm';
 import { trackStreamSelected } from '../../services/analyticsService';
 import styles from './StreamSelectionModal.module.css';
 
@@ -42,8 +41,6 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
       viewerCount: stream.viewerCount
     });
 
-    // GTMトラッキング（既存）
-    trackStreamAction('assign', stream.platform, slotId);
     assignStream(slotId, stream);
     onClose();
   };
@@ -66,10 +63,7 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
           <h2>配信を選択</h2>
           <button
             className={styles.closeButton}
-            onClick={() => {
-              trackButtonClick('stream_selection_modal_close');
-              onClose();
-            }}
+            onClick={onClose}
             type="button"
           >
             <XMarkIcon />
@@ -106,10 +100,6 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
                     style={{ backgroundColor: platformColor[stream.platform] }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      trackButtonClick('stream_selection_modal_open_platform', {
-                        platform: stream.platform,
-                        channel_id: stream.id
-                      });
                       const url = stream.platform === 'twitch'
                         ? `https://www.twitch.tv/${stream.channelLogin || stream.id}`
                         : stream.platform === 'youtube'
@@ -124,10 +114,6 @@ export const StreamSelectionModal = ({ slotId, onClose }: StreamSelectionModalPr
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         e.stopPropagation();
-                        trackButtonClick('stream_selection_modal_open_platform', {
-                          platform: stream.platform,
-                          channel_id: stream.id
-                        });
                         const url = stream.platform === 'twitch'
                           ? `https://www.twitch.tv/${stream.channelLogin || stream.id}`
                           : stream.platform === 'youtube'
