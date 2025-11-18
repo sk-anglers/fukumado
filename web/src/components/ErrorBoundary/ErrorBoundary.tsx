@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { ErrorScreen } from '../ErrorScreen/ErrorScreen';
+import { trackErrorOccurred } from '../../services/analyticsService';
 
 interface Props {
   children: ReactNode;
@@ -24,8 +25,13 @@ export class ErrorBoundary extends Component<Props, State> {
     // エラーログを出力
     console.error('Uncaught error:', error, errorInfo);
 
-    // 本番環境では、エラーログを外部サービスに送信することも検討
-    // 例: Sentry, Datadog, etc.
+    // GA4にエラーを送信
+    trackErrorOccurred({
+      errorType: 'react_error_boundary',
+      errorMessage: error.message,
+      errorStack: error.stack,
+      componentName: errorInfo.componentStack?.split('\n')[1]?.trim() || 'unknown'
+    });
   }
 
   public resetError = () => {

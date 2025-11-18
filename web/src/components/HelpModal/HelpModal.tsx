@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useHelpStore } from '../../stores/helpStore';
-import { trackButtonClick } from '../../utils/gtm';
+import { trackHelpOpened } from '../../services/analyticsService';
 import './HelpModal.css';
 
 export const HelpModal: React.FC = () => {
@@ -19,8 +19,15 @@ export const HelpModal: React.FC = () => {
   } = useHelpStore();
 
   useEffect(() => {
-    if (isModalOpen && articles.length === 0) {
-      loadArticles();
+    if (isModalOpen) {
+      // ヘルプモーダルが開かれたことをトラッキング
+      trackHelpOpened({
+        location: 'modal'
+      });
+
+      if (articles.length === 0) {
+        loadArticles();
+      }
     }
   }, [isModalOpen]);
 

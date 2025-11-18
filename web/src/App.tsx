@@ -20,7 +20,7 @@ import { useMaintenanceStore } from "./stores/maintenanceStore";
 import { useIsMobile } from "./hooks/useMediaQuery";
 import { useLayoutTracking } from "./hooks/useAnalytics";
 import { startAnnouncementAutoUpdate } from "./stores/announcementStore";
-import { trackPageView } from "./services/analyticsService";
+import { trackPageView, trackEngagementTime, trackErrorOccurred } from "./services/analyticsService";
 import { apiFetch } from "./utils/api";
 import { isSafari } from "./utils/browserDetection";
 import { config } from "./config";
@@ -402,6 +402,48 @@ function App(): JSX.Element {
     masterVolume,
     saveToServer
   ]);
+
+  // 定期的にengagement_timeを送信（30秒ごと）
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const activeCount = slots.filter(s => s.assignedStream).length;
+      trackEngagementTime({
+        screenName: 'main_app',
+        engagementTimeMsec: 30000, // 30秒
+        activeStreamsCount: activeCount
+      });
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, [slots]);
+
+  // グローバルエラーハンドラー
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      trackErrorOccurred({
+        errorType: 'unhandled_error',
+        errorMessage: event.message,
+        errorStack: event.error?.stack,
+        componentName: 'global'
+      });
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      trackErrorOccurred({
+        errorType: 'unhandled_promise_rejection',
+        errorMessage: String(event.reason),
+        componentName: 'global'
+      });
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
 
   // エラーテストモードが有効な場合はエラーをスロー（Error Boundaryでキャッチ）
   if (shouldThrowError) {

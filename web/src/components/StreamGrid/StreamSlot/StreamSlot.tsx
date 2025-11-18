@@ -14,6 +14,9 @@ import {
   trackStreamPlaybackStarted,
   trackFirstStreamPlayback,
   trackMultiStreamActive,
+  trackStreamRemoved,
+  trackVolumeChange,
+  trackQualityChange,
   sessionManager
 } from '../../../services/analyticsService';
 import type { StreamSlot, VideoQuality, Platform } from '../../../types';
@@ -874,6 +877,15 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
+                      // 配信削除をトラッキング
+                      if (assignedStream) {
+                        trackStreamRemoved({
+                          platform: assignedStream.platform,
+                          streamId: assignedStream.id,
+                          channelName: assignedStream.displayName,
+                          slotId: slot.id
+                        });
+                      }
                       clearSlot(slot.id);
                     }}
                     aria-label="配信を削除"
@@ -889,6 +901,17 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
+                      // ミュート/ミュート解除をトラッキング
+                      if (assignedStream) {
+                        trackVolumeChange({
+                          platform: assignedStream.platform,
+                          streamId: assignedStream.id,
+                          slotId: slot.id,
+                          action: slot.muted ? 'unmute' : 'mute',
+                          previousVolume: slot.volume,
+                          newVolume: slot.muted ? slot.volume : 0
+                        });
+                      }
                       toggleSlotMute(slot.id);
                     }}
                     aria-label={slot.muted ? 'ミュート解除' : 'ミュート'}
@@ -949,6 +972,15 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
+                        // 配信削除をトラッキング
+                        if (assignedStream) {
+                          trackStreamRemoved({
+                            platform: assignedStream.platform,
+                            streamId: assignedStream.id,
+                            channelName: assignedStream.displayName,
+                            slotId: slot.id
+                          });
+                        }
                         clearSlot(slot.id);
                       }}
                     >
@@ -986,6 +1018,17 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
+                        // ミュート/ミュート解除をトラッキング
+                        if (assignedStream) {
+                          trackVolumeChange({
+                            platform: assignedStream.platform,
+                            streamId: assignedStream.id,
+                            slotId: slot.id,
+                            action: slot.muted ? 'unmute' : 'mute',
+                            previousVolume: slot.volume,
+                            newVolume: slot.muted ? slot.volume : 0
+                          });
+                        }
                         toggleSlotMute(slot.id);
                       }}
                     >
@@ -1005,7 +1048,18 @@ const StreamSlotCardComponent = ({ slot, isActive, isFocused = false, showSelect
                             toggleSlotMute(slot.id);
                           }
                         }}
-                        onMouseUp={() => {}}
+                        onMouseUp={() => {
+                          // 音量変更をトラッキング（マウスアップ時のみ）
+                          if (assignedStream) {
+                            trackVolumeChange({
+                              platform: assignedStream.platform,
+                              streamId: assignedStream.id,
+                              slotId: slot.id,
+                              action: 'volume_adjust',
+                              newVolume: slot.volume
+                            });
+                          }
+                        }}
                         onClick={(event) => event.stopPropagation()}
                         onMouseDown={(event) => event.stopPropagation()}
                         onPointerDown={(event) => event.stopPropagation()}

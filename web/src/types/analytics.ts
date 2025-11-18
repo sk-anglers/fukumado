@@ -16,7 +16,16 @@ export type EventType =
   | 'stream_playback_started'
   | 'first_stream_playback'
   | 'multi_stream_active'
-  | 'auth_completed';
+  | 'auth_completed'
+  | 'stream_removed'
+  | 'error_occurred'
+  | 'engagement_time'
+  | 'stream_swap'
+  | 'quality_change'
+  | 'search_performed'
+  | 'volume_change'
+  | 'chat_opened'
+  | 'help_opened';
 
 export type LayoutPreset = 'twoByTwo' | 'oneByTwo' | 'focus';
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
@@ -209,6 +218,105 @@ export interface AuthCompletedEvent extends BaseEventData {
   };
 }
 
+// 配信削除イベント
+export interface StreamRemovedEvent extends BaseEventData {
+  type: 'stream_removed';
+  data: {
+    platform: Platform;
+    streamId: string;
+    channelName: string;
+    slotId: string;
+    watchDuration?: number;        // 視聴時間（秒）
+  };
+}
+
+// エラー発生イベント
+export interface ErrorOccurredEvent extends BaseEventData {
+  type: 'error_occurred';
+  data: {
+    errorType: string;              // 'player_load_error', 'api_error', 'network_error'等
+    errorMessage: string;           // エラーメッセージ
+    errorStack?: string;            // スタックトレース
+    platform?: Platform;            // エラー発生プラットフォーム
+    streamId?: string;              // 関連する配信ID
+    componentName?: string;         // エラー発生コンポーネント
+  };
+}
+
+// 画面別滞在時間イベント
+export interface EngagementTimeEvent extends BaseEventData {
+  type: 'engagement_time';
+  data: {
+    screenName: string;             // 画面名
+    engagementTimeMsec: number;     // 滞在時間（ミリ秒）
+    activeStreamsCount?: number;    // 視聴中配信数
+  };
+}
+
+// 配信スワップイベント
+export interface StreamSwapEvent extends BaseEventData {
+  type: 'stream_swap';
+  data: {
+    fromSlotId: string;
+    toSlotId: string;
+    platform: Platform;
+    streamId: string;
+  };
+}
+
+// 画質変更イベント
+export interface QualityChangeEvent extends BaseEventData {
+  type: 'quality_change';
+  data: {
+    platform: Platform;
+    streamId: string;
+    slotId: string;
+    previousQuality: string;
+    newQuality: string;
+  };
+}
+
+// 検索実行イベント
+export interface SearchPerformedEvent extends BaseEventData {
+  type: 'search_performed';
+  data: {
+    platform: Platform;
+    query: string;
+    resultsCount: number;
+  };
+}
+
+// 音量変更イベント
+export interface VolumeChangeEvent extends BaseEventData {
+  type: 'volume_change';
+  data: {
+    platform: Platform;
+    streamId: string;
+    slotId: string;
+    action: 'mute' | 'unmute' | 'volume_adjust';
+    previousVolume?: number;
+    newVolume?: number;
+  };
+}
+
+// チャット表示イベント
+export interface ChatOpenedEvent extends BaseEventData {
+  type: 'chat_opened';
+  data: {
+    platform: Platform;
+    channelId: string;
+    channelName: string;
+  };
+}
+
+// ヘルプ表示イベント
+export interface HelpOpenedEvent extends BaseEventData {
+  type: 'help_opened';
+  data: {
+    location: string;               // 'header', 'account_menu'等
+  };
+}
+
 export type AnalyticsEvent =
   | LayoutChangeEvent
   | ButtonClickEvent
@@ -223,4 +331,13 @@ export type AnalyticsEvent =
   | StreamPlaybackStartedEvent
   | FirstStreamPlaybackEvent
   | MultiStreamActiveEvent
-  | AuthCompletedEvent;
+  | AuthCompletedEvent
+  | StreamRemovedEvent
+  | ErrorOccurredEvent
+  | EngagementTimeEvent
+  | StreamSwapEvent
+  | QualityChangeEvent
+  | SearchPerformedEvent
+  | VolumeChangeEvent
+  | ChatOpenedEvent
+  | HelpOpenedEvent;

@@ -14,6 +14,15 @@ import type {
   FirstStreamPlaybackEvent,
   MultiStreamActiveEvent,
   AuthCompletedEvent,
+  StreamRemovedEvent,
+  ErrorOccurredEvent,
+  EngagementTimeEvent,
+  StreamSwapEvent,
+  QualityChangeEvent,
+  SearchPerformedEvent,
+  VolumeChangeEvent,
+  ChatOpenedEvent,
+  HelpOpenedEvent,
   LayoutPreset,
   DeviceType,
   ButtonType,
@@ -460,6 +469,168 @@ export function trackAuthCompleted(data: {
 }): void {
   const event: AuthCompletedEvent = {
     type: 'auth_completed',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * 配信削除イベントを送信
+ */
+export function trackStreamRemoved(data: {
+  platform: Platform;
+  streamId: string;
+  channelName: string;
+  slotId: string;
+  watchDuration?: number;
+}): void {
+  const event: StreamRemovedEvent = {
+    type: 'stream_removed',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * エラー発生イベントを送信
+ */
+export function trackErrorOccurred(data: {
+  errorType: string;
+  errorMessage: string;
+  errorStack?: string;
+  platform?: Platform;
+  streamId?: string;
+  componentName?: string;
+}): void {
+  const event: ErrorOccurredEvent = {
+    type: 'error_occurred',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * 画面別滞在時間イベントを送信
+ */
+export function trackEngagementTime(data: {
+  screenName: string;
+  engagementTimeMsec: number;
+  activeStreamsCount?: number;
+}): void {
+  const event: EngagementTimeEvent = {
+    type: 'engagement_time',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * 配信スワップイベントを送信
+ */
+export function trackStreamSwap(data: {
+  fromSlotId: string;
+  toSlotId: string;
+  platform: Platform;
+  streamId: string;
+}): void {
+  const event: StreamSwapEvent = {
+    type: 'stream_swap',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * 画質変更イベントを送信
+ */
+export function trackQualityChange(data: {
+  platform: Platform;
+  streamId: string;
+  slotId: string;
+  previousQuality: string;
+  newQuality: string;
+}): void {
+  const event: QualityChangeEvent = {
+    type: 'quality_change',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * 検索実行イベントを送信
+ */
+export function trackSearchPerformed(data: {
+  platform: Platform;
+  query: string;
+  resultsCount: number;
+}): void {
+  const event: SearchPerformedEvent = {
+    type: 'search_performed',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * 音量変更イベントを送信
+ */
+export function trackVolumeChange(data: {
+  platform: Platform;
+  streamId: string;
+  slotId: string;
+  action: 'mute' | 'unmute' | 'volume_adjust';
+  previousVolume?: number;
+  newVolume?: number;
+}): void {
+  const event: VolumeChangeEvent = {
+    type: 'volume_change',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * チャット表示イベントを送信
+ */
+export function trackChatOpened(data: {
+  platform: Platform;
+  channelId: string;
+  channelName: string;
+}): void {
+  const event: ChatOpenedEvent = {
+    type: 'chat_opened',
+    ...createBaseEventData(),
+    data
+  };
+
+  sendEvent(event);
+}
+
+/**
+ * ヘルプ表示イベントを送信
+ */
+export function trackHelpOpened(data: {
+  location: string;
+}): void {
+  const event: HelpOpenedEvent = {
+    type: 'help_opened',
     ...createBaseEventData(),
     data
   };
