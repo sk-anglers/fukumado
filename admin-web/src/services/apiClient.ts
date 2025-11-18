@@ -126,24 +126,24 @@ export const getHealth = async (): Promise<{
 };
 
 /**
- * システムメトリクス取得
+ * システムメトリクス取得（/system/metricsから取得）
  */
 export const getSystemMetrics = async (): Promise<SystemMetrics> => {
-  return fetchAPI<SystemMetrics>('/metrics/system');
+  return fetchAPI<SystemMetrics>('/system/metrics');
 };
 
 /**
  * Twitch APIレート制限情報取得
  */
 export const getTwitchRateLimit = async (): Promise<TwitchRateLimit> => {
-  return fetchAPI<TwitchRateLimit>('/metrics/api/twitch');
+  return fetchAPI<TwitchRateLimit>('/api-tracking/rate-limit');
 };
 
 /**
  * YouTube APIクォータ情報取得
  */
 export const getYouTubeQuota = async (): Promise<YouTubeQuota> => {
-  return fetchAPI<YouTubeQuota>('/metrics/api/youtube');
+  return fetchAPI<YouTubeQuota>('/api-tracking/youtube-quota');
 };
 
 /**
@@ -222,45 +222,55 @@ export const disableMaintenance = async (): Promise<void> => {
 // ========================================
 
 /**
- * 本サービスのセキュリティ統計取得
+ * 本サービスのセキュリティ統計取得（未実装のため空データを返す）
  */
 export const getMainServiceStats = async (): Promise<MainServiceSecurityStats> => {
-  return fetchAPI<MainServiceSecurityStats>('/security/main-service/stats');
+  // TODO: サーバー側で実装後に有効化
+  console.warn('[API] getMainServiceStats is not implemented yet');
+  return {} as MainServiceSecurityStats;
 };
 
 /**
- * 本サービスのセキュリティヘルスチェック
+ * 本サービスのセキュリティヘルスチェック（未実装のため空データを返す）
  */
 export const getMainServiceHealth = async (): Promise<MainServiceHealthCheck> => {
-  return fetchAPI<MainServiceHealthCheck>('/security/main-service/health');
+  // TODO: サーバー側で実装後に有効化
+  console.warn('[API] getMainServiceHealth is not implemented yet');
+  return {} as MainServiceHealthCheck;
 };
 
 /**
- * 本サービスの異常検知アラート取得
+ * 本サービスの異常検知アラート取得（未実装のため空配列を返す）
  */
 export const getMainServiceAlerts = async (limit: number = 50): Promise<AnomalyAlertsResponse> => {
-  return fetchAPI<AnomalyAlertsResponse>(`/security/main-service/alerts?limit=${limit}`);
+  // TODO: サーバー側で実装後に有効化
+  console.warn('[API] getMainServiceAlerts is not implemented yet');
+  return { alerts: [], total: 0 };
 };
 
 /**
- * 本サービスのセッション統計取得
+ * 本サービスのセッション統計取得（未実装のため空データを返す）
  */
 export const getMainServiceSessions = async (): Promise<SessionStats> => {
-  return fetchAPI<SessionStats>('/security/main-service/sessions');
+  // TODO: サーバー側で実装後に有効化
+  console.warn('[API] getMainServiceSessions is not implemented yet');
+  return {} as SessionStats;
 };
 
 /**
- * 本サービスのWebSocket統計取得
+ * 本サービスのWebSocket統計取得（WebSocketエンドポイントから取得）
  */
 export const getMainServiceWebSocket = async (): Promise<WebSocketStats> => {
-  return fetchAPI<WebSocketStats>('/security/main-service/websocket');
+  return fetchAPI<WebSocketStats>('/websocket/stats');
 };
 
 /**
- * 本サービスのセキュリティサマリー取得
+ * 本サービスのセキュリティサマリー取得（未実装のため空データを返す）
  */
 export const getMainServiceSummary = async (): Promise<SecuritySummary> => {
-  return fetchAPI<SecuritySummary>('/security/main-service/summary');
+  // TODO: サーバー側で実装後に有効化
+  console.warn('[API] getMainServiceSummary is not implemented yet');
+  return {} as SecuritySummary;
 };
 
 // ========================================
@@ -268,10 +278,10 @@ export const getMainServiceSummary = async (): Promise<SecuritySummary> => {
 // ========================================
 
 /**
- * 配信詳細情報取得
+ * 配信詳細情報取得（/streams/を使用）
  */
 export const getStreamDetails = async (): Promise<StreamDetails> => {
-  return fetchAPI<StreamDetails>('/streams/details');
+  return fetchAPI<StreamDetails>('/streams');
 };
 
 /**
